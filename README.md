@@ -1,4 +1,43 @@
-# shawarma_pos_nuevo
+# Shawarma Oxa APB
+
+Aplicación POS (Punto de Venta) para Shawarma Oxa
+
+Este repositorio contiene la aplicación Flutter usada como punto de venta.
+
+## Requisitos
+
+- Flutter SDK (estable)
+- Android SDK / Xcode si vas a compilar para mobile
+
+## Comandos rápidos
+
+Instalar dependencias:
+
+```powershell
+flutter pub get
+```
+
+Ejecutar en dispositivo/emulador:
+
+```powershell
+flutter run
+```
+
+Analizar el código y ejecutar tests:
+
+```powershell
+flutter analyze
+flutter test
+```
+
+## Contribuir
+
+- Haz fork y un pull request para cambios grandes.
+- Mantén la rama `main` limpia: crea ramas por feature o bugfix.
+
+## Enlace del repositorio
+
+https://github.com/APB-gif/Shawarma-Oxa-APB# shawarma_pos_nuevo
 
 A new Flutter project.
 
