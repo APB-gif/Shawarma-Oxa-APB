@@ -1,0 +1,43 @@
+﻿# Flutter & Dart
+# Generated .gitignore for Flutter projects
+.dart_tool/
+.packages
+.pub-cache/
+.build/
+/build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.generated/
+**/generated/
+**/outputs/
+**/build/
+**/tmp/
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.log
+pubspec.lock
+# Android
+.android/
+local.properties
+**/android/**/build/
+**/android/**/output/
+# iOS
+.ios/
+Pods/
+**/ios/**/Pods/
+**/ios/**/Runner/GeneratedPluginRegistrant.*
+**/ios/Flutter/Flutter.podspec
+# macOS
+.macos/
+# Windows
+.windows/
+# Web
+.build/
+# Others
+**/pubspec.yaml.template
+# Google services
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist

@@ -1,0 +1,76 @@
+name: shawarma_pos_nuevo
+description: Una app de comida rápida.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # --- Firebase (Base de la App) ---
+  firebase_core: ^4.1.1
+  firebase_auth: ^6.1.0
+  cloud_firestore: ^6.0.2
+  firebase_storage: ^13.0.2
+
+  # --- Gestión de Estado y Lógica ---
+  provider: ^6.1.5+1
+  shared_preferences: ^2.2.4
+
+  # --- Utilidades ---
+  intl: ^0.20.2
+  google_fonts: ^6.3.2
+  image_picker: ^1.1.2
+  uuid: ^4.4.0
+  collection: ^1.18.0
+
+  # --- UI y Animaciones ---
+  flutter_animate: ^4.5.0
+  sliver_tools: ^0.2.12
+
+  # --- IMÁGENES ---
+  flutter_svg: ^2.0.10+2
+  cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.3.2
+  file_picker: ^10.3.3
+
+  auto_size_text: ^3.0.0
+  font_awesome_flutter: ^10.10.0
+  google_sign_in: ^7.2.0
+  google_nav_bar: ^5.0.7
+  http: ^1.5.0
+  connectivity_plus: ^7.0.0
+  flutter_secure_storage: ^9.0.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/app_icon.png
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
+    - assets/images/
+
+  fonts:
+    - family: CinzelDecorative
+      fonts:
+        - asset: assets/fonts/CinzelDecorative-Regular.ttf
+        - asset: assets/fonts/CinzelDecorative-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/CinzelDecorative-Black.ttf
+          weight: 900
