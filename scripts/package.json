@@ -1,0 +1,14 @@
+{
+  "name": "migrate-gastos-payment-keys",
+  "version": "1.0.0",
+  "description": "Script to rename payment keys in Firestore gastos collection",
+  "main": "migrate_gastos_payment_keys.js",
+  "scripts": {
+    "start": "node migrate_gastos_payment_keys.js"
+  },
+  "dependencies": {
+    "@google-cloud/firestore": "^6.6.2",
+    "minimist": "^1.2.8",
+    "firebase-admin": "^11.0.0"
+  }
+}

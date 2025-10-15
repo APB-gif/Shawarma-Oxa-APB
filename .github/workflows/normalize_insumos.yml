@@ -1,0 +1,70 @@
+name: Normalize Insumos in Firestore
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Do a dry run (no writes)'
+        required: true
+        default: 'true'
+      truncate:
+        description: 'Truncate instead of round'
+        required: true
+        default: 'false'
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Write service account JSON
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+        run: |
+          if [ -z "$FIREBASE_SA" ]; then
+            echo "Missing FIREBASE_SA secret. Set it in repository Settings → Secrets → Actions." >&2
+            exit 1
+          fi
+          echo "$FIREBASE_SA" > ./sa.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies for script
+        run: |
+          # Ensure npm is initialized and dependencies are installed inside scripts/
+          cd scripts
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            if [ ! -f package.json ]; then
+              npm init -y
+            fi
+            npm install firebase-admin
+          fi
+
+      - name: Run normalization script
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
+        run: |
+          echo "Running script (dry_run=${{ github.event.inputs.dry_run }}, truncate=${{ github.event.inputs.truncate }})"
+          DRY_FLAG=""
+          TRUNC_FLAG=""
+          if [ "${{ github.event.inputs.dry_run }}" = 'true' ]; then
+            DRY_FLAG='--dry-run'
+          fi
+          if [ "${{ github.event.inputs.truncate }}" = 'true' ]; then
+            TRUNC_FLAG='--truncate'
+          fi
+          node scripts/fix_insumos_firestore.js $DRY_FLAG $TRUNC_FLAG
+
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: normalize-log
+          path: ./
