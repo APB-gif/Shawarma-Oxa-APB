@@ -135,6 +135,17 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
       PaymentMethod.yapePersonal,
     ];
 
+    String _displayNameForGastos(PaymentMethod m) {
+      switch (m) {
+        case PaymentMethod.izipayCard:
+          return 'Ruben';
+        case PaymentMethod.yapePersonal:
+          return 'Aharhel';
+        default:
+          return m.displayName;
+      }
+    }
+
     return SegmentedButton<PaymentMethod>(
       style: SegmentedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
@@ -143,7 +154,7 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
           .map((method) => ButtonSegment<PaymentMethod>(
                 value: method,
                 icon: Icon(method.icon, size: 20),
-                label: Text(method.displayName),
+                label: Text(_displayNameForGastos(method)),
               ))
           .toList(),
       selected: <PaymentMethod>{_method},

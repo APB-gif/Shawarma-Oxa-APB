@@ -36,8 +36,13 @@ class ProductoService {
     if (tipo != null) {
       q = q.where('tipo', isEqualTo: tipo);
     }
-    final snap = await q.get();
-    return snap.docs.map((d) => Producto.fromFirestore(d)).toList();
+    try {
+      final snap = await q.get();
+      return snap.docs.map((d) => Producto.fromFirestore(d)).toList();
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') return <Producto>[];
+      rethrow;
+    }
   }
 
   /// Crea o actualiza automáticamente.

@@ -607,6 +607,123 @@ class _PaginaVentasState extends State<PaginaVentas> {
     }
   }
 
+  // ===================== GASTO INSUMOS APERTURA =====================
+  Future<void> _openGastoInsumosDialog(Caja cajaActiva) async {
+    // Default consumptions based on user description
+    final defaults = {
+      'Lechuga': 2.0,
+      'Pepino': 1.0,
+      'Tomate': 1.0,
+      'Cebolla': 1.0,
+      'Papas al hilo': 1.0,
+      'Salsa de ajo (potes)': 1.5,
+      'Hierba buena (ramas)': 20.0,
+      'Perejil (ramas)': 10.0,
+    };
+
+    final controllers = {for (var k in defaults.keys) k: TextEditingController(text: defaults[k]!.toString())};
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Gasto de Insumos - Apertura'),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Ingrese las cantidades gastadas al abrir la caja (unidad según etiqueta)'),
+                const SizedBox(height: 12),
+                ...defaults.keys.map((k) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6.0),
+                      child: TextFormField(
+                        controller: controllers[k],
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(labelText: k),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Requerido';
+                          final val = double.tryParse(v.replaceAll(',', '.')) ?? -1;
+                          if (val < 0) return 'Número inválido';
+                          return null;
+                        },
+                      ),
+                    ))
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () async {
+            if (!(formKey.currentState?.validate() ?? false)) return;
+            Navigator.pop(ctx, true);
+          }, child: const Text('Registrar')),
+        ],
+      ),
+    );
+
+    if (result != true) return;
+
+    // Preparar datos y ejecutar batch: registrar gasto y actualizar stocks de insumos
+    final Map<String, double> cantidades = {};
+    controllers.forEach((k, ctl) {
+      cantidades[k] = double.tryParse(ctl.text.replaceAll(',', '.')) ?? 0.0;
+    });
+
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final gastosCol = FirebaseFirestore.instance.collection('gastos');
+      final gastoDoc = gastosCol.doc();
+      final now = DateTime.now();
+      // Documento resumen del gasto
+      batch.set(gastoDoc, {
+        'tipo': 'insumos_apertura',
+        'fecha': now,
+        'cajaId': cajaActiva.id,
+        'usuarioId': cajaActiva.usuarioAperturaId,
+        'usuarioNombre': cajaActiva.usuarioAperturaNombre,
+        'detalles': cantidades,
+      });
+
+      // Para cada insumo, buscar documento por nombre y restar stockActual
+      for (final entry in cantidades.entries) {
+        final nombre = entry.key;
+        final qty = entry.value;
+        if (qty <= 0) continue;
+        final query = await FirebaseFirestore.instance.collection('insumos').where('nombre', isEqualTo: nombre).limit(1).get();
+        if (query.docs.isNotEmpty) {
+          final doc = query.docs.first;
+          final ref = doc.reference;
+          final stockActual = (doc.data()['stockActual'] ?? doc.data()['stockTotal'] ?? 0).toDouble();
+          final nuevo = stockActual - qty;
+          batch.update(ref, {'stockActual': nuevo});
+        } else {
+          // Si no existe el insumo, crear uno con stock negativo para registrar el consumo
+          final newRef = FirebaseFirestore.instance.collection('insumos').doc();
+          batch.set(newRef, {
+            'nombre': nombre,
+            'stockActual': -qty,
+            'stockTotal': 0,
+            'unidad': 'unidad',
+            'createdAt': DateTime.now(),
+          });
+        }
+      }
+
+      await batch.commit();
+
+      if (mainScaffoldContext != null) {
+        mostrarNotificacionElegante(mainScaffoldContext!, 'Gasto de insumos registrado', messengerKey: principalMessengerKey);
+      }
+    } catch (e) {
+      if (mainScaffoldContext != null) {
+        mostrarNotificacionElegante(mainScaffoldContext!, 'Error registrando gasto: $e', esError: true, messengerKey: principalMessengerKey);
+      }
+    }
+  }
+
   // ===================== ORDENAMIENTO DE PRODUCTOS =====================
 
   int _shawarmaRank(String name) {
@@ -677,6 +794,13 @@ class _PaginaVentasState extends State<PaginaVentas> {
               );
             },
           ),
+          // 🥬 Gasto de insumos por apertura de caja (solo si hay caja abierta)
+          if (cajaActiva != null)
+            IconButton(
+              icon: const Icon(Icons.kitchen),
+              tooltip: 'Gasto de insumos (apertura)',
+              onPressed: () => _openGastoInsumosDialog(cajaActiva),
+            ),
           // 🗑️ Descartar caja local (solo si hay una abierta)
           if (cajaActiva != null)
             IconButton(

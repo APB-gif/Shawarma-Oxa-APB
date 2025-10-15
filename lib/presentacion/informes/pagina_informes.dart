@@ -16,6 +16,23 @@ String capitalize(String s) {
   return '${cleanString[0].toUpperCase()}${cleanString.substring(1)}';
 }
 
+// Mapeo específico para mostrar los métodos en la sección de Gastos
+String _displayMethodForGastos(String key) {
+  final lower = key.toLowerCase().trim();
+  if (lower == 'tarjeta') return 'Ruben';
+  if (lower == 'yape personal' || lower == 'yape') return 'Aharhel';
+  return key;
+}
+
+Map<String, double> _mergeMetodoMap(Map<String, double> src) {
+  final res = <String, double>{};
+  src.forEach((k, v) {
+    final dk = _displayMethodForGastos(k);
+    res[dk] = (res[dk] ?? 0.0) + v;
+  });
+  return res;
+}
+
 class _ThemeColors {
   static const Color background = Colors.white;
   static const Color cardBackground = Color(0xFFF7F8FC);
@@ -414,8 +431,8 @@ class _TabResumen extends StatelessWidget {
     final metodosVentas = informeService.resumenTotalMetodosDePago;
     final ventas = informeService.ventasDelPeriodo;
 
-    final totalGastos = informeService.resumenTotalGastos;
-    final metodosGastos = informeService.resumenMetodosDePagoGastos;
+  final totalGastos = informeService.resumenTotalGastos;
+  final metodosGastos = _mergeMetodoMap(informeService.resumenMetodosDePagoGastos);
 
     final neto = informeService.netoTotal;
     final netoMetodos = informeService.netoPorMetodo;
@@ -939,6 +956,15 @@ class _GastoTileLite extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           IconButton(
+            icon: const Icon(Icons.edit_outlined,
+                color: _ThemeColors.primaryGradientEnd),
+            tooltip: 'Editar gasto',
+            onPressed: () {
+              _showEditGastoDialog(context, g);
+            },
+          ),
+          const SizedBox(width: 2),
+          IconButton(
             icon: const Icon(Icons.delete_outline, color: _ThemeColors.danger),
             onPressed: () {
               _showDeleteConfirmationDialog(
@@ -954,6 +980,116 @@ class _GastoTileLite extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showEditGastoDialog(BuildContext context, GastoResumen gasto) {
+  final formKey = GlobalKey<FormState>();
+  final informe = context.read<InformeService>();
+  // Método actual: si hay varios, toma la primera clave
+  String metodo = gasto.pagos.keys.isNotEmpty ? gasto.pagos.keys.first : 'Otros';
+  double monto = gasto.total;
+  bool saving = false;
+
+  final metodosDisponibles = <String>[
+    'Efectivo',
+    'Ruben',
+    'Aharhel',
+    'Yape',
+    'Otros',
+    ...gasto.pagos.keys.map((k) => _displayMethodForGastos(k)).where((k) => k != 'Efectivo' && k != 'Ruben' && k != 'Aharhel' && k != 'Yape' && k != 'Otros'),
+  ].toSet().toList();
+
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Editar gasto'),
+      content: Form(
+        key: formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<String>(
+              value: metodo,
+              items: metodosDisponibles
+                  .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                  .toList(),
+              onChanged: (v) => metodo = v ?? metodo,
+              decoration: const InputDecoration(
+                labelText: 'Método de pago',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              initialValue: monto.toStringAsFixed(2),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Monto',
+                border: OutlineInputBorder(),
+                prefixText: 'S/ ',
+              ),
+              validator: (v) {
+                final d = double.tryParse((v ?? '').replaceAll(',', '.'));
+                if (d == null || d <= 0) return 'Monto inválido';
+                return null;
+              },
+              onChanged: (v) {
+                final d = double.tryParse(v.replaceAll(',', '.'));
+                if (d != null) monto = d;
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('Cancelar'),
+        ),
+        StatefulBuilder(
+          builder: (ctx2, setLocal) {
+            Future<void> submit() async {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+              setLocal(() => saving = true);
+              final err = await informe.updateGasto(gasto.id, metodo: metodo, monto: monto);
+              setLocal(() => saving = false);
+              if (ctx2.mounted) {
+                if (err == null) {
+                  Navigator.of(ctx2).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Gasto actualizado'),
+                    backgroundColor: Colors.green,
+                  ));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(err),
+                    backgroundColor: Colors.red,
+                  ));
+                }
+              }
+            }
+
+            return ElevatedButton.icon(
+              onPressed: saving ? null : submit,
+              icon: saving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.save_outlined),
+              label: const Text('Guardar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _ThemeColors.primaryGradientEnd,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            );
+          },
+        ),
+      ],
+    ),
+  );
 }
 
 class _GrupoDeVentasDiario extends StatelessWidget {
@@ -1442,8 +1578,8 @@ class _CierreGlassCardState extends State<_CierreGlassCard> {
 IconData _getPaymentMethodIcon(String key) {
   final lowerKey = key.toLowerCase();
   if (lowerKey.contains('efectivo')) return Icons.money_rounded;
-  if (lowerKey.contains('tarjeta')) return Icons.credit_card_rounded;
-  if (lowerKey.contains('yape')) return Icons.qr_code_2_rounded;
+  if (lowerKey.contains('tarjeta') || lowerKey.contains('ruben')) return Icons.credit_card_rounded;
+  if (lowerKey.contains('yape') || lowerKey.contains('aharhel')) return Icons.qr_code_2_rounded;
   return Icons.payment_rounded;
 }
 

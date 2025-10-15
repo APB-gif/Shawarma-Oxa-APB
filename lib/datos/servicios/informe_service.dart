@@ -446,6 +446,48 @@ class InformeService with ChangeNotifier {
     }
   }
 
+  /// Actualiza un gasto (solo método de pago y monto) y sincroniza estado local/cache.
+  Future<String?> updateGasto(
+    String gastoId, {
+    required String metodo,
+    required double monto,
+  }) async {
+    try {
+      final ref = _db.collection('gastos').doc(gastoId);
+      // Compatibilidad con distintos esquemas: total/monto, pagos y paymentMethod
+      final dataUpdate = <String, dynamic>{
+        'total': monto,
+        'monto': monto,
+        'pagos': {metodo: monto},
+        'paymentMethod': metodo,
+      };
+      await ref.update(dataUpdate);
+
+      // Actualiza estado local
+      final idx = _gastosDelPeriodo.indexWhere((g) => g.id == gastoId);
+      if (idx != -1) {
+        final old = _gastosDelPeriodo[idx];
+        _gastosDelPeriodo[idx] = GastoResumen(
+          id: old.id,
+          fecha: old.fecha,
+          total: monto,
+          pagos: {metodo: monto},
+          label: old.label,
+        );
+      }
+
+      // Invalida cache y notifica
+      _cache.clear();
+      _cacheStamp.clear();
+      notifyListeners();
+      return null;
+    } on FirebaseException catch (e) {
+      return 'Error de Firebase: ${e.message}';
+    } catch (e) {
+      return 'Ocurrió un error inesperado: $e';
+    }
+  }
+
   // ===== Utilidades de cache/fechas =====
   String _getCacheKey(FiltroPeriodo periodo, {DateTime? start, DateTime? end}) {
     switch (periodo) {

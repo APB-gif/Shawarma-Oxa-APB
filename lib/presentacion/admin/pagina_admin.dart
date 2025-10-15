@@ -83,7 +83,10 @@ class _PaginaAdminState extends State<PaginaAdmin>
   Widget _buildResponsiveSliverAppBar(
       BuildContext context, AuthService auth, bool isDesktop) {
     return SliverAppBar(
-      expandedHeight: isDesktop ? 120 : 80,
+      automaticallyImplyLeading: false,
+      // keep a consistent toolbar height to avoid title jumping when pinned
+      toolbarHeight: isDesktop ? 80 : 64,
+      expandedHeight: isDesktop ? 120 : 96,
       floating: false,
       pinned: true,
       backgroundColor: Colors.white,
@@ -91,7 +94,13 @@ class _PaginaAdminState extends State<PaginaAdmin>
       elevation: 0,
       shadowColor: Colors.black12,
       flexibleSpace: FlexibleSpaceBar(
-        centerTitle: !isDesktop,
+        // force consistent centering and control title padding so it looks good
+        // both when expanded (at top) and when collapsed while scrolling
+        centerTitle: true,
+        titlePadding: EdgeInsetsDirectional.only(
+          start: isDesktop ? 24 : 16,
+          bottom: isDesktop ? 16 : 12,
+        ),
         title: Text(
           'Panel de Administración',
           style: TextStyle(
@@ -113,35 +122,14 @@ class _PaginaAdminState extends State<PaginaAdmin>
           ),
         ),
       ),
-      leading: isDesktop
-          ? null
-          : IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new,
-                  color: Color(0xFF64748B)),
-              onPressed: () => Navigator.pop(context),
-            ),
+    // No leading/back button to avoid layout overflow on small devices
       actions: [
         if (isDesktop) ...[
           _buildQuickAction(FontAwesomeIcons.bell, () {}),
           _buildQuickAction(FontAwesomeIcons.cog, () {}),
           const SizedBox(width: 16),
         ],
-        Container(
-          margin: EdgeInsets.only(right: isDesktop ? 32 : 16),
-          child: CircleAvatar(
-            radius: isDesktop ? 22 : 18,
-            backgroundColor: const Color(0xFF3B82F6),
-            child: Text(
-              auth.currentUser?.displayName?.substring(0, 1).toUpperCase() ??
-                  'A',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-                fontSize: isDesktop ? 16 : 14,
-              ),
-            ),
-          ),
-        ),
+        // Removed floating user initial avatar to simplify header on small screens
       ],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
@@ -217,11 +205,11 @@ class _PaginaAdminState extends State<PaginaAdmin>
     );
   }
 
-  Widget _buildResponsiveHeroSection(
-      AuthService auth, bool isTablet, bool isDesktop) {
+  Widget _buildResponsiveHeroSection(AuthService auth, bool isTablet, bool isDesktop) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(isDesktop ? 32 : 24),
+      // Reduce padding on smaller devices to avoid overflowing the screen
+      padding: EdgeInsets.all(isDesktop ? 32 : (isTablet ? 20 : 16)),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -235,8 +223,8 @@ class _PaginaAdminState extends State<PaginaAdmin>
         borderRadius: BorderRadius.circular(isDesktop ? 24 : 20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF3B82F6).withOpacity(0.25),
-            blurRadius: 25,
+            color: const Color(0xFF3B82F6).withOpacity(0.20),
+            blurRadius: isDesktop ? 25 : 12,
             offset: const Offset(0, 10),
           ),
         ],
@@ -257,6 +245,7 @@ class _PaginaAdminState extends State<PaginaAdmin>
             ),
           ),
           SizedBox(width: isDesktop ? 24 : 16),
+          // Texto principal: limitar líneas y reducir tamaños en móviles para evitar overflow
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,7 +253,7 @@ class _PaginaAdminState extends State<PaginaAdmin>
                 Text(
                   '¡Bienvenido de vuelta!',
                   style: TextStyle(
-                    fontSize: isDesktop ? 18 : 16,
+                    fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
                     color: Colors.white70,
                     fontWeight: FontWeight.w400,
                   ),
@@ -272,8 +261,10 @@ class _PaginaAdminState extends State<PaginaAdmin>
                 const SizedBox(height: 4),
                 Text(
                   auth.currentUser?.displayName ?? 'Administrador',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: isDesktop ? 28 : 24,
+                    fontSize: isDesktop ? 28 : (isTablet ? 22 : 20),
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -281,8 +272,10 @@ class _PaginaAdminState extends State<PaginaAdmin>
                 SizedBox(height: isDesktop ? 12 : 8),
                 Text(
                   'Controla y administra todos los aspectos de tu negocio desde este panel',
+                  maxLines: isDesktop ? 2 : 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: isDesktop ? 16 : 14,
+                    fontSize: isDesktop ? 16 : (isTablet ? 14 : 13),
                     color: Colors.white70,
                     fontWeight: FontWeight.w400,
                   ),
@@ -330,32 +323,14 @@ class _PaginaAdminState extends State<PaginaAdmin>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Herramientas de Administración',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1E293B),
-          ),
-        ),
         const SizedBox(height: 8),
-        const Text(
-          'Gestiona eficientemente cada módulo de tu sistema',
-          style: TextStyle(
-            fontSize: 16,
-            color: Color(0xFF64748B),
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-        const SizedBox(height: 32),
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: 3,
           crossAxisSpacing: 24,
-          mainAxisSpacing: 16, // Reducido el espacio vertical entre cards
-          childAspectRatio:
-              2.5, // Aumentado significativamente para cards más horizontales
+          mainAxisSpacing: 16,
+          childAspectRatio: 1.0,
           children: _buildAdminCards(context, true),
         ),
       ],
@@ -366,34 +341,22 @@ class _PaginaAdminState extends State<PaginaAdmin>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Herramientas',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1E293B),
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Selecciona una opción para comenzar',
-          style: TextStyle(
-            fontSize: 14,
-            color: Color(0xFF64748B),
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-        const SizedBox(height: 24),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: isTablet ? 3 : 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio:
-              isTablet ? 1.6 : 1.4, // Incrementado para tablet y móvil
-          children: _buildAdminCards(context, false),
-        ),
+        const SizedBox(height: 8),
+        LayoutBuilder(builder: (context, constraints) {
+          final crossCount = isTablet
+              ? (constraints.maxWidth > 900 ? 3 : 2)
+              : (constraints.maxWidth < 350 ? 2 : 2);
+          final aspect = 1.0;
+          return GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: crossCount,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: aspect,
+            children: _buildAdminCards(context, false),
+          );
+        }),
       ],
     );
   }
@@ -468,13 +431,12 @@ class _PaginaAdminState extends State<PaginaAdmin>
           duration: const Duration(milliseconds: 200),
           child: Container(
             padding: EdgeInsets.symmetric(
-              horizontal: isDesktop ? 20 : 16,
-              vertical: isDesktop ? 16 : 12, // Padding vertical más pequeño
+              horizontal: isDesktop ? 12 : 12,
+              vertical: isDesktop ? 16 : 16,
             ),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius:
-                  BorderRadius.circular(16), // Bordes menos redondeados
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
               boxShadow: [
                 BoxShadow(
@@ -484,18 +446,17 @@ class _PaginaAdminState extends State<PaginaAdmin>
                 ),
               ],
             ),
-            child: Row(
-              // Cambio a Row para layout horizontal
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icono a la izquierda
                 Container(
-                  padding: EdgeInsets.all(isDesktop ? 10 : 8),
+                  padding: EdgeInsets.all(isDesktop ? 16 : 14),
                   decoration: BoxDecoration(
                     gradient: data.gradient,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: data.gradient.colors.first.withOpacity(0.2),
+                        color: data.gradient.colors.first.withOpacity(0.15),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -503,48 +464,18 @@ class _PaginaAdminState extends State<PaginaAdmin>
                   ),
                   child: Icon(
                     data.icon,
-                    size: isDesktop ? 20 : 18,
+                    size: isDesktop ? 34 : 28,
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(width: 16),
-                // Contenido del texto
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        data.title,
-                        style: TextStyle(
-                          fontSize: isDesktop ? 16 : 14,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1E293B),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        data.subtitle,
-                        style: TextStyle(
-                          fontSize: isDesktop ? 12 : 11,
-                          color: const Color(0xFF64748B),
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Flecha a la derecha
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: data.gradient.colors.first.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(
-                    Icons.arrow_forward_ios,
-                    size: 12,
-                    color: data.gradient.colors.first,
+                const SizedBox(height: 12),
+                Text(
+                  data.title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: isDesktop ? 16 : 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1E293B),
                   ),
                 ),
               ],
