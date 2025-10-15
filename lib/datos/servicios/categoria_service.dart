@@ -8,12 +8,21 @@ class CategoriaService {
 
   /// Lee todas las categorías. Filtra por [tipo] si se especifica.
   Future<List<Categoria>> getCategorias({String? tipo}) async {
-    Query<Map<String, dynamic>> q = _col;
-    if (tipo != null) {
-      q = q.where('tipo', isEqualTo: tipo);
+    try {
+      Query<Map<String, dynamic>> q = _col;
+      if (tipo != null) {
+        q = q.where('tipo', isEqualTo: tipo);
+      }
+  final snapshot = await q.get();
+  return snapshot.docs.map((d) => Categoria.fromFirestore(d)).toList();
+    } on FirebaseException catch (e) {
+      // Si Firestore rechaza la lectura por permisos, devolvemos lista vacía en lugar
+      // de propagar la excepción para evitar que la UI se pare.
+      if (e.code == 'permission-denied') {
+        return [];
+      }
+      rethrow;
     }
-    final snap = await q.get();
-    return snap.docs.map((d) => Categoria.fromFirestore(d)).toList();
   }
 
   Future<void> addCategoria(Categoria c) async {

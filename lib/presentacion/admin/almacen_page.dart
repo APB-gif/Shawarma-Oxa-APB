@@ -1,11 +1,15 @@
 import 'dart:typed_data';
 import 'dart:math' as math;
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shawarma_pos_nuevo/datos/modelos/insumo.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:shawarma_pos_nuevo/utils/download_helper.dart';
 
 final GlobalKey<ScaffoldMessengerState> almacenMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
@@ -17,15 +21,18 @@ class AlmacenPage extends StatefulWidget {
   State<AlmacenPage> createState() => _AlmacenPageState();
 }
 
-class _AlmacenPageState extends State<AlmacenPage>
-    with TickerProviderStateMixin {
-  String _searchQuery = '';
-  String _sortBy = 'nombre';
+class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin {
+  late AnimationController _bannerController;
+  late AnimationController _progressController;
+  late AnimationController _waveController;
+  late AnimationController _agitationController;
+
+  // UI state
+  bool _isListView = false;
   bool _showOnlyCritical = false;
-  late final AnimationController _bannerController;
-  late final AnimationController _progressController;
-  late final AnimationController _waveController;
-  late final AnimationController _agitationController;
+  String _stockFilter = 'todos'; // 'todos', 'optimo', 'normal', 'minimo', 'critico'
+  String _sortBy = 'nombre';
+  String _searchQuery = '';
   bool _hasInitiallyLoaded = false;
 
   @override
@@ -33,7 +40,7 @@ class _AlmacenPageState extends State<AlmacenPage>
     super.initState();
     _bannerController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 800),
       lowerBound: 0.98,
       upperBound: 1.02,
     )..addStatusListener((status) {
@@ -43,18 +50,18 @@ class _AlmacenPageState extends State<AlmacenPage>
           _bannerController.forward();
         }
       });
-    
+
     _progressController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    
+
     // Controlador para el movimiento de olas (SOLO durante agitación)
     _waveController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
-    ); // SIN repeat - solo se activa manualmente
-    
+    );
+
     // Controlador para la agitación al deslizar (con curva de calma)
     _agitationController = AnimationController(
       vsync: this,
@@ -91,6 +98,33 @@ class _AlmacenPageState extends State<AlmacenPage>
     final colorScheme = Theme.of(context).colorScheme;
     
     return AppBar(
+      leading: Navigator.canPop(context)
+          ? Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Center(
+                child: Material(
+                  color: colorScheme.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 2,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => Navigator.of(context).maybePop(),
+                    child: const SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Center(
+                        child: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : null,
       backgroundColor: colorScheme.surface,
       surfaceTintColor: colorScheme.surfaceTint,
       elevation: 0,
@@ -109,44 +143,135 @@ class _AlmacenPageState extends State<AlmacenPage>
               size: 24,
             ),
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Almacén',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Almacén',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    letterSpacing: 0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Text(
-                'Gestión de insumos',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+                const SizedBox(height: 2),
+                Text(
+                  'Gestión de insumos',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
       actions: [
         if (isWideScreen) ...[
-          IconButton(
-            icon: Icon(_showOnlyCritical ? Icons.filter_alt : Icons.filter_alt_outlined),
-            tooltip: _showOnlyCritical ? 'Mostrar todos' : 'Solo críticos',
-            onPressed: () => setState(() => _showOnlyCritical = !_showOnlyCritical),
+          // filtro con menu desplegable (Todos/Óptimo/Normal/Mínimo/Crítico)
+          Tooltip(
+            message: 'Filtrar por estado: ${_stockFilterLabel(_stockFilter)}',
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: colorScheme.primary.withOpacity(0.18)),
+              ),
+              alignment: Alignment.center,
+              child: PopupMenuButton<String>(
+                tooltip: 'Filtrar por estado: ${_stockFilterLabel(_stockFilter)}',
+                padding: EdgeInsets.zero,
+                initialValue: _stockFilter,
+                onSelected: (value) {
+                  setState(() {
+                    _stockFilter = value;
+                    _showOnlyCritical = value == 'critico';
+                  });
+                },
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(value: 'todos', child: Text('Todos')),
+                  const PopupMenuItem(value: 'optimo', child: Text('Óptimo')),
+                  const PopupMenuItem(value: 'normal', child: Text('Normal')),
+                  const PopupMenuItem(value: 'minimo', child: Text('Mínimo')),
+                  const PopupMenuItem(value: 'critico', child: Text('Crítico')),
+                ],
+                child: Icon(Icons.filter_alt, color: colorScheme.primary),
+              ),
+            ),
           ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.sort_rounded),
-            tooltip: 'Ordenar',
-            onSelected: (value) => setState(() => _sortBy = value),
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'nombre', child: Text('Por nombre')),
-              const PopupMenuItem(value: 'stock', child: Text('Por stock')),
-              const PopupMenuItem(value: 'precio', child: Text('Por precio')),
-            ],
+          // ordenar con fondo
+          Tooltip(
+            message: 'Ordenar',
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: colorScheme.primary.withOpacity(0.18)),
+                ),
+                child: PopupMenuButton<String>(
+                  icon: Icon(Icons.sort_rounded, color: colorScheme.primary),
+                  onSelected: (value) => setState(() => _sortBy = value),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'nombre', child: Text('Por nombre')),
+                    const PopupMenuItem(value: 'stock', child: Text('Por stock')),
+                    const PopupMenuItem(value: 'precio', child: Text('Por precio')),
+                  ],
+                ),
+              ),
+          ),
+          // toggle vista (grid / lista)
+          Tooltip(
+            message: _isListView ? 'Vista en cuadrícula' : 'Vista en lista',
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: colorScheme.primary.withOpacity(0.18)),
+              ),
+              child: IconButton(
+                icon: Icon(_isListView ? Icons.grid_view_rounded : Icons.view_list_rounded,
+                    color: colorScheme.primary),
+                onPressed: () => setState(() => _isListView = !_isListView),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+                iconSize: 20,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
+          Tooltip(
+            message: 'Exportar críticos',
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: colorScheme.primary.withOpacity(0.18)),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.upload_file_rounded),
+                color: colorScheme.primary,
+                onPressed: () async => await _exportCriticalsAsText(context),
+              ),
+            ),
+          ),
           FilledButton.icon(
             onPressed: () => _mostrarFormularioInsumo(),
             icon: const Icon(Icons.add_rounded),
@@ -155,44 +280,121 @@ class _AlmacenPageState extends State<AlmacenPage>
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
           ),
         ] else ...[
-          IconButton(
-            icon: const Icon(Icons.search_rounded),
-            onPressed: () => _showSearchDialog(context),
+          // Botones en móvil con tamaño y decoración coherente
+          Tooltip(
+            message: 'Buscar',
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceVariant.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: colorScheme.outline.withOpacity(0.12)),
+              ),
+              child: IconButton(
+                icon: Icon(Icons.search_rounded, color: colorScheme.onSurfaceVariant),
+                onPressed: () => _showSearchDialog(context),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+                iconSize: 20,
+              ),
+            ),
           ),
-          PopupMenuButton(
-            icon: const Icon(Icons.more_vert_rounded),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'filter',
-                child: Row(
-                  children: [
-                    Icon(_showOnlyCritical ? Icons.filter_alt : Icons.filter_alt_outlined),
-                    const SizedBox(width: 8),
-                    Text(_showOnlyCritical ? 'Mostrar todos' : 'Solo críticos'),
-                  ],
-                ),
+          Tooltip(
+            message: 'Más opciones',
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceVariant.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: colorScheme.outline.withOpacity(0.12)),
               ),
-              const PopupMenuItem(
-                value: 'sort',
-                child: Row(
-                  children: [
-                    Icon(Icons.sort_rounded),
-                    SizedBox(width: 8),
-                    Text('Ordenar'),
+              alignment: Alignment.center,
+              // Important: no constraints here so the PopupMenuButton can position the menu overlay correctly
+              child: PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert_rounded, color: colorScheme.onSurfaceVariant),
+                  iconSize: 20,
+                  padding: EdgeInsets.zero,
+                  offset: const Offset(0, 44), // force the menu to appear below the button
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'filter_header',
+                      child: Row(
+                        children: [
+                          Icon(Icons.filter_alt, color: colorScheme.onSurfaceVariant),
+                          SizedBox(width: 8),
+                          Text('Filtrar por estado'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'toggle_view',
+                      child: Row(
+                        children: [
+                          Icon(_isListView ? Icons.grid_view_rounded : Icons.view_list_rounded, color: colorScheme.onSurfaceVariant),
+                          SizedBox(width: 8),
+                          Text(_isListView ? 'Ver en cuadrícula' : 'Ver en lista'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'sort',
+                      child: Row(
+                        children: [
+                          Icon(Icons.sort_rounded, color: colorScheme.onSurfaceVariant),
+                          SizedBox(width: 8),
+                          Text('Ordenar'),
+                        ],
+                      ),
+                    ),
+                      PopupMenuItem(
+                        value: 'export_criticos',
+                        child: Row(
+                          children: [
+                            Icon(Icons.upload_file_rounded, color: colorScheme.onSurfaceVariant),
+                            SizedBox(width: 8),
+                            Text('Exportar críticos'),
+                          ],
+                        ),
+                      ),
                   ],
+                  onSelected: (value) async {
+                    if (value == 'sort') {
+                      _showSortDialog(context);
+                    } else if (value == 'toggle_view') {
+                      setState(() => _isListView = !_isListView);
+                      } else if (value == 'export_criticos') {
+                        await _exportCriticalsAsText(context);
+                    } else if (value == 'filter_header') {
+                      // abrir un submenu modal para elegir el filtro — usaremos showMenu para mostrar las opciones
+                      final selected = await showMenu<String>(
+                        context: context,
+                        position: RelativeRect.fromLTRB(1000, 80, 10, 0),
+                        items: [
+                          const PopupMenuItem(value: 'todos', child: Text('Todos')),
+                          const PopupMenuItem(value: 'optimo', child: Text('Óptimo')),
+                          const PopupMenuItem(value: 'normal', child: Text('Normal')),
+                          const PopupMenuItem(value: 'minimo', child: Text('Mínimo')),
+                          const PopupMenuItem(value: 'critico', child: Text('Crítico')),
+                        ],
+                      );
+                      if (selected != null) {
+                        setState(() {
+                          _stockFilter = selected;
+                          _showOnlyCritical = selected == 'critico';
+                        });
+                      }
+                    }
+                  },
                 ),
-              ),
-            ],
-            onSelected: (value) {
-              if (value == 'filter') {
-                setState(() => _showOnlyCritical = !_showOnlyCritical);
-              } else if (value == 'sort') {
-                _showSortDialog(context);
-              }
-            },
+            ),
           ),
         ],
         const SizedBox(width: 8),
@@ -255,40 +457,76 @@ class _AlmacenPageState extends State<AlmacenPage>
     }
   }
 
+  String _stockFilterLabel(String key) {
+    switch (key) {
+      case 'optimo':
+        return 'Óptimo';
+      case 'normal':
+        return 'Normal';
+      case 'minimo':
+        return 'Mínimo';
+      case 'critico':
+        return 'Crítico';
+      default:
+        return 'Todos';
+    }
+  }
+
+  // Devuelve el estado del stock para un insumo: 'optimo'|'normal'|'minimo'|'critico'
+  String _getStockStatus(Insumo i) {
+    final actual = i.stockActual ?? i.stockTotal;
+    final minimo = i.stockMinimo;
+    final total = i.stockTotal;
+    // Debe coincidir con la lógica usada para mostrar la etiqueta en las cards
+    if (actual < minimo) return 'critico';
+    if (actual == minimo) return 'minimo';
+    if (actual >= total) return 'optimo';
+    return 'normal';
+  }
+
   Widget _buildSearchAndFilters(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: colorScheme.surface,
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+            color: colorScheme.outline.withOpacity(0.2),
             width: 1,
           ),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Buscar insumo por nombre...',
-                prefixIcon: const Icon(Icons.search_rounded),
-                filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Buscar insumo por nombre...',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    filled: true,
+                    fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                  onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
-              onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
-            ),
+            ],
           ),
+          const SizedBox(height: 12),
         ],
       ),
     );
   }
+
+  
 
   Widget _buildLoadingState() {
     return const Center(
@@ -356,6 +594,14 @@ class _AlmacenPageState extends State<AlmacenPage>
       }
     }
 
+    // Aplicar filtro por estado si se seleccionó uno distinto de 'todos'
+    if (_stockFilter != 'todos') {
+      insumos = insumos.where((i) {
+        final estado = _getStockStatus(i);
+        return estado == _stockFilter;
+      }).toList();
+    }
+
     if (insumos.isEmpty) {
       return _buildEmptyState(context);
     }
@@ -364,9 +610,225 @@ class _AlmacenPageState extends State<AlmacenPage>
       children: [
         if (totalCriticos > 0) _buildCriticalBanner(context, criticosBelow, criticosEqual),
         Expanded(
-          child: _buildResponsiveGrid(context, insumos, isWideScreen, isTablet),
+          child: _isListView ? _buildListView(context, insumos, isWideScreen) : _buildResponsiveGrid(context, insumos, isWideScreen, isTablet),
         ),
       ],
+    );
+  }
+
+  // Exporta los insumos críticos como texto, lo copia al portapapeles y muestra un diálogo con el texto
+  Future<void> _exportCriticalsAsText(BuildContext context) async {
+    try {
+      // Obtener snapshot actual directamente desde Firestore para reflejar el estado más reciente
+      final snapshot = await FirebaseFirestore.instance.collection('insumos').get();
+      final all = snapshot.docs.map((d) => Insumo.fromMap(d.id, d.data())).toList();
+      final criticos = all.where((i) {
+        final actual = i.stockActual ?? i.stockTotal;
+        return actual <= i.stockMinimo;
+      }).toList();
+
+      if (criticos.isEmpty) {
+        // Use global messenger key to avoid calling ScaffoldMessenger.of(context) from
+        // contexts that might not have a Scaffold descendant (eg. bottom sheets / dialogs).
+        almacenMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('No hay insumos críticos para exportar.')));
+        return;
+      }
+
+      final buffer = StringBuffer();
+      buffer.writeln('Insumos críticos (${criticos.length}):');
+      buffer.writeln();
+      for (final i in criticos) {
+        final actual = i.stockActual ?? i.stockTotal;
+  buffer.writeln('- ${i.nombre} — ${actual.toInt()} disponibles — MÍNIMO: ${i.stockMinimo.toInt()}');
+      }
+
+      final text = buffer.toString();
+
+      // No hacer descarga automática en web: dejamos que el usuario elija 'Descargar'
+      // desde el BottomSheet. En plataformas no-web copiamos al portapapeles como antes.
+      if (!kIsWeb) {
+        try {
+          await Clipboard.setData(ClipboardData(text: text));
+        } catch (e) {
+          almacenMessengerKey.currentState?.showSnackBar(SnackBar(content: Text('No se pudo copiar al portapapeles: $e')));
+        }
+      }
+
+      // Mostrar BottomSheet con el texto y acciones Copiar / Compartir / Cerrar (mejor UX móvil)
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (ctx) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        const Expanded(child: Text('Insumos críticos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                        IconButton(onPressed: () => Navigator.of(ctx).pop(), icon: const Icon(Icons.close_rounded)),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(text),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                              child: OutlinedButton.icon(
+                            onPressed: () async {
+                              try {
+                                await Clipboard.setData(ClipboardData(text: text));
+                                almacenMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Texto copiado al portapapeles')));
+                              } catch (e) {
+                                almacenMessengerKey.currentState?.showSnackBar(SnackBar(content: Text('Error copiando al portapapeles: $e')));
+                              }
+                            },
+                            icon: const Icon(Icons.copy_rounded),
+                            label: const Text('Copiar'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Mostrar botón de descarga SOLO en web. En dispositivos móviles/desktop
+                        // eliminamos la opción de "Descargar" y dejamos Copiar/Compartir.
+                        if (kIsWeb)
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                try {
+                                  // Descargar el archivo (web iniciará descarga)
+                                  await downloadTextFile('insumos_criticos.txt', text);
+                                  almacenMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Descarga iniciada: insumos_criticos.txt')));
+                                } catch (e) {
+                                  almacenMessengerKey.currentState?.showSnackBar(SnackBar(content: Text('No se pudo descargar/guardar: $e')));
+                                }
+                              },
+                              icon: const Icon(Icons.download_rounded),
+                              label: const Text('Descargar'),
+                            ),
+                          ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () async {
+                              try {
+                                await Share.share(text);
+                              } catch (e) {
+                                almacenMessengerKey.currentState?.showSnackBar(SnackBar(content: Text('No se pudo compartir: $e')));
+                              }
+                            },
+                            icon: const Icon(Icons.share_rounded),
+                            label: const Text('Compartir'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error exportando: $e')));
+      }
+    }
+  }
+
+  // Nueva vista en lista detallada
+  Widget _buildListView(BuildContext context, List<Insumo> insumos, bool isWideScreen) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      itemCount: insumos.length,
+      separatorBuilder: (c, i) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final insumo = insumos[index];
+        final actual = insumo.stockActual ?? insumo.stockTotal;
+    // Usar la misma lógica que las cards para definir estado y color
+    final estado = _getStockStatus(insumo);
+    final statusColor = estado == 'critico'
+      ? colorScheme.error
+      : (estado == 'minimo'
+        ? Colors.amber.shade700
+        : (estado == 'optimo' ? Colors.green : colorScheme.primary));
+    final labelEstado = estado == 'critico'
+      ? 'CRÍTICO'
+      : (estado == 'minimo'
+        ? 'MÍNIMO'
+        : (estado == 'optimo' ? 'ÓPTIMO' : 'NORMAL'));
+
+        return Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 1,
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            leading: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.12),
+              ),
+              child: insumo.icono != null && insumo.icono!.isNotEmpty
+                  ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(insumo.icono!, fit: BoxFit.cover))
+                  : Icon(Icons.inventory_2_outlined, color: colorScheme.onSurfaceVariant),
+            ),
+            title: Text(insumo.nombre, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            subtitle: Text('${insumo.unidad} • ${actual.toInt()} disponibles', style: theme.textTheme.bodySmall),
+            trailing: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 56, minWidth: 64),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('S/ ${insumo.precioUnitario.toStringAsFixed(2)}', style: theme.textTheme.bodySmall),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Container(
+                      constraints: const BoxConstraints(maxHeight: 28),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: statusColor.withOpacity(0.18)),
+                      ),
+                      child: Text(
+                        labelEstado,
+                        style: theme.textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.bold, fontSize: 11),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            onTap: () => _mostrarFormularioInsumo(insumo: insumo),
+          ),
+        );
+      },
     );
   }
 
@@ -419,58 +881,52 @@ class _AlmacenPageState extends State<AlmacenPage>
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
         final hayBelow = criticosBelow.isNotEmpty;
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isMobile = screenWidth < 600; // ajustar breakpoints si es necesario
+        final horizontalMargin = isMobile ? 12.0 : 16.0;
+        final verticalMargin = isMobile ? 8.0 : 12.0;
+        final horizontalPadding = isMobile ? 12.0 : 18.0;
+        final verticalPadding = isMobile ? 12.0 : 16.0;
+        final iconSize = isMobile ? 20.0 : 28.0;
+        final titleFontSize = isMobile ? 14.0 : 16.0;
+        final subtitleFontSize = isMobile ? 12.0 : 13.0;
+        final chipCompact = isMobile;
         
         return Transform.scale(
           scale: 1 + (_bannerController.value - 1) * 0.03,
           child: Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(20),
+            margin: EdgeInsets.symmetric(horizontal: horizontalMargin, vertical: verticalMargin),
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: hayBelow
-                    ? [
-                        colorScheme.errorContainer.withOpacity(0.3),
-                        colorScheme.errorContainer.withOpacity(0.1),
-                      ]
-                    : [
-                        Colors.amber.withOpacity(0.2),
-                        Colors.amber.withOpacity(0.05),
-                      ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
+              color: hayBelow ? colorScheme.errorContainer.withOpacity(0.18) : Colors.amber.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
               border: Border.all(
-                color: hayBelow 
-                    ? colorScheme.error.withOpacity(0.3)
-                    : Colors.amber.withOpacity(0.3),
+                color: hayBelow ? colorScheme.error.withOpacity(0.25) : Colors.amber.withOpacity(0.25),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: colorScheme.shadow.withOpacity(0.1),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: colorScheme.shadow.withOpacity(isMobile ? 0.04 : 0.06),
+                  blurRadius: isMobile ? 6 : 10,
+                  offset: Offset(0, isMobile ? 2 : 4),
                 ),
               ],
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(isMobile ? 8 : 10),
                   decoration: BoxDecoration(
-                    color: hayBelow 
-                        ? colorScheme.error.withOpacity(0.15)
-                        : Colors.amber.withOpacity(0.15),
-                    shape: BoxShape.circle,
+                    color: hayBelow ? colorScheme.error.withOpacity(0.14) : Colors.amber.withOpacity(0.14),
+                    borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
                   ),
                   child: Icon(
                     hayBelow ? Icons.error_outline_rounded : Icons.warning_amber_rounded,
                     color: hayBelow ? colorScheme.error : Colors.amber.shade700,
-                    size: 32,
+                    size: iconSize,
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: isMobile ? 10 : 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -478,19 +934,19 @@ class _AlmacenPageState extends State<AlmacenPage>
                       Text(
                         'Alerta de inventario',
                         style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                           color: hayBelow ? colorScheme.error : Colors.amber.shade800,
+                          fontSize: titleFontSize,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: isMobile ? 2 : 4),
                       Text(
                         totalCriticos == 1
                             ? '1 insumo requiere atención'
                             : '$totalCriticos insumos requieren atención',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: hayBelow 
-                              ? colorScheme.error.withOpacity(0.8)
-                              : Colors.amber.shade700,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: hayBelow ? colorScheme.error.withOpacity(0.85) : Colors.amber.shade700,
+                          fontSize: subtitleFontSize,
                         ),
                       ),
                     ],
@@ -499,20 +955,22 @@ class _AlmacenPageState extends State<AlmacenPage>
                 Row(
                   children: [
                     if (criticosBelow.isNotEmpty) ...[
-                      _buildCriticalChip(
+                      _buildModernChip(
                         context,
                         '${criticosBelow.length}',
                         'Agotados',
                         colorScheme.error,
+                        compact: chipCompact,
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: isMobile ? 6 : 8),
                     ],
                     if (criticosEqual.isNotEmpty)
-                      _buildCriticalChip(
+                      _buildModernChip(
                         context,
                         '${criticosEqual.length}',
                         'Mínimo',
                         Colors.amber.shade700,
+                        compact: chipCompact,
                       ),
                   ],
                 ),
@@ -524,36 +982,51 @@ class _AlmacenPageState extends State<AlmacenPage>
     );
   }
 
-  Widget _buildCriticalChip(BuildContext context, String count, String label, Color color) {
+  Widget _buildModernChip(BuildContext context, String count, String label, Color color, {bool compact = false}) {
+    final theme = Theme.of(context);
+    final horizontal = compact ? 8.0 : 10.0;
+    final vertical = compact ? 6.0 : 6.0;
+    final radius = compact ? 10.0 : 12.0;
+    final titleSize = compact ? (theme.textTheme.titleSmall?.fontSize ?? 14) - 2 : theme.textTheme.titleSmall?.fontSize;
+    final labelSize = compact ? 10.0 : 11.0;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: compact ? 4 : 6,
+            offset: const Offset(0, 2),
+          )
+        ],
+        border: Border.all(color: color.withOpacity(0.18), width: 1),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             count,
-            style: TextStyle(
+            style: theme.textTheme.titleSmall?.copyWith(
               color: color,
-              fontSize: 16,
               fontWeight: FontWeight.bold,
+              fontSize: titleSize,
             ),
           ),
           Text(
             label,
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: color.withOpacity(0.9),
+              fontSize: labelSize,
             ),
           ),
         ],
       ),
     );
   }
+
+  // Nota: la versión moderna de los chips se implementa en _buildModernChip
 
   Widget _buildResponsiveGrid(BuildContext context, List<Insumo> insumos, bool isWideScreen, bool isTablet) {
     final screenWidth = MediaQuery.of(context).size.width;

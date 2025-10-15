@@ -40,9 +40,9 @@ String _metodoKey(PaymentMethod m) {
     case PaymentMethod.cash:
       return 'Efectivo';
     case PaymentMethod.izipayCard:
-      return 'Tarjeta';
+      return 'Ruben';
     case PaymentMethod.yapePersonal:
-      return 'Yape Personal';
+      return 'Aharhel';
     default:
       return m.displayName;
   }

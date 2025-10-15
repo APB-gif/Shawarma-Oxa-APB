@@ -8,8 +8,13 @@ class AlmacenService extends ChangeNotifier {
 
   // Obtiene todos los productos en el almacén
   Future<List<Producto>> obtenerProductosDelAlmacen() async {
-    final snapshot = await _db.collection('productos').get();
-    return snapshot.docs.map((doc) => Producto.fromFirestore(doc)).toList();
+    try {
+      final snapshot = await _db.collection('productos').get();
+      return snapshot.docs.map((d) => Producto.fromFirestore(d)).toList();
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') return <Producto>[];
+      rethrow;
+    }
   }
 
   // Obtiene un solo producto del almacén por su ID
