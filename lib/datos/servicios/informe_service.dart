@@ -337,8 +337,31 @@ class InformeService with ChangeNotifier {
     }).toList();
 
     // --- CAJAS (normalizamos números antes de usar el modelo) ---
+    // Empezamos con las cajas referenciadas por ventas (si las hay)
     final Set<String> cajaIds =
         ventasResult.map((v) => v.cajaId).where((id) => id.isNotEmpty).toSet();
+
+    // Además, buscar cajas que hayan sido cerradas dentro del rango
+    // (esto incluye cajas vacías que se cerraron sin ventas)
+    try {
+      final cajasClosedQuery = _db
+          .collection('cajas')
+          .where('fechaCierre', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('fechaCierre', isLessThanOrEqualTo: Timestamp.fromDate(endInclusive));
+
+      QuerySnapshot<Map<String, dynamic>> cajasClosedSnap =
+          await cajasClosedQuery.get(const GetOptions(source: Source.cache));
+      if (cajasClosedSnap.docs.isEmpty || forceRefresh) {
+        cajasClosedSnap =
+            await cajasClosedQuery.get(const GetOptions(source: Source.server));
+      }
+
+      for (final doc in cajasClosedSnap.docs) {
+        if (doc.id.isNotEmpty) cajaIds.add(doc.id);
+      }
+    } catch (_) {
+      // Si la consulta por fecha falla por esquemas antiguos, no interrumpimos
+    }
 
     final List<Caja> cajasResult = [];
     if (cajaIds.isNotEmpty) {

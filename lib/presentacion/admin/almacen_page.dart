@@ -639,7 +639,7 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
       buffer.writeln();
       for (final i in criticos) {
         final actual = i.stockActual ?? i.stockTotal;
-  buffer.writeln('- ${i.nombre} — ${actual.toInt()} disponibles — MÍNIMO: ${i.stockMinimo.toInt()}');
+  buffer.writeln('- ${i.nombre} — ${actual.toStringAsFixed(2)} disponibles — MÍNIMO: ${i.stockMinimo.toStringAsFixed(2)}');
       }
 
       final text = buffer.toString();
@@ -797,7 +797,7 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                   : Icon(Icons.inventory_2_outlined, color: colorScheme.onSurfaceVariant),
             ),
             title: Text(insumo.nombre, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            subtitle: Text('${insumo.unidad} • ${actual.toInt()} disponibles', style: theme.textTheme.bodySmall),
+            subtitle: Text('${insumo.unidad} • ${actual.toStringAsFixed(2)} disponibles', style: theme.textTheme.bodySmall),
             trailing: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 56, minWidth: 64),
               child: Column(
@@ -1558,7 +1558,7 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            '${(actual * animationProgress).toInt()}',
+                            '${(actual * animationProgress).toStringAsFixed(2)}',
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
@@ -1646,21 +1646,21 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
           children: [
             _buildIndicator(
               'Mín',
-              '${minimo.toInt()}',
+              '${minimo.toStringAsFixed(2)}',
               Colors.red,
               theme,
               compact,
             ),
             _buildIndicator(
               'Total',
-              '${total.toInt()}',
+              '${total.toStringAsFixed(2)}',
               colorScheme.onSurfaceVariant,
               theme,
               compact,
             ),
             _buildIndicator(
               'Usado',
-              '${(total - actual).toInt()}',
+              '${(total - actual).toStringAsFixed(2)}',
               Colors.grey,
               theme,
               compact,

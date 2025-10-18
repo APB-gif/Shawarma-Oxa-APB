@@ -26,12 +26,14 @@ void mostrarNotificacionElegante(
   final messenger = messengerKey.currentState;
   final snackBar = SnackBar(
     backgroundColor: colorFondo,
-    behavior: SnackBarBehavior.floating,
+    // Usar comportamiento fijo por defecto para evitar que el SnackBar
+    // se muestre fuera de la pantalla cuando hay widgets en el fondo
+    // (bottomNavigationBar, persistentFooterButtons, etc.). Si se
+    // desea el estilo flotante, explícitamente pasar behavior al invocar.
+    behavior: SnackBarBehavior.fixed,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12.0),
+      borderRadius: BorderRadius.circular(4.0),
     ),
-    margin: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0,
-        80.0), // margen inferior para no tapar la barra de navegación
     dismissDirection: DismissDirection.down,
     elevation: 4.0,
     content: Row(

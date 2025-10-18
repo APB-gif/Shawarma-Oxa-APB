@@ -1,0 +1,142 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    // ===== Helpers =====
+    function isSignedIn() { return request.auth != null; }
+    function isSelf(uid)  { return isSignedIn() && request.auth.uid == uid; }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(db)/documents/users/$(request.auth.uid))
+        && get(/databases/$(db)/documents/users/$(request.auth.uid)).data.rol == 'administrador';
+    }
+
+    function isActiveOperator(cajaId) {
+      return isSignedIn()
+        && exists(/databases/$(db)/documents/cajas_live/$(cajaId))
+        && get(/databases/$(db)/documents/cajas_live/$(cajaId)).data.operadoresActivos != null
+        && request.auth.uid in get(/databases/$(db)/documents/cajas_live/$(cajaId)).data.operadoresActivos;
+    }
+
+    // ---------- users ----------
+    match /users/{uid} {
+      allow create: if isSelf(uid)
+                    && request.resource.data.uid == uid
+                    && request.resource.data.email == request.auth.token.email;
+      allow read:   if isSignedIn();
+      allow update: if (
+                       isSelf(uid)
+                       && request.resource.data.diff(resource.data).changedKeys()
+                            .hasOnly(['nombre','photoUrl'])
+                       && request.resource.data.rol   == resource.data.rol
+                       && request.resource.data.uid   == resource.data.uid
+                       && request.resource.data.email == resource.data.email
+                     ) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ---------- ventas (raíz) ----------
+    match /ventas/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (
+        request.resource.data.usuarioId == request.auth.uid ||
+        request.resource.data.createdBy == request.auth.uid
+      );
+      allow update: if isSignedIn() && (
+        resource.data.usuarioId == request.auth.uid ||
+        resource.data.createdBy == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // ---------- cajas (cierres) ----------
+    match /cajas/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // subcolecciones bajo /cajas/*
+    match /cajas/{id}/{sub=**} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // ---------- catálogo ----------
+    match /productos/{doc=**}  { 
+      allow read: if isSignedIn(); 
+      allow write: if isSignedIn();
+    }
+    match /categorias/{doc=**} { 
+      allow read: if isSignedIn(); 
+      allow write: if isSignedIn();
+    }
+
+    // ---------- recetas ----------
+    match /recetas/{doc=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ---------- gastos ----------
+    match /gastos/{doc} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---------- insumos ----------
+    match /insumos/{doc=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ---------- configuración (estado compartido) ----------
+    // Incluye: estado de salsa de ajo, configuraciones globales, etc.
+    match /configuracion/{configId} {
+      // Cualquier usuario autenticado puede leer la configuración
+      allow read: if isSignedIn();
+      
+      // Cualquier usuario autenticado puede escribir (actualizar estado de salsa, etc.)
+      // Si quieres restringir solo a ciertos roles, cambia a: if isAdmin()
+      allow write: if isSignedIn();
+      
+      // Solo admins pueden eliminar configuraciones
+      allow delete: if isAdmin();
+    }
+
+    // ========== espejo en vivo ==========
+    match /cajas_live/{cajaId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin() || isSignedIn();
+
+      // --- comandos ---
+      match /commands/{cmdId} {
+        allow read: if isSignedIn();
+
+        allow create: if isAdmin() || isActiveOperator(cajaId);
+
+        allow update: if isSignedIn()
+                      && request.resource.data.diff(resource.data).changedKeys()
+                           .hasOnly(['status','error','appliedAt'])
+                      && (request.resource.data.status == 'applied'
+                          || request.resource.data.status == 'error');
+
+        allow delete: if isAdmin() || isActiveOperator(cajaId);
+      }
+
+      // --- buffers para historial ---
+      match /ventas_buffer/{ventaId} {
+        allow read: if isSignedIn();
+        allow create, update, delete: if isActiveOperator(cajaId) || isAdmin();
+      }
+      match /ventas_eliminadas_buffer/{ventaId} {
+        allow read: if isSignedIn();
+        allow create, update, delete: if isActiveOperator(cajaId) || isAdmin();
+      }
+    }
+  }
+}

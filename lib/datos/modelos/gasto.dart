@@ -39,6 +39,7 @@ class GastoItem {
 class Gasto {
   final String? id;
   final String? cajaId; // para compatibilidad si luego quieres asociarlo a una caja
+  final String? tipo; // p.ej. 'insumos_apertura'
   final DateTime fecha;
   final String proveedor;
   final String descripcion;
@@ -51,6 +52,7 @@ class Gasto {
   const Gasto({
     this.id,
     this.cajaId,
+    this.tipo,
     required this.fecha,
     required this.proveedor,
     required this.descripcion,
@@ -64,6 +66,7 @@ class Gasto {
   Gasto copyWith({
     String? id,
     String? cajaId,
+    String? tipo,
     DateTime? fecha,
     String? proveedor,
     String? descripcion,
@@ -76,6 +79,7 @@ class Gasto {
       Gasto(
         id: id ?? this.id,
         cajaId: cajaId ?? this.cajaId,
+        tipo: tipo ?? this.tipo,
         fecha: fecha ?? this.fecha,
         proveedor: proveedor ?? this.proveedor,
         descripcion: descripcion ?? this.descripcion,
@@ -89,6 +93,7 @@ class Gasto {
   Map<String, dynamic> toJson() => {
         'id': id,
         'cajaId': cajaId,
+    'tipo': tipo,
         'fecha': fecha.toIso8601String(),
         'proveedor': proveedor,
         'descripcion': descripcion,
@@ -102,6 +107,7 @@ class Gasto {
   factory Gasto.fromJson(Map<String, dynamic> json) => Gasto(
         id: json['id']?.toString(),
         cajaId: json['cajaId']?.toString(),
+    tipo: json['tipo']?.toString(),
         fecha: DateTime.tryParse(json['fecha']?.toString() ?? '') ?? DateTime.now(),
         proveedor: json['proveedor']?.toString() ?? '',
         descripcion: json['descripcion']?.toString() ?? '',
@@ -132,6 +138,7 @@ class Gasto {
     return {
       if (id != null) 'id': id,
       if (cajaId != null) 'cajaId': cajaId,
+      if (tipo != null) 'tipo': tipo,
       'fecha': fecha,
       'proveedor': proveedor,
       'descripcion': descripcion,

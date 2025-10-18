@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -43,6 +45,9 @@ class PedidoPendiente {
   });
 }
 
+    // Nota: la funcionalidad de registrar gasto de insumos por apertura ahora
+    // se realiza desde el diálogo centralizado en `gasto_apertura_dialog.dart`
+    
 class PaginaVentas extends StatefulWidget {
   const PaginaVentas({super.key});
 
@@ -61,6 +66,18 @@ class _PaginaVentasState extends State<PaginaVentas> {
   bool _isLoading = true;
   Categoria? _selectedCategory;
 
+  // Estado local de salsa: lista de potes con fracción individual
+  // Cada pote tiene: id, fracción (0.0-1.0)
+  List<Map<String, dynamic>> _salsaPotes = [
+    {'id': 1, 'fraccion': 1.0},
+    {'id': 2, 'fraccion': 1.0},
+    {'id': 3, 'fraccion': 1.0},
+  ];
+  int _nextPoteId = 4;
+  
+  // Listener de Firestore para sincronización en tiempo real
+  StreamSubscription<DocumentSnapshot>? _salsaSubscription;
+
   // Carrito y pendientes
   final List<ItemCarrito> _cart = [];
   final List<PedidoPendiente> _pedidosPendientes = [];
@@ -70,6 +87,495 @@ class _PaginaVentasState extends State<PaginaVentas> {
   void initState() {
     super.initState();
     _cargarDatosIniciales();
+    _loadSalsaEstado();
+  }
+
+  @override
+  void dispose() {
+    _salsaSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// Carga el estado de salsa desde Firestore y configura listener en tiempo real
+  Future<void> _loadSalsaEstado() async {
+    try {
+      final docRef = FirebaseFirestore.instance.collection('configuracion').doc('salsa_de_ajo');
+      
+      // Configurar listener en tiempo real
+      _salsaSubscription = docRef.snapshots().listen((snapshot) {
+        if (!mounted) return;
+        
+        if (snapshot.exists) {
+          try {
+            final data = snapshot.data();
+            if (data != null && data['potes'] != null) {
+              final List<dynamic> potesData = data['potes'];
+              final potes = potesData.map((p) => Map<String, dynamic>.from(p as Map)).toList();
+              final maxId = potes.fold<int>(0, (max, p) => (p['id'] as int) > max ? (p['id'] as int) : max);
+              
+              setState(() {
+                _salsaPotes = potes;
+                _nextPoteId = maxId + 1;
+              });
+            }
+          } catch (e) {
+            print('Error al parsear datos de salsa: $e');
+          }
+        } else {
+          // Si no existe el documento, crearlo con valores por defecto
+          _saveSalsaEstado();
+        }
+      }, onError: (error) {
+        print('Error en listener de salsa: $error');
+      });
+    } catch (e) {
+      print('Error al configurar listener de salsa: $e');
+    }
+  }
+
+  /// Guarda el estado de salsa en Firestore (visible para todos los dispositivos)
+  Future<void> _saveSalsaEstado() async {
+    try {
+      final docRef = FirebaseFirestore.instance.collection('configuracion').doc('salsa_de_ajo');
+      await docRef.set({
+        'potes': _salsaPotes,
+        'ultimaActualizacion': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      if (mainScaffoldContext != null) {
+        mostrarNotificacionElegante(
+          mainScaffoldContext!,
+          'Error al guardar estado de salsa: $e',
+          esError: true,
+          messengerKey: principalMessengerKey,
+        );
+      }
+    }
+  }
+
+  Future<void> _showSalsaDialog() async {
+    // Copiar estado actual para editar
+    final tmpPotes = _salsaPotes.map((p) => Map<String, dynamic>.from(p)).toList();
+    int tmpNextId = _nextPoteId;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          elevation: 8,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 500,
+              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header con gradiente
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        theme.colorScheme.primary,
+                        theme.colorScheme.primaryContainer,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.invert_colors_rounded,
+                          color: theme.colorScheme.onPrimary,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Estado de Salsa de ajo',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onPrimary,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Control de potes disponibles',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: theme.colorScheme.onPrimary.withOpacity(0.9),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        icon: Icon(Icons.close_rounded, color: theme.colorScheme.onPrimary),
+                        tooltip: 'Cerrar',
+                      ),
+                    ],
+                  ),
+                ),
+                // Contenido scrollable
+                Flexible(
+                  child: StatefulBuilder(
+                    builder: (ctx2, setStateDialog) => SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Instrucción
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: theme.colorScheme.primary.withOpacity(0.2),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.cloud_sync_rounded,
+                                  color: theme.colorScheme.primary,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Sincronizado en tiempo real • Visible desde cualquier dispositivo',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onSurface.withOpacity(0.8),
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // Lista de potes
+                          ...tmpPotes.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final pote = entry.value;
+                            final poteId = pote['id'] as int;
+                            final fraccion = (pote['fraccion'] as num).toDouble();
+                            final porcentaje = (fraccion * 100).toInt();
+                            
+                            // Determinar color según porcentaje
+                            Color poteColor;
+                            Color borderColor;
+                            IconData iconData;
+                            String estadoText;
+                            
+                            if (porcentaje == 0) {
+                              poteColor = Colors.red.shade100;
+                              borderColor = Colors.red.shade600;
+                              iconData = Icons.cancel_rounded;
+                              estadoText = 'Vacío';
+                            } else if (porcentaje == 100) {
+                              poteColor = Colors.green.shade100;
+                              borderColor = Colors.green.shade600;
+                              iconData = Icons.check_circle_rounded;
+                              estadoText = 'Lleno';
+                            } else {
+                              poteColor = Colors.orange.shade100;
+                              borderColor = Colors.orange.shade600;
+                              iconData = Icons.pie_chart_rounded;
+                              estadoText = '$porcentaje%';
+                            }
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: poteColor.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: borderColor, width: 2),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Header del pote
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 50,
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          color: poteColor,
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: borderColor, width: 2),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: borderColor.withOpacity(0.3),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Icon(iconData, color: borderColor, size: 28),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Pote $poteId',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: theme.colorScheme.onSurface,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              estadoText,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: borderColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Botón eliminar (solo si hay más de 1 pote)
+                                      if (tmpPotes.length > 1)
+                                        IconButton(
+                                          onPressed: () {
+                                            setStateDialog(() {
+                                              tmpPotes.removeAt(index);
+                                            });
+                                          },
+                                          icon: Icon(Icons.delete_outline_rounded, color: theme.colorScheme.error),
+                                          tooltip: 'Eliminar pote',
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  // Slider de fracción
+                                  SliderTheme(
+                                    data: SliderTheme.of(ctx2).copyWith(
+                                      activeTrackColor: borderColor,
+                                      inactiveTrackColor: theme.colorScheme.surfaceVariant,
+                                      thumbColor: borderColor,
+                                      overlayColor: borderColor.withOpacity(0.2),
+                                      trackHeight: 6,
+                                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                                    ),
+                                    child: Slider(
+                                      value: fraccion,
+                                      onChanged: (v) {
+                                        setStateDialog(() {
+                                          tmpPotes[index]['fraccion'] = v;
+                                        });
+                                      },
+                                      min: 0.0,
+                                      max: 1.0,
+                                      divisions: 20,
+                                    ),
+                                  ),
+                                  // Marcadores de porcentaje
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text('0%', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                                        Text('25%', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                                        Text('50%', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                                        Text('75%', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                                        Text('100%', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                                      ],
+                                    ),
+                                  ),
+                                  // Botones rápidos
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      _QuickButton(
+                                        label: 'Vacío',
+                                        icon: Icons.remove_circle_outline,
+                                        color: Colors.red,
+                                        onTap: () => setStateDialog(() => tmpPotes[index]['fraccion'] = 0.0),
+                                      ),
+                                      _QuickButton(
+                                        label: '1/4',
+                                        icon: Icons.pie_chart_outline,
+                                        color: Colors.orange,
+                                        onTap: () => setStateDialog(() => tmpPotes[index]['fraccion'] = 0.25),
+                                      ),
+                                      _QuickButton(
+                                        label: '1/2',
+                                        icon: Icons.donut_small,
+                                        color: Colors.amber,
+                                        onTap: () => setStateDialog(() => tmpPotes[index]['fraccion'] = 0.5),
+                                      ),
+                                      _QuickButton(
+                                        label: '3/4',
+                                        icon: Icons.pie_chart,
+                                        color: Colors.lightGreen,
+                                        onTap: () => setStateDialog(() => tmpPotes[index]['fraccion'] = 0.75),
+                                      ),
+                                      _QuickButton(
+                                        label: 'Lleno',
+                                        icon: Icons.check_circle,
+                                        color: Colors.green,
+                                        onTap: () => setStateDialog(() => tmpPotes[index]['fraccion'] = 1.0),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 12),
+                          // Botón agregar pote
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                setStateDialog(() {
+                                  // Recalcular el siguiente ID basado en los potes existentes
+                                  final maxId = tmpPotes.fold<int>(0, (max, p) => (p['id'] as int) > max ? (p['id'] as int) : max);
+                                  final nuevoId = maxId + 1;
+                                  tmpPotes.add({'id': nuevoId, 'fraccion': 1.0});
+                                  tmpNextId = nuevoId + 1;
+                                });
+                              },
+                              icon: const Icon(Icons.add_circle_outline_rounded),
+                              label: const Text('Agregar otro pote'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                side: BorderSide(color: theme.colorScheme.primary, width: 2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Resumen
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.secondaryContainer.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.assessment_rounded,
+                                  color: theme.colorScheme.secondary,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Total disponible',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${tmpPotes.fold<double>(0.0, (sum, p) => sum + (p['fraccion'] as num).toDouble()).toStringAsFixed(2)} potes',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: theme.colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Footer con botones
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    border: Border(
+                      top: BorderSide(
+                        color: theme.colorScheme.outline.withOpacity(0.2),
+                      ),
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                        child: const Text('Cancelar'),
+                      ),
+                      const SizedBox(width: 10),
+                      FilledButton.icon(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        icon: const Icon(Icons.check_circle_rounded, size: 18),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                        label: const Text('Guardar'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    
+    if (result == true) {
+      setState(() {
+        _salsaPotes = tmpPotes;
+        _nextPoteId = tmpNextId;
+      });
+      await _saveSalsaEstado();
+    }
   }
 
   /// Carga categorías y productos una sola vez, y filtra SOLO ventas.
@@ -294,6 +800,7 @@ class _PaginaVentasState extends State<PaginaVentas> {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (ctx) {
+        final theme = Theme.of(ctx);
         return StatefulBuilder(builder: (context, modalSetState) {
           return DraggableScrollableSheet(
             expand: false,
@@ -301,65 +808,301 @@ class _PaginaVentasState extends State<PaginaVentas> {
             minChildSize: 0.4,
             maxChildSize: 0.9,
             builder: (_, controller) {
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text('Pedidos Pendientes',
-                        style: Theme.of(context).textTheme.titleLarge),
-                  ),
-                  Expanded(
-                    child: _pedidosPendientes.isEmpty
-                        ? const Center(child: Text('No hay pedidos guardados.'))
-                        : ListView.builder(
-                            controller: controller,
-                            itemCount: _pedidosPendientes.length,
-                            itemBuilder: (context, index) {
-                              final pedido = _pedidosPendientes[index];
-                              return Card(
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 8.0, vertical: 4.0),
-                                clipBehavior: Clip.antiAlias,
-                                child: ExpansionTile(
-                                  title: Text(pedido.nombre,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16)),
-                                  subtitle: Text(
-                                    'S/ ${pedido.subtotal.toStringAsFixed(2)} - ${DateFormat('h:mm a').format(pedido.fecha)}',
+              return Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Column(
+                  children: [
+                    // Header con gradiente
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            theme.colorScheme.primary,
+                            theme.colorScheme.primary.withOpacity(0.8),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      child: SafeArea(
+                        bottom: false,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.inventory_2_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Pedidos Pendientes',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      TextButton(
-                                          onPressed: () =>
-                                              _loadPendingOrder(pedido),
-                                          child: const Text('Reanudar')),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline,
-                                            color: Colors.redAccent),
-                                        onPressed: () {
-                                          modalSetState(() {
-                                            _pedidosPendientes.removeAt(index);
-                                          });
-                                          setState(() {});
-                                        },
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${_pedidosPendientes.length} ${_pedidosPendientes.length == 1 ? 'pedido guardado' : 'pedidos guardados'}',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              icon: const Icon(Icons.close_rounded, color: Colors.white),
+                              tooltip: 'Cerrar',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    // Contenido
+                    Expanded(
+                      child: _pedidosPendientes.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade200,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.inventory_2_outlined,
+                                      size: 64,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No hay pedidos guardados',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Los pedidos guardados aparecerán aquí',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              controller: controller,
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _pedidosPendientes.length,
+                              itemBuilder: (context, index) {
+                                final pedido = _pedidosPendientes[index];
+                                final itemCount = pedido.items.length;
+                                final timeAgo = _formatTimeAgo(pedido.fecha);
+                                
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
                                       ),
                                     ],
                                   ),
-                                  children: _buildPreviewItems(pedido.items),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                ],
+                                  child: Theme(
+                                    data: theme.copyWith(
+                                      dividerColor: Colors.transparent,
+                                    ),
+                                    child: ExpansionTile(
+                                      tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      childrenPadding: const EdgeInsets.all(0),
+                                      leading: Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primary.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Icon(
+                                          Icons.restaurant_menu_rounded,
+                                          color: theme.colorScheme.primary,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      title: Text(
+                                        pedido.nombre,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      subtitle: Padding(
+                                        padding: const EdgeInsets.only(top: 6),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.receipt_long_rounded,
+                                                  size: 14,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '$itemCount ${itemCount == 1 ? 'producto' : 'productos'}',
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Icon(
+                                                  Icons.access_time_rounded,
+                                                  size: 14,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  timeAgo,
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.shade50,
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(color: Colors.green.shade200),
+                                              ),
+                                              child: Text(
+                                                'S/ ${pedido.subtotal.toStringAsFixed(2)}',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.green.shade700,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      trailing: const Icon(Icons.expand_more_rounded),
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF8FAFC),
+                                            border: Border(
+                                              top: BorderSide(color: Colors.grey.shade200),
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              ..._buildPreviewItems(pedido.items),
+                                              const SizedBox(height: 12),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: FilledButton.icon(
+                                                      onPressed: () => _loadPendingOrder(pedido),
+                                                      icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                                                      label: const Text('Reanudar'),
+                                                      style: FilledButton.styleFrom(
+                                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                                        backgroundColor: theme.colorScheme.primary,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  OutlinedButton(
+                                                    onPressed: () {
+                                                      modalSetState(() {
+                                                        _pedidosPendientes.removeAt(index);
+                                                      });
+                                                      setState(() {});
+                                                    },
+                                                    style: OutlinedButton.styleFrom(
+                                                      padding: const EdgeInsets.all(12),
+                                                      side: BorderSide(color: Colors.red.shade400, width: 1.5),
+                                                    ),
+                                                    child: Icon(
+                                                      Icons.delete_outline_rounded,
+                                                      color: Colors.red.shade600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
               );
             },
           );
         });
       },
     );
+  }
+  
+  String _formatTimeAgo(DateTime fecha) {
+    final now = DateTime.now();
+    final diff = now.difference(fecha);
+    
+    if (diff.inMinutes < 1) {
+      return 'Ahora';
+    } else if (diff.inMinutes < 60) {
+      return 'Hace ${diff.inMinutes} min';
+    } else if (diff.inHours < 24) {
+      return 'Hace ${diff.inHours}h';
+    } else {
+      return DateFormat('dd/MM h:mm a').format(fecha);
+    }
   }
 
   List<Widget> _buildPreviewItems(List<ItemCarrito> items) {
@@ -374,30 +1117,197 @@ class _PaginaVentasState extends State<PaginaVentas> {
           item.comentario == firstItem.comentario);
 
       if (count > 1 && isUniform) {
-        return ListTile(
-          contentPadding: const EdgeInsets.only(left: 24, right: 16),
-          dense: true,
-          title: Text('${firstItem.producto.nombre} (x$count)'),
-          subtitle: firstItem.comentario.isNotEmpty
-              ? Text(firstItem.comentario)
-              : null,
-          trailing: Text(
-              'S/ ${(firstItem.precioEditable * count).toStringAsFixed(2)}'),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFF059669)),
+                ),
+                child: Text(
+                  'x$count',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF047857),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      firstItem.producto.nombre,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (firstItem.comentario.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.comment_rounded, size: 12, color: Colors.amber.shade700),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                firstItem.comentario,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.amber.shade900,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.purple.shade200),
+                    ),
+                    child: Text(
+                      firstItem.categoryName,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.purple.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'S/ ${(firstItem.precioEditable * count).toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF059669),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       } else {
         return Column(
-          children: groupItems
-              .map((item) => ListTile(
-                    contentPadding: const EdgeInsets.only(left: 24, right: 16),
-                    dense: true,
-                    title: Text(item.producto.nombre),
-                    subtitle: item.comentario.isNotEmpty
-                        ? Text(item.comentario)
-                        : null,
-                    trailing:
-                        Text('S/ ${item.precioEditable.toStringAsFixed(2)}'),
-                  ))
-              .toList(),
+          children: groupItems.map((item) => Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.producto.nombre,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (item.comentario.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.comment_rounded, size: 12, color: Colors.amber.shade700),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  item.comentario,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.amber.shade900,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B).withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: const Color(0xFF64748B)),
+                      ),
+                      child: Text(
+                        item.categoryName,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Color(0xFF1E293B),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'S/ ${item.precioEditable.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF059669),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          )).toList(),
         );
       }
     }).toList();
@@ -608,121 +1518,9 @@ class _PaginaVentasState extends State<PaginaVentas> {
   }
 
   // ===================== GASTO INSUMOS APERTURA =====================
-  Future<void> _openGastoInsumosDialog(Caja cajaActiva) async {
-    // Default consumptions based on user description
-    final defaults = {
-      'Lechuga': 2.0,
-      'Pepino': 1.0,
-      'Tomate': 1.0,
-      'Cebolla': 1.0,
-      'Papas al hilo': 1.0,
-      'Salsa de ajo (potes)': 1.5,
-      'Hierba buena (ramas)': 20.0,
-      'Perejil (ramas)': 10.0,
-    };
-
-    final controllers = {for (var k in defaults.keys) k: TextEditingController(text: defaults[k]!.toString())};
-    final formKey = GlobalKey<FormState>();
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Gasto de Insumos - Apertura'),
-        content: Form(
-          key: formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Ingrese las cantidades gastadas al abrir la caja (unidad según etiqueta)'),
-                const SizedBox(height: 12),
-                ...defaults.keys.map((k) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6.0),
-                      child: TextFormField(
-                        controller: controllers[k],
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: InputDecoration(labelText: k),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Requerido';
-                          final val = double.tryParse(v.replaceAll(',', '.')) ?? -1;
-                          if (val < 0) return 'Número inválido';
-                          return null;
-                        },
-                      ),
-                    ))
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () async {
-            if (!(formKey.currentState?.validate() ?? false)) return;
-            Navigator.pop(ctx, true);
-          }, child: const Text('Registrar')),
-        ],
-      ),
-    );
-
-    if (result != true) return;
-
-    // Preparar datos y ejecutar batch: registrar gasto y actualizar stocks de insumos
-    final Map<String, double> cantidades = {};
-    controllers.forEach((k, ctl) {
-      cantidades[k] = double.tryParse(ctl.text.replaceAll(',', '.')) ?? 0.0;
-    });
-
-    try {
-      final batch = FirebaseFirestore.instance.batch();
-      final gastosCol = FirebaseFirestore.instance.collection('gastos');
-      final gastoDoc = gastosCol.doc();
-      final now = DateTime.now();
-      // Documento resumen del gasto
-      batch.set(gastoDoc, {
-        'tipo': 'insumos_apertura',
-        'fecha': now,
-        'cajaId': cajaActiva.id,
-        'usuarioId': cajaActiva.usuarioAperturaId,
-        'usuarioNombre': cajaActiva.usuarioAperturaNombre,
-        'detalles': cantidades,
-      });
-
-      // Para cada insumo, buscar documento por nombre y restar stockActual
-      for (final entry in cantidades.entries) {
-        final nombre = entry.key;
-        final qty = entry.value;
-        if (qty <= 0) continue;
-        final query = await FirebaseFirestore.instance.collection('insumos').where('nombre', isEqualTo: nombre).limit(1).get();
-        if (query.docs.isNotEmpty) {
-          final doc = query.docs.first;
-          final ref = doc.reference;
-          final stockActual = (doc.data()['stockActual'] ?? doc.data()['stockTotal'] ?? 0).toDouble();
-          final nuevo = stockActual - qty;
-          batch.update(ref, {'stockActual': nuevo});
-        } else {
-          // Si no existe el insumo, crear uno con stock negativo para registrar el consumo
-          final newRef = FirebaseFirestore.instance.collection('insumos').doc();
-          batch.set(newRef, {
-            'nombre': nombre,
-            'stockActual': -qty,
-            'stockTotal': 0,
-            'unidad': 'unidad',
-            'createdAt': DateTime.now(),
-          });
-        }
-      }
-
-      await batch.commit();
-
-      if (mainScaffoldContext != null) {
-        mostrarNotificacionElegante(mainScaffoldContext!, 'Gasto de insumos registrado', messengerKey: principalMessengerKey);
-      }
-    } catch (e) {
-      if (mainScaffoldContext != null) {
-        mostrarNotificacionElegante(mainScaffoldContext!, 'Error registrando gasto: $e', esError: true, messengerKey: principalMessengerKey);
-      }
-    }
-  }
+  // Nota: la UI para registrar el gasto de insumos por apertura ahora está
+  // centralizada en `lib/presentacion/caja/gasto_apertura_dialog.dart`. Se
+  // debe abrir desde la pantalla de Caja (cierre/apertura), no desde Ventas.
 
   // ===================== ORDENAMIENTO DE PRODUCTOS =====================
 
@@ -794,13 +1592,18 @@ class _PaginaVentasState extends State<PaginaVentas> {
               );
             },
           ),
-          // 🥬 Gasto de insumos por apertura de caja (solo si hay caja abierta)
-          if (cajaActiva != null)
-            IconButton(
-              icon: const Icon(Icons.kitchen),
-              tooltip: 'Gasto de insumos (apertura)',
-              onPressed: () => _openGastoInsumosDialog(cajaActiva),
+          // (Botón de Gasto de Insumos removido del AppBar)
+          // 🧴 Estado salsa de ajo (mostramos en color si hay potes disponibles)
+          IconButton(
+            icon: Icon(
+              Icons.invert_colors, 
+              color: _salsaPotes.any((p) => (p['fraccion'] as num).toDouble() > 0) 
+                ? Colors.orange 
+                : Colors.grey
             ),
+            tooltip: 'Estado Salsa de ajo',
+            onPressed: _showSalsaDialog,
+          ),
           // 🗑️ Descartar caja local (solo si hay una abierta)
           if (cajaActiva != null)
             IconButton(
@@ -1285,6 +2088,47 @@ class _CategoriaIconVentas extends StatelessWidget {
               const Icon(Icons.image_not_supported_outlined),
         );
       },
+    );
+  }
+}
+
+/// Widget auxiliar para botones rápidos de fracción
+class _QuickButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

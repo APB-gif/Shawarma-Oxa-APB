@@ -419,299 +419,203 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
                                               children: _insumos.asMap().entries.map((entry) {
                                                 final i = entry.key;
                                                 final insumo = entry.value;
-                                                return LayoutBuilder(
-                                                  builder: (ctx, itemConstraints) {
-                                                    // Apilamos vertical si el ancho es reducido (<480) más abajo
-                                                    return Container(
+                                                final qtyController = qtyControllers[i];
+                                                
+                                                return Container(
                                                   margin: const EdgeInsets.only(bottom: 12),
-                                                  padding: const EdgeInsets.all(16),
+                                                  padding: const EdgeInsets.all(12),
                                                   decoration: BoxDecoration(
                                                     color: Colors.white,
                                                     borderRadius: BorderRadius.circular(8),
                                                     border: Border.all(color: const Color(0xFFE2E8F0)),
                                                   ),
-                                                      child: (itemConstraints.maxWidth < 520)
-                                                      ? Column(
-                                                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                                                          children: [
-                              // En pantallas estrechas mostramos un campo readonly que abre un picker fullscreen
-                              TextFormField(
-                                readOnly: true,
-                                controller: TextEditingController(text: insumo.nombre),
-                                decoration: InputDecoration(
-                                  label: Tooltip(message: 'Insumo', child: const Text('Insumo')),
-                                  prefixIcon: const Icon(FontAwesomeIcons.cubes, size: 14, color: Color(0xFF10B981)),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                                  suffixIcon: IconButton(
-                                    icon: const Icon(Icons.search),
-                                    onPressed: () async {
-                                      await _openInsumoPicker(ctx, insumos, insumo.id ?? insumo.nombre, (sel) {
-                                        setLocalState(() {
-                                          _insumos[i] = InsumoReceta(id: sel['id'], nombre: sel['nombre'] ?? '', cantidad: insumo.cantidad);
-                                        });
-                                      });
-                                    },
-                                  ),
-                                ),
-                                onTap: () async {
-                                  await _openInsumoPicker(ctx, insumos, insumo.id ?? insumo.nombre, (sel) {
-                                    setLocalState(() {
-                                      _insumos[i] = InsumoReceta(id: sel['id'], nombre: sel['nombre'] ?? '', cantidad: insumo.cantidad);
-                                    });
-                                  });
-                                },
-                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-                              ),
-                                                            const SizedBox(height: 12),
-                                                            Row(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                                    children: [
+                                                      // Campo Insumo (siempre arriba)
+                                                      TextFormField(
+                                                        readOnly: true,
+                                                        controller: TextEditingController(text: insumo.nombre),
+                                                        decoration: InputDecoration(
+                                                          labelText: 'Insumo',
+                                                          prefixIcon: const Icon(FontAwesomeIcons.cubes, size: 14, color: Color(0xFF10B981)),
+                                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                                                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                                          isDense: true,
+                                                          suffixIcon: IconButton(
+                                                            icon: const Icon(Icons.search, size: 20),
+                                                            onPressed: () async {
+                                                              await _openInsumoPicker(context, insumos, insumo.id ?? insumo.nombre, (sel) {
+                                                                setLocalState(() {
+                                                                  _insumos[i] = InsumoReceta(
+                                                                    id: sel['id'], 
+                                                                    nombre: sel['nombre'] ?? '', 
+                                                                    cantidad: insumo.cantidad
+                                                                  );
+                                                                });
+                                                              });
+                                                            },
+                                                          ),
+                                                        ),
+                                                        onTap: () async {
+                                                          await _openInsumoPicker(context, insumos, insumo.id ?? insumo.nombre, (sel) {
+                                                            setLocalState(() {
+                                                              _insumos[i] = InsumoReceta(
+                                                                id: sel['id'], 
+                                                                nombre: sel['nombre'] ?? '', 
+                                                                cantidad: insumo.cantidad
+                                                              );
+                                                            });
+                                                          });
+                                                        },
+                                                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                                                      ),
+                                                      
+                                                      const SizedBox(height: 12),
+                                                      
+                                                      // Fila de cantidad + botones + eliminar
+                                                      Row(
+                                                        children: [
+                                                          // Campo Cantidad con botones +/-
+                                                          Expanded(
+                                                            child: Column(
+                                                              crossAxisAlignment: CrossAxisAlignment.start,
                                                               children: [
-                                                                // Control de cantidad con botones - / +
-                                                                Expanded(
-                                                                  child: Builder(builder: (ctxQty) {
-                                                                    final qtyController = qtyControllers[i];
-                                                                    return Row(
-                                                                      children: [
-                                                                        Expanded(
-                                                                          child: TextFormField(
-                                                                            controller: qtyController,
-                                                                            decoration: InputDecoration(
-                                                                              labelText: 'Cantidad',
-                                                                              prefixIcon: const Icon(
-                                                                                  FontAwesomeIcons.weightHanging,
-                                                                                  size: 14, color: Color(0xFF10B981)),
-                                                                              border: OutlineInputBorder(
-                                                                                borderRadius: BorderRadius.circular(6),
-                                                                              ),
-                                                                              isDense: true,
-                                                                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                                                            ),
-                                                                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                                            onTap: () {
-                                                                              // Seleccionar todo al hacer tap para facilitar reemplazo
-                                                                              qtyController.selection = TextSelection(baseOffset: 0, extentOffset: qtyController.text.length);
-                                                                            },
-                                                                            onChanged: (v) => setLocalState(() {
-                                                                              final _parsed = double.tryParse(v);
-                                                                              var val = _parsed == null ? 0.0 : _parsed;
-                                                                              val = (val * 100).round() / 100.0;
-                                                                              _insumos[i] = InsumoReceta(
-                                                                                  nombre: insumo.nombre,
-                                                                                  cantidad: val,
-                                                                                  id: insumo.id);
-                                                                            }),
-                                                                            validator: (v) => double.tryParse(v ?? '') != null ? null : 'Ingrese un número válido',
-                                                                          ),
-                                                                        ),
-                                                                        const SizedBox(width: 8),
-                                                                        // Botones agrupados a la derecha del campo
-                                                                        Row(
-                                                                          mainAxisSize: MainAxisSize.min,
-                                                                          children: [
-                                                                            IconButton(
-                                                                              icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF10B981)),
-                                                                              padding: EdgeInsets.zero,
-                                                                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                                                                              onPressed: () {
-                                                                                setLocalState(() {
-                                                                                  var newVal = ((insumo.cantidad - 0.01) < 0 ? 0.0 : (insumo.cantidad - 0.01));
-                                                                                  newVal = (newVal * 100).round() / 100.0;
-                                                                                  _insumos[i] = InsumoReceta(nombre: insumo.nombre, cantidad: newVal, id: insumo.id);
-                                                                                  qtyControllers[i].text = newVal.toStringAsFixed(2);
-                                                                                });
-                                                                              },
-                                                                            ),
-                                                                            IconButton(
-                                                                              icon: const Icon(Icons.add_circle_outline, color: Color(0xFF10B981)),
-                                                                              padding: EdgeInsets.zero,
-                                                                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                                                                              onPressed: () {
-                                                                                setLocalState(() {
-                                                                                  var newVal = (insumo.cantidad + 0.01);
-                                                                                  newVal = (newVal * 100).round() / 100.0;
-                                                                                  _insumos[i] = InsumoReceta(nombre: insumo.nombre, cantidad: newVal, id: insumo.id);
-                                                                                  qtyControllers[i].text = newVal.toStringAsFixed(2);
-                                                                                });
-                                                                              },
-                                                                            ),
-                                                                          ],
-                                                                        ),
-                                                                      ],
-                                                                    );
-                                                                  }),
+                                                                // Etiqueta "Cantidad" separada
+                                                                const Padding(
+                                                                  padding: EdgeInsets.only(left: 4, bottom: 6),
+                                                                  child: Text(
+                                                                    'Cantidad',
+                                                                    style: TextStyle(
+                                                                      fontSize: 12,
+                                                                      color: Color(0xFF64748B),
+                                                                      fontWeight: FontWeight.w500,
+                                                                    ),
+                                                                  ),
                                                                 ),
-                                                                const SizedBox(width: 8),
-                                                                IconButton(
-                                                                  icon: const Icon(
-                                                                    FontAwesomeIcons.trash,
-                                                                    color: Color(0xFFEF4444),
-                                                                    size: 16,
-                                                                  ),
-                                                                  padding: EdgeInsets.zero,
-                                                                  visualDensity: VisualDensity.compact,
-                                                                  constraints: const BoxConstraints(
-                                                                    minWidth: 36,
-                                                                    minHeight: 36,
-                                                                  ),
-                                                                  onPressed: () {
-                                                                    setLocalState(() {
-                                                                      qtyControllers[i].dispose();
-                                                                      qtyControllers.removeAt(i);
-                                                                      _insumos.removeAt(i);
-                                                                    });
-                                                                  },
-                                                                  tooltip: 'Eliminar insumo',
+                                                                // Fila con botones y campo
+                                                                Row(
+                                                                  children: [
+                                                                    // Botón -
+                                                                    IconButton(
+                                                                      icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF10B981), size: 20),
+                                                                      padding: EdgeInsets.zero,
+                                                                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                                                      onPressed: () {
+                                                                        setLocalState(() {
+                                                                          var newVal = ((insumo.cantidad - 0.01) < 0 ? 0.0 : (insumo.cantidad - 0.01));
+                                                                          newVal = (newVal * 100).round() / 100.0;
+                                                                          _insumos[i] = InsumoReceta(
+                                                                            nombre: insumo.nombre, 
+                                                                            cantidad: newVal, 
+                                                                            id: insumo.id
+                                                                          );
+                                                                          qtyController.text = newVal.toStringAsFixed(2);
+                                                                        });
+                                                                      },
+                                                                    ),
+                                                                    
+                                                                    const SizedBox(width: 4),
+                                                                    
+                                                                    // Campo de texto cantidad (sin label flotante)
+                                                                    Expanded(
+                                                                      child: TextFormField(
+                                                                        controller: qtyController,
+                                                                        textAlign: TextAlign.center,
+                                                                        style: const TextStyle(
+                                                                          fontSize: 16,
+                                                                          fontWeight: FontWeight.w600,
+                                                                          color: Color(0xFF1E293B),
+                                                                        ),
+                                                                        decoration: InputDecoration(
+                                                                          hintText: '0.00',
+                                                                          border: OutlineInputBorder(
+                                                                            borderRadius: BorderRadius.circular(6),
+                                                                          ),
+                                                                          isDense: true,
+                                                                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                                                                        ),
+                                                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                                        onTap: () {
+                                                                          qtyController.selection = TextSelection(
+                                                                            baseOffset: 0, 
+                                                                            extentOffset: qtyController.text.length
+                                                                          );
+                                                                        },
+                                                                        onChanged: (v) {
+                                                                          setLocalState(() {
+                                                                            final parsed = double.tryParse(v);
+                                                                            var val = parsed ?? 0.0;
+                                                                            val = (val * 100).round() / 100.0;
+                                                                            _insumos[i] = InsumoReceta(
+                                                                              nombre: insumo.nombre,
+                                                                              cantidad: val,
+                                                                              id: insumo.id
+                                                                            );
+                                                                          });
+                                                                        },
+                                                                        validator: (v) => double.tryParse(v ?? '') != null 
+                                                                          ? null 
+                                                                          : 'Número válido',
+                                                                      ),
+                                                                    ),
+                                                                    
+                                                                    const SizedBox(width: 4),
+                                                                    
+                                                                    // Botón +
+                                                                    IconButton(
+                                                                      icon: const Icon(Icons.add_circle_outline, color: Color(0xFF10B981), size: 20),
+                                                                      padding: EdgeInsets.zero,
+                                                                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                                                      onPressed: () {
+                                                                        setLocalState(() {
+                                                                          var newVal = insumo.cantidad + 0.01;
+                                                                          newVal = (newVal * 100).round() / 100.0;
+                                                                          _insumos[i] = InsumoReceta(
+                                                                            nombre: insumo.nombre, 
+                                                                            cantidad: newVal, 
+                                                                            id: insumo.id
+                                                                          );
+                                                                          qtyController.text = newVal.toStringAsFixed(2);
+                                                                        });
+                                                                      },
+                                                                    ),
+                                                                  ],
                                                                 ),
                                                               ],
                                                             ),
-                                                          ],
-                                                        )
-                                                      : LayoutBuilder(
-                                                          builder: (ctx2, rowConstraints) {
-                                                            final maxW = rowConstraints.maxWidth;
-                                                            // Reservar espacio para el botón y separadores para evitar desbordes
-                                                            const double trashW = 36; // IconButton compacto
-                                                            const double gap = 8; // separadores
-                                                            final double available = maxW - trashW - gap; // espacio para inputs
-
-                                                            // Distribución 68/32 del espacio restante, con límites mínimos
-                                                            double dropW = available * 0.68;
-                                                            double qtyW = available * 0.32;
-                                                            if (dropW < 100) dropW = 100;
-                                                            if (qtyW < 90) qtyW = 90;
-                                                            // Si se excede el available, reducir proporcionalmente
-                                                            final overflow = (dropW + gap + qtyW) - available;
-                                                            if (overflow > 0) {
-                                                              final total = dropW + qtyW;
-                                                              dropW -= overflow * (dropW / total);
-                                                              qtyW -= overflow * (qtyW / total);
-                                                            }
-                                                            return Row(
-                                                              children: [
-                                                                SizedBox(
-                                                                  width: dropW,
-                                                                  child: TextFormField(
-                                                                    readOnly: true,
-                                                                    controller: TextEditingController(text: insumo.nombre),
-                                                                    decoration: InputDecoration(
-                                                                      label: Tooltip(message: 'Insumo', child: const Text('Insumo')),
-                                                                      prefixIcon: const Icon(FontAwesomeIcons.cubes, size: 14, color: Color(0xFF10B981)),
-                                                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-                                                                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                                                                      suffixIcon: IconButton(
-                                                                        icon: const Icon(Icons.search),
-                                                                        onPressed: () async {
-                                                                          await _openInsumoPicker(ctx2, insumos, insumo.id ?? insumo.nombre, (sel) {
-                                                                            setLocalState(() {
-                                                                              _insumos[i] = InsumoReceta(id: sel['id'], nombre: sel['nombre'] ?? '', cantidad: insumo.cantidad);
-                                                                            });
-                                                                          });
-                                                                        },
-                                                                      ),
-                                                                    ),
-                                                                    onTap: () async {
-                                                                      await _openInsumoPicker(ctx2, insumos, insumo.id ?? insumo.nombre, (sel) {
-                                                                        setLocalState(() {
-                                                                          _insumos[i] = InsumoReceta(id: sel['id'], nombre: sel['nombre'] ?? '', cantidad: insumo.cantidad);
-                                                                        });
-                                                                      });
-                                                                    },
-                                                                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-                                                                  ),
-                                                                ),
-                                                                const SizedBox(width: 8),
-                                                                // Control de cantidad comprimido: campo con botones agrupados a la derecha
-                                                                SizedBox(
-                                                                  width: qtyW,
-                                                                  child: Builder(builder: (ctxQty) {
-                                                                    final qtyController = qtyControllers[i];
-                                                                    return Row(
-                                                                      children: [
-                                                                        // Campo editable
-                                                                        Expanded(
-                                                                          child: TextFormField(
-                                                                            controller: qtyController,
-                                                                            decoration: InputDecoration(
-                                                                              labelText: 'Cantidad',
-                                                                              prefixIcon: const Icon(
-                                                                                  FontAwesomeIcons.weightHanging,
-                                                                                  size: 14, color: Color(0xFF10B981)),
-                                                                              border: OutlineInputBorder(
-                                                                                borderRadius: BorderRadius.circular(6),
-                                                                              ),
-                                                                              isDense: true,
-                                                                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                                                            ),
-                                                                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                                            onTap: () {
-                                                                              qtyController.selection = TextSelection(baseOffset: 0, extentOffset: qtyController.text.length);
-                                                                            },
-                                                                            onChanged: (v) => setLocalState(() {
-                                                                              final _parsed = double.tryParse(v);
-                                                                              _insumos[i] = InsumoReceta(nombre: insumo.nombre, cantidad: _parsed == null ? 0.0 : _parsed, id: insumo.id);
-                                                                            }),
-                                                                            validator: (v) => double.tryParse(v ?? '') != null ? null : 'Ingrese un número válido',
-                                                                          ),
-                                                                        ),
-                                                                        const SizedBox(width: 8),
-                                                                        // Botones agrupados a la derecha del campo
-                                                                        Row(
-                                                                          mainAxisSize: MainAxisSize.min,
-                                                                          children: [
-                                                                            IconButton(
-                                                                              icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF10B981)),
-                                                                              padding: EdgeInsets.zero,
-                                                                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                                                              onPressed: () {
-                                                                                setLocalState(() {
-                                                                                  var newVal = ((insumo.cantidad - 0.01) < 0 ? 0.0 : (insumo.cantidad - 0.01));
-                                                                                  newVal = (newVal * 100).round() / 100.0;
-                                                                                  _insumos[i] = InsumoReceta(nombre: insumo.nombre, cantidad: newVal, id: insumo.id);
-                                                                                });
-                                                                              },
-                                                                            ),
-                                                                            IconButton(
-                                                                              icon: const Icon(Icons.add_circle_outline, color: Color(0xFF10B981)),
-                                                                              padding: EdgeInsets.zero,
-                                                                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                                                              onPressed: () {
-                                                                                setLocalState(() {
-                                                                                  var newVal = (insumo.cantidad + 0.01);
-                                                                                  newVal = (newVal * 100).round() / 100.0;
-                                                                                  _insumos[i] = InsumoReceta(nombre: insumo.nombre, cantidad: newVal, id: insumo.id);
-                                                                                });
-                                                                              },
-                                                                            ),
-                                                                          ],
-                                                                        ),
-                                                                      ],
-                                                                    );
-                                                                  }),
-                                                                ),
-                                                            const SizedBox(width: 8),
-                                                                IconButton(
-                                                                  icon: const Icon(
-                                                                    FontAwesomeIcons.trash,
-                                                                    color: Color(0xFFEF4444),
-                                                                    size: 16,
-                                                                  ),
-                                                                  padding: EdgeInsets.zero,
-                                                                  visualDensity: VisualDensity.compact,
-                                                                  constraints: const BoxConstraints(
-                                                                    minWidth: 36,
-                                                                    minHeight: 36,
-                                                                  ),
-                                                                  onPressed: () {
-                                                                    setLocalState(() => _insumos.removeAt(i));
-                                                                  },
-                                                                  tooltip: 'Eliminar insumo',
-                                                                ),
-                                                              ],
-                                                            );
-                                                          },
-                                                        ),
-                                                    );
-                                                  },
+                                                          ),
+                                                          
+                                                          const SizedBox(width: 8),
+                                                          
+                                                          // Botón eliminar
+                                                          Padding(
+                                                            padding: const EdgeInsets.only(top: 20),
+                                                            child: IconButton(
+                                                              icon: const Icon(
+                                                                FontAwesomeIcons.trash,
+                                                                color: Color(0xFFEF4444),
+                                                                size: 18,
+                                                              ),
+                                                              padding: EdgeInsets.zero,
+                                                              constraints: const BoxConstraints(
+                                                                minWidth: 40,
+                                                                minHeight: 40,
+                                                              ),
+                                                              onPressed: () {
+                                                                setLocalState(() {
+                                                                  qtyControllers[i].dispose();
+                                                                  qtyControllers.removeAt(i);
+                                                                  _insumos.removeAt(i);
+                                                                });
+                                                              },
+                                                              tooltip: 'Eliminar',
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
                                                 );
                                               }).toList(),
                                             ),

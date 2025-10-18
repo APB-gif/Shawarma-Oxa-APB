@@ -224,45 +224,169 @@ class _PanelPagoState extends State<PanelPago> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: _unfocusAll,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: ListView(
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
           children: [
-            const SizedBox(height: 16),
-            Center(
-              child: Column(
+            // Header con gradiente
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFF059669),
+                    Color(0xFF047857),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.payment_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Procesar Pago',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${widget.items.length} ${widget.items.length == 1 ? 'producto' : 'productos'}',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Total en card blanco
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Total a Pagar',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              if (_method == MetodoDePago.izipayCard) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Incluye 5% tarjeta',
+                                  style: TextStyle(
+                                    color: Colors.orange.shade700,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          Text(
+                            'S/ ${_totalAPagar.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              color: Color(0xFF059669),
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Contenido scrolleable
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
                 children: [
-                  Text('Pagar',
-                      style: Theme.of(context).textTheme.headlineSmall),
-                  const SizedBox(height: 4),
-                  Text('S/ ${_totalAPagar.toStringAsFixed(2)}',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineMedium
-                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  // Métodos de pago
+                  _buildPaymentMethodsSection(),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Campos según método
+                  ..._buildFieldsByMethod(),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Selector de fecha y hora
+                  _buildDateTimePicker(),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Botón de confirmar
+                  FilledButton.icon(
+                    onPressed: _confirm,
+                    icon: const Icon(Icons.check_circle_rounded, size: 20),
+                    label: const Text('Confirmar y Guardar'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: const Color(0xFF059669),
+                      foregroundColor: Colors.white,
+                      textStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  
+                  SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 16),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            _buildMobilePaymentMethods(),
-            const SizedBox(height: 24),
-            ..._buildFieldsByMethod(),
-            const SizedBox(height: 24),
-            // NUEVO: Widget para seleccionar fecha y hora de la venta
-            _buildDateTimePicker(),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _confirm,
-              icon: Icon(_method.icon),
-              label: const Text('Confirmar y guardar'),
-              style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  )),
-            ),
-            SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 24),
           ],
         ),
       ),
@@ -271,127 +395,246 @@ class _PanelPagoState extends State<PanelPago> {
 
   // NUEVO: Widget completo para los selectores de fecha y hora.
   Widget _buildDateTimePicker() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            icon: const Icon(Icons.calendar_today_outlined, size: 20),
-            label: Text(DateFormat.yMMMd('es_ES').format(_fechaVenta)),
-            onPressed: () async {
-              final pickedDate = await showDatePicker(
-                context: context,
-                initialDate: _fechaVenta,
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now(),
-              );
-              if (pickedDate != null) {
-                setState(() {
-                  _fechaVenta = DateTime(
-                    pickedDate.year,
-                    pickedDate.month,
-                    pickedDate.day,
-                    _fechaVenta.hour,
-                    _fechaVenta.minute,
-                  );
-                });
-              }
-            },
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton.icon(
-            icon: const Icon(Icons.access_time_outlined, size: 20),
-            label: Text(DateFormat.jm('es_ES').format(_fechaVenta)),
-            onPressed: () async {
-              final pickedTime = await showTimePicker(
-                context: context,
-                initialTime: TimeOfDay.fromDateTime(_fechaVenta),
-              );
-              if (pickedTime != null) {
-                setState(() {
-                  _fechaVenta = DateTime(
-                    _fechaVenta.year,
-                    _fechaVenta.month,
-                    _fechaVenta.day,
-                    pickedTime.hour,
-                    pickedTime.minute,
-                  );
-                });
-              }
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMobilePaymentMethods() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: MetodoDePago.values.map((method) {
-          final isSelected = _method == method;
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: InkWell(
-              onTap: () => _onMethodChanged(method),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 70,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(12),
-                  border: isSelected
-                      ? Border.all(
-                          color: Theme.of(context).colorScheme.primary,
-                          width: 2)
-                      : null,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      method.icon,
-                      size: 28,
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.onPrimary
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      method.displayName.replaceAll(' ', '\n'),
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isSelected
-                                ? Theme.of(context).colorScheme.onPrimary
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                    ),
-                  ],
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.event_available_rounded,
+                size: 20,
+                color: Color(0xFF059669),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Fecha y Hora de Venta',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade800,
                 ),
               ),
-            ),
-          );
-        }).toList(),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_today_outlined, size: 18),
+                  label: Text(
+                    DateFormat.yMMMd('es_ES').format(_fechaVenta),
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  onPressed: () async {
+                    final pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: _fechaVenta,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                    );
+                    if (pickedDate != null) {
+                      setState(() {
+                        _fechaVenta = DateTime(
+                          pickedDate.year,
+                          pickedDate.month,
+                          pickedDate.day,
+                          _fechaVenta.hour,
+                          _fechaVenta.minute,
+                        );
+                      });
+                    }
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.access_time_outlined, size: 18),
+                  label: Text(
+                    DateFormat.jm('es_ES').format(_fechaVenta),
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  onPressed: () async {
+                    final pickedTime = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(_fechaVenta),
+                    );
+                    if (pickedTime != null) {
+                      setState(() {
+                        _fechaVenta = DateTime(
+                          _fechaVenta.year,
+                          _fechaVenta.month,
+                          _fechaVenta.day,
+                          pickedTime.hour,
+                          pickedTime.minute,
+                        );
+                      });
+                    }
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  InputDecoration _inputDeco(String label) {
+  Widget _buildPaymentMethodsSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.account_balance_wallet_rounded,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Método de Pago',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: MetodoDePago.values.map((method) {
+                final isSelected = _method == method;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: InkWell(
+                    onTap: () => _onMethodChanged(method),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 75,
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : const Color(0xFFE2E8F0),
+                          width: isSelected ? 2 : 1,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            method.icon,
+                            size: 28,
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.grey.shade700,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            method.displayName,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              height: 1.2,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.grey.shade700,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _inputDeco(String label, {Color? borderColor}) {
     return InputDecoration(
       labelText: label,
       prefixText: 'S/ ',
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        borderSide: BorderSide(color: borderColor ?? const Color(0xFFE2E8F0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        borderSide: BorderSide(color: borderColor ?? const Color(0xFFE2E8F0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        borderSide: BorderSide(
+          color: Theme.of(context).colorScheme.primary,
+          width: 2,
+        ),
+      ),
     );
   }
 
@@ -399,83 +642,297 @@ class _PanelPagoState extends State<PanelPago> {
     switch (_method) {
       case MetodoDePago.cash:
         return [
-          TextField(
-            controller: _cashCtl,
-            focusNode: _fnCash,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: _inputDeco('Monto recibido (efectivo)'),
-            onChanged: (_) => setState(() {}),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.money_rounded,
+                      size: 20,
+                      color: Colors.green.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Pago en Efectivo',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _cashCtl,
+                  focusNode: _fnCash,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: _inputDeco('Monto recibido', borderColor: Colors.green.shade300),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 12),
+                _CashChangePreview(subtotal: _subtotal, received: _parse(_cashCtl)),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          _CashChangePreview(subtotal: _subtotal, received: _parse(_cashCtl)),
         ];
 
       case MetodoDePago.izipayCard:
         final totalConFee = _cardWithFee(_subtotal);
         return [
-          Text(
-            'Subtotal: S/ ${_subtotal.toStringAsFixed(2)} + 5% = S/ ${totalConFee.toStringAsFixed(2)}',
-            style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _cardCtl,
-            focusNode: _fnCard,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: _inputDeco('Monto a cobrar por tarjeta'),
-            onChanged: (_) => setState(() {}),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.credit_card_rounded,
+                      size: 20,
+                      color: Colors.blue.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Pago con Tarjeta',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline_rounded, size: 18, color: Colors.orange.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Subtotal: S/ ${_subtotal.toStringAsFixed(2)} + 5% = S/ ${totalConFee.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.orange.shade900,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _cardCtl,
+                  focusNode: _fnCard,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: _inputDeco('Monto a cobrar', borderColor: Colors.blue.shade300),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+            ),
           ),
         ];
 
       case MetodoDePago.izipayYape:
         return [
-          TextField(
-            controller: _izipayYapeCtl,
-            focusNode: _fnIziYape,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: _inputDeco('Monto por IziPay Yape'),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.qr_code_2_rounded,
+                      size: 20,
+                      color: Colors.purple.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'IziPay Yape',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _izipayYapeCtl,
+                  focusNode: _fnIziYape,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: _inputDeco('Monto por IziPay Yape', borderColor: Colors.purple.shade300),
+                ),
+              ],
+            ),
           ),
         ];
 
       case MetodoDePago.yapePersonal:
         return [
-          TextField(
-            controller: _yapePersonalCtl,
-            focusNode: _fnYapePers,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: _inputDeco('Monto por Yape personal'),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.phone_android_rounded,
+                      size: 20,
+                      color: Colors.purple.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Yape Personal',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _yapePersonalCtl,
+                  focusNode: _fnYapePers,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: _inputDeco('Monto por Yape personal', borderColor: Colors.purple.shade300),
+                ),
+              ],
+            ),
           ),
         ];
 
       case MetodoDePago.split:
         return [
-          TextField(
-            controller: _cashCtl,
-            decoration: _inputDeco('Parte en efectivo'),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _cardCtl,
-            decoration: _inputDeco('Parte por tarjeta (+5%)'),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _izipayYapeCtl,
-            decoration: _inputDeco('Parte por IziPay Yape'),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _yapePersonalCtl,
-            decoration: _inputDeco('Parte por Yape personal'),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => setState(() {}),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.call_split_rounded,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Pago Dividido',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _cashCtl,
+                  decoration: _inputDeco('Parte en efectivo', borderColor: Colors.green.shade300),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _cardCtl,
+                  decoration: _inputDeco('Parte por tarjeta (+5%)', borderColor: Colors.blue.shade300),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _izipayYapeCtl,
+                  decoration: _inputDeco('Parte por IziPay Yape', borderColor: Colors.purple.shade300),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _yapePersonalCtl,
+                  decoration: _inputDeco('Parte por Yape personal', borderColor: Colors.purple.shade300),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+            ),
           ),
         ];
     }
@@ -490,16 +947,45 @@ class _CashChangePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final change = (received - subtotal) > 0 ? (received - subtotal) : 0;
-    return ListTile(
-      title: Text('Vuelto:', style: Theme.of(context).textTheme.titleMedium),
-      trailing: Text(
-        'S/ ${change.toStringAsFixed(2)}',
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.green.shade50,
+            Colors.green.shade100,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green.shade300),
       ),
-      contentPadding: EdgeInsets.zero,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.attach_money_rounded, size: 20, color: Colors.green.shade700),
+              const SizedBox(width: 8),
+              Text(
+                'Vuelto:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.green.shade900,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            'S/ ${change.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.green.shade700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

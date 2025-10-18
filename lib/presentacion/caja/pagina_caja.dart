@@ -11,6 +11,7 @@ import 'package:shawarma_pos_nuevo/datos/modelos/venta.dart';
 import 'package:shawarma_pos_nuevo/datos/servicios/caja_service.dart';
 import 'package:shawarma_pos_nuevo/presentacion/widgets/notificaciones.dart';
 import 'package:shawarma_pos_nuevo/presentacion/pagina_principal.dart';
+import 'package:shawarma_pos_nuevo/presentacion/caja/gasto_apertura_dialog.dart';
 
 // --------- Helpers ---------
 String _catNombre(dynamic p) {
@@ -1500,10 +1501,43 @@ class _VistaCajaAbierta extends StatelessWidget {
                               try {
                                 final monto = double.parse(
                                     controller.text.replaceAll(',', '.'));
+
+                                // Antes de cerrar, verificar si existe gasto de apertura
+                                final tieneGastoApertura = cajaService.gastosLocales
+                                    .any((g) => (g.tipo ?? '') == 'insumos_apertura');
+
+                                if (!tieneGastoApertura) {
+                                  // Mostrar diálogo para registrar gasto de apertura
+                                  BuildContext dialogCtx;
+                                  if (mainScaffoldContext != null) {
+                                    dialogCtx = mainScaffoldContext!;
+                                  } else {
+                                    try {
+                                      dialogCtx = Navigator.of(dialogContext, rootNavigator: true).context;
+                                    } catch (_) {
+                                      dialogCtx = dialogContext;
+                                    }
+                                  }
+
+                                  final gasto = await showGastoInsumosAperturaDialog(dialogCtx, caja);
+
+                                  // Si usuario no registró, abortar
+                                  if (gasto == null) {
+                                    if (mainScaffoldContext != null) {
+                                      mostrarNotificacionElegante(mainScaffoldContext!, 'Cierre cancelado. Registra el gasto de apertura antes de cerrar la caja.', esError: true, messengerKey: principalMessengerKey);
+                                    }
+                                    return;
+                                  }
+                                  // Agregar gasto local y luego continuar al cierre
+                                  await cajaService.agregarGastoLocal(gasto);
+                                }
+
+                                // Intentar cerrar ahora que existe el gasto de apertura
                                 await cajaService.cerrarCaja(
                                   montoContado: monto,
                                   fechaCierreSeleccionada: fechaSeleccionada,
                                 );
+
                                 if (dialogContext.mounted) {
                                   Navigator.of(dialogContext).pop();
                                 }

@@ -139,22 +139,99 @@ class _PanelGastosState extends State<PanelGastos> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final totalGastos = _items.fold(0.0, (sum, item) => sum + item.precioEditable);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 16),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Resumen de Gastos', style: Theme.of(context).textTheme.headlineSmall, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: MediaQuery.of(context).size.height * 0.4,
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header con gradiente
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF059669), // Verde esmeralda
+                  Color(0xFF10B981), // Verde más claro
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF059669).withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.receipt_long_rounded,
+                    color: theme.colorScheme.onSecondary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Resumen de Gastos',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSecondary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_items.length} ${_items.length == 1 ? 'producto' : 'productos'}',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSecondary.withOpacity(0.9),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: theme.colorScheme.onSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Lista de items (scrollable)
+          Flexible(
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: screenHeight * 0.5 - keyboardHeight,
+              ),
               child: _items.isEmpty
-                  ? const Center(child: Text('Añade productos para registrar un gasto.'))
+                  ? _buildEmptyState()
                   : ListView.builder(
+                      padding: const EdgeInsets.all(16),
                       shrinkWrap: true,
                       itemCount: _items.length,
                       itemBuilder: (context, index) {
@@ -168,44 +245,174 @@ class _PanelGastosState extends State<PanelGastos> {
                       },
                     ),
             ),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ),
+
+          // Footer con total y acciones
+          Container(
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + keyboardHeight),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                top: BorderSide(
+                  color: Colors.grey.shade200,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Total Gasto:', style: Theme.of(context).textTheme.titleLarge),
-                Text(
-                  'S/ ${totalGastos.toStringAsFixed(2)}',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                // Total
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF10B981).withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.payments_rounded,
+                            color: Color(0xFF059669),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Total Gasto',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'S/ ${totalGastos.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF059669),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Botones de acción
+                Row(
+                  children: [
+                    // Botón añadir a lista
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _items.isEmpty || _savingList ? null : _saveAndCloseList,
+                        icon: _savingList
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.playlist_add_check_rounded, size: 18),
+                        label: Text(_savingList ? 'Guardando...' : 'A Lista'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(
+                            color: _items.isEmpty ? Colors.grey.shade300 : theme.colorScheme.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(width: 8),
+                    
+                    // Botón vaciar
+                    OutlinedButton(
+                      onPressed: _items.isEmpty ? null : _showClearConfirmationDialog,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.all(14),
+                        side: BorderSide(
+                          color: _items.isEmpty ? Colors.grey.shade300 : Colors.red.shade400,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.delete_sweep_rounded,
+                        color: _items.isEmpty ? Colors.grey.shade400 : Colors.red.shade600,
+                      ),
+                    ),
+                    
+                    const SizedBox(width: 8),
+                    
+                    // Botón registrar
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton.icon(
+                        onPressed: _items.isEmpty ? null : () => widget.onConfirm(totalGastos),
+                        icon: const Icon(Icons.check_circle_rounded, size: 18),
+                        label: const Text('Registrar'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF059669),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.shopping_bag_outlined,
+                size: 48,
+                color: Colors.grey.shade400,
+              ),
+            ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                IconButton(
-                  icon: _savingList
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.playlist_add_check_outlined),
-                  tooltip: _savingList ? 'Guardando...' : 'Añadir a lista de compras',
-                  onPressed: _items.isEmpty || _savingList ? null : _saveAndCloseList,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_sweep_outlined),
-                  tooltip: 'Vaciar lista',
-                  onPressed: _items.isEmpty ? null : _showClearConfirmationDialog,
-                  color: Colors.redAccent,
-                ),
-                const Spacer(),
-                FilledButton.icon(
-                  onPressed: _items.isEmpty ? null : () => widget.onConfirm(totalGastos),
-                  icon: const Icon(Icons.payment),
-                  label: const Text('Registrar Gasto'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.secondary,
-                  ),
-                ),
-              ],
-            )
+            const Text(
+              'Sin productos',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Añade productos para registrar un gasto',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+              ),
+            ),
           ],
         ),
       ),
@@ -270,56 +477,167 @@ class _GastoItemTileState extends State<_GastoItemTile> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final priceTextStyle = TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.bold,
-      color: theme.textTheme.bodyLarge?.color,
-    );
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 400;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        title: Text(widget.item.producto.nombre),
-        trailing: SizedBox(
-          width: 150,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  textAlign: TextAlign.right,
-                  style: priceTextStyle,
-                  decoration: InputDecoration(
-                    prefixText: 'S/ ',
-                    prefixStyle: priceTextStyle,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                    // <<-- CAMBIO: Añadido para que el borde siempre sea visible.
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                      borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFE2E8F0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Nombre del producto
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.shopping_bag_outlined,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    widget.item.producto.nombre,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B),
                     ),
-                    // <<-- CAMBIO: Define cómo se ve el borde cuando está seleccionado.
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                      borderSide: BorderSide(color: theme.primaryColor, width: 2.0),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Precio y botón eliminar
+            Row(
+              children: [
+                // Etiqueta "Precio"
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: Text(
+                    'Precio:',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  onChanged: (value) {
-                    final newPrice = double.tryParse(value.replaceAll(',', '.')) ?? 0.0;
-                    widget.onUpdatePrice(widget.item.uniqueId, newPrice);
-                  },
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                onPressed: () => widget.onRemoveItem(widget.item.uniqueId),
-              ),
-            ],
-          ),
+                
+                // Campo de precio
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _focusNode.hasFocus 
+                          ? theme.colorScheme.primary 
+                          : Colors.grey.shade300,
+                        width: _focusNode.hasFocus ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        // Prefijo "S/"
+                        Padding(
+                          padding: const EdgeInsets.only(left: 12),
+                          child: const Text(
+                            'S/',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF059669),
+                            ),
+                          ),
+                        ),
+                        
+                        const SizedBox(width: 4),
+                        
+                        // Campo de texto
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            focusNode: _focusNode,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: isMobile ? 15 : 16,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF059669),
+                            ),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 12,
+                              ),
+                              hintText: '0.00',
+                            ),
+                            onChanged: (value) {
+                              final newPrice = double.tryParse(value.replaceAll(',', '.')) ?? 0.0;
+                              widget.onUpdatePrice(widget.item.uniqueId, newPrice);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(width: 8),
+                
+                // Botón eliminar
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.red.shade700,
+                      size: 20,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(
+                      minWidth: 40,
+                      minHeight: 40,
+                    ),
+                    onPressed: () => widget.onRemoveItem(widget.item.uniqueId),
+                    tooltip: 'Eliminar',
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
