@@ -47,12 +47,14 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
     );
     if (pickedDate == null) return;
 
-    final TimeOfDay? pickedTime =
-        await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_selectedDateTime));
+    final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_selectedDateTime));
     if (pickedTime == null) return;
 
     setState(() {
-      _selectedDateTime = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, pickedTime.hour, pickedTime.minute);
+      _selectedDateTime = DateTime(pickedDate.year, pickedDate.month,
+          pickedDate.day, pickedTime.hour, pickedTime.minute);
     });
   }
 
@@ -81,7 +83,8 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF059669).withOpacity(0.3),
@@ -123,7 +126,8 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                           Text(
                             '${widget.items.length} ${widget.items.length == 1 ? 'producto' : 'productos'}',
                             style: TextStyle(
-                              color: theme.colorScheme.onSecondary.withOpacity(0.9),
+                              color: theme.colorScheme.onSecondary
+                                  .withOpacity(0.9),
                               fontSize: 13,
                             ),
                           ),
@@ -142,7 +146,8 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                 const SizedBox(height: 16),
                 // Total destacado
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -183,17 +188,18 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                 children: [
                   // Fecha y Hora
                   _buildDateTimePicker(),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Método de pago
                   _buildPaymentMethodSection(),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Botón confirmar
                   FilledButton.icon(
-                    onPressed: () => widget.onConfirm(_method, _selectedDateTime),
+                    onPressed: () =>
+                        widget.onConfirm(_method, _selectedDateTime),
                     icon: const Icon(Icons.check_circle_rounded, size: 20),
                     label: const Text('Confirmar Gasto'),
                     style: FilledButton.styleFrom(
@@ -220,7 +226,7 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
 
   Widget _buildDateTimePicker() {
     final theme = Theme.of(context);
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -270,7 +276,8 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        DateFormat('dd/MM/yyyy • HH:mm').format(_selectedDateTime),
+                        DateFormat('dd/MM/yyyy • HH:mm')
+                            .format(_selectedDateTime),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -348,10 +355,14 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: isSelected ? theme.colorScheme.primaryContainer.withOpacity(0.3) : Colors.white,
+            color: isSelected
+                ? theme.colorScheme.primaryContainer.withOpacity(0.3)
+                : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? theme.colorScheme.primary : const Color(0xFFE2E8F0),
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : const Color(0xFFE2E8F0),
               width: isSelected ? 2 : 1,
             ),
             boxShadow: [
@@ -375,16 +386,16 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: isSelected 
-                          ? theme.colorScheme.primary.withOpacity(0.15)
-                          : Colors.grey.shade100,
+                        color: isSelected
+                            ? theme.colorScheme.primary.withOpacity(0.15)
+                            : Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         method.icon,
-                        color: isSelected 
-                          ? theme.colorScheme.primary 
-                          : Colors.grey.shade600,
+                        color: isSelected
+                            ? theme.colorScheme.primary
+                            : Colors.grey.shade600,
                         size: 24,
                       ),
                     ),
@@ -394,10 +405,11 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                         displayNameForGastos(method),
                         style: TextStyle(
                           fontSize: 16,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected 
-                            ? theme.colorScheme.primary 
-                            : const Color(0xFF1E293B),
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: isSelected
+                              ? theme.colorScheme.primary
+                              : const Color(0xFF1E293B),
                         ),
                       ),
                     ),
@@ -419,7 +431,8 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                         width: 24,
                         height: 24,
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300, width: 2),
+                          border:
+                              Border.all(color: Colors.grey.shade300, width: 2),
                           shape: BoxShape.circle,
                         ),
                       ),

@@ -15,7 +15,8 @@ class ServicioVentas {
   /// Reactivado: se conserva item.producto.categoriaId (si existe)
   Future<void> registrarVenta(Orden nuevaOrden) async {
     try {
-      final Map<String, dynamic> data = Map<String, dynamic>.from(nuevaOrden.toJson());
+      final Map<String, dynamic> data =
+          Map<String, dynamic>.from(nuevaOrden.toJson());
 
       final items = (data['items'] as List?) ?? const [];
       for (final it in items) {
@@ -50,7 +51,8 @@ class ServicioVentas {
 
   Future<void> eliminarVentasDeSesion(String cajaId) async {
     try {
-      final query = await _ventasCollection.where('cajaId', isEqualTo: cajaId).get();
+      final query =
+          await _ventasCollection.where('cajaId', isEqualTo: cajaId).get();
       final batch = FirebaseFirestore.instance.batch();
 
       for (final doc in query.docs) {

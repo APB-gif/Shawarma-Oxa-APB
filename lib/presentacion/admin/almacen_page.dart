@@ -21,7 +21,8 @@ class AlmacenPage extends StatefulWidget {
   State<AlmacenPage> createState() => _AlmacenPageState();
 }
 
-class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin {
+class _AlmacenPageState extends State<AlmacenPage>
+    with TickerProviderStateMixin {
   late AnimationController _bannerController;
   late AnimationController _progressController;
   late AnimationController _waveController;
@@ -30,7 +31,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
   // UI state
   bool _isListView = false;
   bool _showOnlyCritical = false;
-  String _stockFilter = 'todos'; // 'todos', 'optimo', 'normal', 'minimo', 'critico'
+  String _stockFilter =
+      'todos'; // 'todos', 'optimo', 'normal', 'minimo', 'critico'
   String _sortBy = 'nombre';
   String _searchQuery = '';
   bool _hasInitiallyLoaded = false;
@@ -65,7 +67,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
     // Controlador para la agitación al deslizar (con curva de calma)
     _agitationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 6000), // 6 segundos para calma muy gradual
+      duration: const Duration(
+          milliseconds: 6000), // 6 segundos para calma muy gradual
     );
   }
 
@@ -82,7 +85,7 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
   Widget build(BuildContext context) {
     final isWideScreen = MediaQuery.of(context).size.width > 900;
     final isTablet = MediaQuery.of(context).size.width > 600;
-    
+
     return ScaffoldMessenger(
       key: almacenMessengerKey,
       child: Scaffold(
@@ -94,9 +97,10 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
     );
   }
 
-  PreferredSizeWidget _buildModernAppBar(BuildContext context, bool isWideScreen) {
+  PreferredSizeWidget _buildModernAppBar(
+      BuildContext context, bool isWideScreen) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return AppBar(
       leading: Navigator.canPop(context)
           ? Padding(
@@ -104,7 +108,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
               child: Center(
                 child: Material(
                   color: colorScheme.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                   elevation: 2,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(10),
@@ -152,10 +157,10 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                 Text(
                   'Almacén',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 20,
-                    letterSpacing: 0.2,
-                  ),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                        letterSpacing: 0.2,
+                      ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -163,9 +168,9 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                 Text(
                   'Gestión de insumos',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -186,11 +191,13 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
               decoration: BoxDecoration(
                 color: colorScheme.primary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: colorScheme.primary.withOpacity(0.18)),
+                border:
+                    Border.all(color: colorScheme.primary.withOpacity(0.18)),
               ),
               alignment: Alignment.center,
               child: PopupMenuButton<String>(
-                tooltip: 'Filtrar por estado: ${_stockFilterLabel(_stockFilter)}',
+                tooltip:
+                    'Filtrar por estado: ${_stockFilterLabel(_stockFilter)}',
                 padding: EdgeInsets.zero,
                 initialValue: _stockFilter,
                 onSelected: (value) {
@@ -213,23 +220,26 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
           // ordenar con fondo
           Tooltip(
             message: 'Ordenar',
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: colorScheme.primary.withOpacity(0.18)),
-                ),
-                child: PopupMenuButton<String>(
-                  icon: Icon(Icons.sort_rounded, color: colorScheme.primary),
-                  onSelected: (value) => setState(() => _sortBy = value),
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'nombre', child: Text('Por nombre')),
-                    const PopupMenuItem(value: 'stock', child: Text('Por stock')),
-                    const PopupMenuItem(value: 'precio', child: Text('Por precio')),
-                  ],
-                ),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+                border:
+                    Border.all(color: colorScheme.primary.withOpacity(0.18)),
               ),
+              child: PopupMenuButton<String>(
+                icon: Icon(Icons.sort_rounded, color: colorScheme.primary),
+                onSelected: (value) => setState(() => _sortBy = value),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                      value: 'nombre', child: Text('Por nombre')),
+                  const PopupMenuItem(value: 'stock', child: Text('Por stock')),
+                  const PopupMenuItem(
+                      value: 'precio', child: Text('Por precio')),
+                ],
+              ),
+            ),
           ),
           // toggle vista (grid / lista)
           Tooltip(
@@ -241,14 +251,19 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
               decoration: BoxDecoration(
                 color: colorScheme.primary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: colorScheme.primary.withOpacity(0.18)),
+                border:
+                    Border.all(color: colorScheme.primary.withOpacity(0.18)),
               ),
               child: IconButton(
-                icon: Icon(_isListView ? Icons.grid_view_rounded : Icons.view_list_rounded,
+                icon: Icon(
+                    _isListView
+                        ? Icons.grid_view_rounded
+                        : Icons.view_list_rounded,
                     color: colorScheme.primary),
                 onPressed: () => setState(() => _isListView = !_isListView),
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+                constraints:
+                    const BoxConstraints.tightFor(width: 44, height: 44),
                 iconSize: 20,
               ),
             ),
@@ -263,7 +278,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
               decoration: BoxDecoration(
                 color: colorScheme.primary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: colorScheme.primary.withOpacity(0.18)),
+                border:
+                    Border.all(color: colorScheme.primary.withOpacity(0.18)),
               ),
               child: IconButton(
                 icon: const Icon(Icons.upload_file_rounded),
@@ -294,13 +310,16 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
               decoration: BoxDecoration(
                 color: colorScheme.surfaceVariant.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: colorScheme.outline.withOpacity(0.12)),
+                border:
+                    Border.all(color: colorScheme.outline.withOpacity(0.12)),
               ),
               child: IconButton(
-                icon: Icon(Icons.search_rounded, color: colorScheme.onSurfaceVariant),
+                icon: Icon(Icons.search_rounded,
+                    color: colorScheme.onSurfaceVariant),
                 onPressed: () => _showSearchDialog(context),
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+                constraints:
+                    const BoxConstraints.tightFor(width: 40, height: 40),
                 iconSize: 20,
               ),
             ),
@@ -314,86 +333,102 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
               decoration: BoxDecoration(
                 color: colorScheme.surfaceVariant.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: colorScheme.outline.withOpacity(0.12)),
+                border:
+                    Border.all(color: colorScheme.outline.withOpacity(0.12)),
               ),
               alignment: Alignment.center,
               // Important: no constraints here so the PopupMenuButton can position the menu overlay correctly
               child: PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert_rounded, color: colorScheme.onSurfaceVariant),
-                  iconSize: 20,
-                  padding: EdgeInsets.zero,
-                  offset: const Offset(0, 44), // force the menu to appear below the button
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'filter_header',
-                      child: Row(
-                        children: [
-                          Icon(Icons.filter_alt, color: colorScheme.onSurfaceVariant),
-                          SizedBox(width: 8),
-                          Text('Filtrar por estado'),
-                        ],
-                      ),
+                icon: Icon(Icons.more_vert_rounded,
+                    color: colorScheme.onSurfaceVariant),
+                iconSize: 20,
+                padding: EdgeInsets.zero,
+                offset: const Offset(
+                    0, 44), // force the menu to appear below the button
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'filter_header',
+                    child: Row(
+                      children: [
+                        Icon(Icons.filter_alt,
+                            color: colorScheme.onSurfaceVariant),
+                        SizedBox(width: 8),
+                        Text('Filtrar por estado'),
+                      ],
                     ),
-                    PopupMenuItem(
-                      value: 'toggle_view',
-                      child: Row(
-                        children: [
-                          Icon(_isListView ? Icons.grid_view_rounded : Icons.view_list_rounded, color: colorScheme.onSurfaceVariant),
-                          SizedBox(width: 8),
-                          Text(_isListView ? 'Ver en cuadrícula' : 'Ver en lista'),
-                        ],
-                      ),
+                  ),
+                  PopupMenuItem(
+                    value: 'toggle_view',
+                    child: Row(
+                      children: [
+                        Icon(
+                            _isListView
+                                ? Icons.grid_view_rounded
+                                : Icons.view_list_rounded,
+                            color: colorScheme.onSurfaceVariant),
+                        SizedBox(width: 8),
+                        Text(
+                            _isListView ? 'Ver en cuadrícula' : 'Ver en lista'),
+                      ],
                     ),
-                    PopupMenuItem(
-                      value: 'sort',
-                      child: Row(
-                        children: [
-                          Icon(Icons.sort_rounded, color: colorScheme.onSurfaceVariant),
-                          SizedBox(width: 8),
-                          Text('Ordenar'),
-                        ],
-                      ),
+                  ),
+                  PopupMenuItem(
+                    value: 'sort',
+                    child: Row(
+                      children: [
+                        Icon(Icons.sort_rounded,
+                            color: colorScheme.onSurfaceVariant),
+                        SizedBox(width: 8),
+                        Text('Ordenar'),
+                      ],
                     ),
-                      PopupMenuItem(
-                        value: 'export_criticos',
-                        child: Row(
-                          children: [
-                            Icon(Icons.upload_file_rounded, color: colorScheme.onSurfaceVariant),
-                            SizedBox(width: 8),
-                            Text('Exportar críticos'),
-                          ],
-                        ),
-                      ),
-                  ],
-                  onSelected: (value) async {
-                    if (value == 'sort') {
-                      _showSortDialog(context);
-                    } else if (value == 'toggle_view') {
-                      setState(() => _isListView = !_isListView);
-                      } else if (value == 'export_criticos') {
-                        await _exportCriticalsAsText(context);
-                    } else if (value == 'filter_header') {
-                      // abrir un submenu modal para elegir el filtro — usaremos showMenu para mostrar las opciones
-                      final selected = await showMenu<String>(
-                        context: context,
-                        position: RelativeRect.fromLTRB(1000, 80, 10, 0),
-                        items: [
-                          const PopupMenuItem(value: 'todos', child: Text('Todos')),
-                          const PopupMenuItem(value: 'optimo', child: Text('Óptimo')),
-                          const PopupMenuItem(value: 'normal', child: Text('Normal')),
-                          const PopupMenuItem(value: 'minimo', child: Text('Mínimo')),
-                          const PopupMenuItem(value: 'critico', child: Text('Crítico')),
-                        ],
-                      );
-                      if (selected != null) {
-                        setState(() {
-                          _stockFilter = selected;
-                          _showOnlyCritical = selected == 'critico';
-                        });
-                      }
+                  ),
+                  PopupMenuItem(
+                    value: 'export_criticos',
+                    child: Row(
+                      children: [
+                        Icon(Icons.upload_file_rounded,
+                            color: colorScheme.onSurfaceVariant),
+                        SizedBox(width: 8),
+                        Text('Exportar críticos'),
+                      ],
+                    ),
+                  ),
+                ],
+                onSelected: (value) async {
+                  if (value == 'sort') {
+                    _showSortDialog(context);
+                  } else if (value == 'toggle_view') {
+                    setState(() => _isListView = !_isListView);
+                  } else if (value == 'export_criticos') {
+                    await _exportCriticalsAsText(context);
+                  } else if (value == 'filter_header') {
+                    // abrir un submenu modal para elegir el filtro — usaremos showMenu para mostrar las opciones
+                    final selected = await showMenu<String>(
+                      context: context,
+                      position: RelativeRect.fromLTRB(1000, 80, 10, 0),
+                      items: [
+                        const PopupMenuItem(
+                            value: 'todos', child: Text('Todos')),
+                        const PopupMenuItem(
+                            value: 'optimo', child: Text('Óptimo')),
+                        const PopupMenuItem(
+                            value: 'normal', child: Text('Normal')),
+                        const PopupMenuItem(
+                            value: 'minimo', child: Text('Mínimo')),
+                        const PopupMenuItem(
+                            value: 'critico', child: Text('Crítico')),
+                      ],
+                    );
+                    if (selected != null) {
+                      setState(() {
+                        _stockFilter = selected;
+                        _showOnlyCritical = selected == 'critico';
+                      });
                     }
-                  },
-                ),
+                  }
+                },
+              ),
             ),
           ),
         ],
@@ -402,7 +437,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildResponsiveBody(BuildContext context, bool isWideScreen, bool isTablet) {
+  Widget _buildResponsiveBody(
+      BuildContext context, bool isWideScreen, bool isTablet) {
     return Column(
       children: [
         if (isWideScreen) _buildSearchAndFilters(context),
@@ -419,7 +455,7 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
               if (snapshot.hasError) {
                 return _buildErrorState(snapshot.error.toString());
               }
-              
+
               final docs = snapshot.data?.docs ?? [];
               var insumos = docs
                   .map((d) => Insumo.fromMap(d.id, d.data()))
@@ -513,9 +549,11 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
                   ),
-                  onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
+                  onChanged: (v) =>
+                      setState(() => _searchQuery = v.trim().toLowerCase()),
                 ),
               ),
             ],
@@ -525,8 +563,6 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
       ),
     );
   }
-
-  
 
   Widget _buildLoadingState() {
     return const Center(
@@ -560,8 +596,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
           Text(
             error,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -569,17 +605,18 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildContent(BuildContext context, List<Insumo> insumos, bool isWideScreen, bool isTablet) {
+  Widget _buildContent(BuildContext context, List<Insumo> insumos,
+      bool isWideScreen, bool isTablet) {
     final criticosBelow = insumos.where((i) {
       final actual = i.stockActual ?? i.stockTotal;
       return actual < i.stockMinimo;
     }).toList();
-    
+
     final criticosEqual = insumos.where((i) {
       final actual = i.stockActual ?? i.stockTotal;
       return actual == i.stockMinimo;
     }).toList();
-    
+
     final totalCriticos = criticosBelow.length + criticosEqual.length;
 
     // Controlar animación según existencia de críticos
@@ -608,9 +645,12 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
 
     return Column(
       children: [
-        if (totalCriticos > 0) _buildCriticalBanner(context, criticosBelow, criticosEqual),
+        if (totalCriticos > 0)
+          _buildCriticalBanner(context, criticosBelow, criticosEqual),
         Expanded(
-          child: _isListView ? _buildListView(context, insumos, isWideScreen) : _buildResponsiveGrid(context, insumos, isWideScreen, isTablet),
+          child: _isListView
+              ? _buildListView(context, insumos, isWideScreen)
+              : _buildResponsiveGrid(context, insumos, isWideScreen, isTablet),
         ),
       ],
     );
@@ -620,8 +660,10 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
   Future<void> _exportCriticalsAsText(BuildContext context) async {
     try {
       // Obtener snapshot actual directamente desde Firestore para reflejar el estado más reciente
-      final snapshot = await FirebaseFirestore.instance.collection('insumos').get();
-      final all = snapshot.docs.map((d) => Insumo.fromMap(d.id, d.data())).toList();
+      final snapshot =
+          await FirebaseFirestore.instance.collection('insumos').get();
+      final all =
+          snapshot.docs.map((d) => Insumo.fromMap(d.id, d.data())).toList();
       final criticos = all.where((i) {
         final actual = i.stockActual ?? i.stockTotal;
         return actual <= i.stockMinimo;
@@ -630,7 +672,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
       if (criticos.isEmpty) {
         // Use global messenger key to avoid calling ScaffoldMessenger.of(context) from
         // contexts that might not have a Scaffold descendant (eg. bottom sheets / dialogs).
-        almacenMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('No hay insumos críticos para exportar.')));
+        almacenMessengerKey.currentState?.showSnackBar(const SnackBar(
+            content: Text('No hay insumos críticos para exportar.')));
         return;
       }
 
@@ -639,7 +682,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
       buffer.writeln();
       for (final i in criticos) {
         final actual = i.stockActual ?? i.stockTotal;
-  buffer.writeln('- ${i.nombre} — ${actual.toStringAsFixed(2)} disponibles — MÍNIMO: ${i.stockMinimo.toStringAsFixed(2)}');
+        buffer.writeln(
+            '- ${i.nombre} — ${actual.toStringAsFixed(2)} disponibles — MÍNIMO: ${i.stockMinimo.toStringAsFixed(2)}');
       }
 
       final text = buffer.toString();
@@ -650,7 +694,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
         try {
           await Clipboard.setData(ClipboardData(text: text));
         } catch (e) {
-          almacenMessengerKey.currentState?.showSnackBar(SnackBar(content: Text('No se pudo copiar al portapapeles: $e')));
+          almacenMessengerKey.currentState?.showSnackBar(
+              SnackBar(content: Text('No se pudo copiar al portapapeles: $e')));
         }
       }
 
@@ -664,7 +709,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
         ),
         builder: (ctx) {
           return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            padding:
+                EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
             child: SafeArea(
               top: false,
               child: Column(
@@ -672,11 +718,18 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     child: Row(
                       children: [
-                        const Expanded(child: Text('Insumos críticos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
-                        IconButton(onPressed: () => Navigator.of(ctx).pop(), icon: const Icon(Icons.close_rounded)),
+                        const Expanded(
+                            child: Text('Insumos críticos',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16))),
+                        IconButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            icon: const Icon(Icons.close_rounded)),
                       ],
                     ),
                   ),
@@ -688,17 +741,25 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
                     child: Row(
                       children: [
                         Expanded(
-                              child: OutlinedButton.icon(
+                          child: OutlinedButton.icon(
                             onPressed: () async {
                               try {
-                                await Clipboard.setData(ClipboardData(text: text));
-                                almacenMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Texto copiado al portapapeles')));
+                                await Clipboard.setData(
+                                    ClipboardData(text: text));
+                                almacenMessengerKey.currentState?.showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'Texto copiado al portapapeles')));
                               } catch (e) {
-                                almacenMessengerKey.currentState?.showSnackBar(SnackBar(content: Text('Error copiando al portapapeles: $e')));
+                                almacenMessengerKey.currentState?.showSnackBar(
+                                    SnackBar(
+                                        content: Text(
+                                            'Error copiando al portapapeles: $e')));
                               }
                             },
                             icon: const Icon(Icons.copy_rounded),
@@ -714,10 +775,17 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                               onPressed: () async {
                                 try {
                                   // Descargar el archivo (web iniciará descarga)
-                                  await downloadTextFile('insumos_criticos.txt', text);
-                                  almacenMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Descarga iniciada: insumos_criticos.txt')));
+                                  await downloadTextFile(
+                                      'insumos_criticos.txt', text);
+                                  almacenMessengerKey.currentState
+                                      ?.showSnackBar(const SnackBar(
+                                          content: Text(
+                                              'Descarga iniciada: insumos_criticos.txt')));
                                 } catch (e) {
-                                  almacenMessengerKey.currentState?.showSnackBar(SnackBar(content: Text('No se pudo descargar/guardar: $e')));
+                                  almacenMessengerKey.currentState
+                                      ?.showSnackBar(SnackBar(
+                                          content: Text(
+                                              'No se pudo descargar/guardar: $e')));
                                 }
                               },
                               icon: const Icon(Icons.download_rounded),
@@ -731,7 +799,10 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                               try {
                                 await Share.share(text);
                               } catch (e) {
-                                almacenMessengerKey.currentState?.showSnackBar(SnackBar(content: Text('No se pudo compartir: $e')));
+                                almacenMessengerKey.currentState?.showSnackBar(
+                                    SnackBar(
+                                        content:
+                                            Text('No se pudo compartir: $e')));
                               }
                             },
                             icon: const Icon(Icons.share_rounded),
@@ -750,13 +821,15 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error exportando: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error exportando: $e')));
       }
     }
   }
 
   // Nueva vista en lista detallada
-  Widget _buildListView(BuildContext context, List<Insumo> insumos, bool isWideScreen) {
+  Widget _buildListView(
+      BuildContext context, List<Insumo> insumos, bool isWideScreen) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     return ListView.separated(
@@ -766,59 +839,77 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
       itemBuilder: (context, index) {
         final insumo = insumos[index];
         final actual = insumo.stockActual ?? insumo.stockTotal;
-    // Usar la misma lógica que las cards para definir estado y color
-    final estado = _getStockStatus(insumo);
-    final statusColor = estado == 'critico'
-      ? colorScheme.error
-      : (estado == 'minimo'
-        ? Colors.amber.shade700
-        : (estado == 'optimo' ? Colors.green : colorScheme.primary));
-    final labelEstado = estado == 'critico'
-      ? 'CRÍTICO'
-      : (estado == 'minimo'
-        ? 'MÍNIMO'
-        : (estado == 'optimo' ? 'ÓPTIMO' : 'NORMAL'));
+        // Usar la misma lógica que las cards para definir estado y color
+        final estado = _getStockStatus(insumo);
+        final statusColor = estado == 'critico'
+            ? colorScheme.error
+            : (estado == 'minimo'
+                ? Colors.amber.shade700
+                : (estado == 'optimo' ? Colors.green : colorScheme.primary));
+        final labelEstado = estado == 'critico'
+            ? 'CRÍTICO'
+            : (estado == 'minimo'
+                ? 'MÍNIMO'
+                : (estado == 'optimo' ? 'ÓPTIMO' : 'NORMAL'));
 
         return Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 1,
           clipBehavior: Clip.antiAlias,
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             leading: Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.12),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withOpacity(0.12),
               ),
               child: insumo.icono != null && insumo.icono!.isNotEmpty
-                  ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(insumo.icono!, fit: BoxFit.cover))
-                  : Icon(Icons.inventory_2_outlined, color: colorScheme.onSurfaceVariant),
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(insumo.icono!, fit: BoxFit.cover))
+                  : Icon(Icons.inventory_2_outlined,
+                      color: colorScheme.onSurfaceVariant),
             ),
-            title: Text(insumo.nombre, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            subtitle: Text('${insumo.unidad} • ${actual.toStringAsFixed(2)} disponibles', style: theme.textTheme.bodySmall),
+            title: Text(insumo.nombre,
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            subtitle: Text(
+                '${insumo.unidad} • ${actual.toStringAsFixed(2)} disponibles',
+                style: theme.textTheme.bodySmall),
             trailing: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 56, minWidth: 64),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('S/ ${insumo.precioUnitario.toStringAsFixed(2)}', style: theme.textTheme.bodySmall),
+                  Text('S/ ${insumo.precioUnitario.toStringAsFixed(2)}',
+                      style: theme.textTheme.bodySmall),
                   const SizedBox(height: 4),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Container(
                       constraints: const BoxConstraints(maxHeight: 28),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: statusColor.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: statusColor.withOpacity(0.18)),
+                        border:
+                            Border.all(color: statusColor.withOpacity(0.18)),
                       ),
                       child: Text(
                         labelEstado,
-                        style: theme.textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.bold, fontSize: 11),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11),
                       ),
                     ),
                   ),
@@ -840,23 +931,29 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
           Icon(
             Icons.inventory_2_outlined,
             size: 80,
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+            color:
+                Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
           ),
           const SizedBox(height: 24),
           Text(
-            _searchQuery.isEmpty ? 'No hay insumos registrados' : 'No se encontraron insumos',
+            _searchQuery.isEmpty
+                ? 'No hay insumos registrados'
+                : 'No se encontraron insumos',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
-            _searchQuery.isEmpty 
+            _searchQuery.isEmpty
                 ? 'Comienza agregando tu primer insumo'
                 : 'Intenta con otros términos de búsqueda',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
-            ),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withOpacity(0.7),
+                ),
             textAlign: TextAlign.center,
           ),
           if (_searchQuery.isEmpty) ...[
@@ -872,9 +969,10 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildCriticalBanner(BuildContext context, List<Insumo> criticosBelow, List<Insumo> criticosEqual) {
+  Widget _buildCriticalBanner(BuildContext context, List<Insumo> criticosBelow,
+      List<Insumo> criticosEqual) {
     final totalCriticos = criticosBelow.length + criticosEqual.length;
-    
+
     return AnimatedBuilder(
       animation: _bannerController,
       builder: (context, child) {
@@ -882,7 +980,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
         final colorScheme = theme.colorScheme;
         final hayBelow = criticosBelow.isNotEmpty;
         final screenWidth = MediaQuery.of(context).size.width;
-        final isMobile = screenWidth < 600; // ajustar breakpoints si es necesario
+        final isMobile =
+            screenWidth < 600; // ajustar breakpoints si es necesario
         final horizontalMargin = isMobile ? 12.0 : 16.0;
         final verticalMargin = isMobile ? 8.0 : 12.0;
         final horizontalPadding = isMobile ? 12.0 : 18.0;
@@ -891,17 +990,23 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
         final titleFontSize = isMobile ? 14.0 : 16.0;
         final subtitleFontSize = isMobile ? 12.0 : 13.0;
         final chipCompact = isMobile;
-        
+
         return Transform.scale(
           scale: 1 + (_bannerController.value - 1) * 0.03,
           child: Container(
-            margin: EdgeInsets.symmetric(horizontal: horizontalMargin, vertical: verticalMargin),
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
+            margin: EdgeInsets.symmetric(
+                horizontal: horizontalMargin, vertical: verticalMargin),
+            padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding, vertical: verticalPadding),
             decoration: BoxDecoration(
-              color: hayBelow ? colorScheme.errorContainer.withOpacity(0.18) : Colors.amber.withOpacity(0.08),
+              color: hayBelow
+                  ? colorScheme.errorContainer.withOpacity(0.18)
+                  : Colors.amber.withOpacity(0.08),
               borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
               border: Border.all(
-                color: hayBelow ? colorScheme.error.withOpacity(0.25) : Colors.amber.withOpacity(0.25),
+                color: hayBelow
+                    ? colorScheme.error.withOpacity(0.25)
+                    : Colors.amber.withOpacity(0.25),
                 width: 1,
               ),
               boxShadow: [
@@ -917,11 +1022,15 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                 Container(
                   padding: EdgeInsets.all(isMobile ? 8 : 10),
                   decoration: BoxDecoration(
-                    color: hayBelow ? colorScheme.error.withOpacity(0.14) : Colors.amber.withOpacity(0.14),
+                    color: hayBelow
+                        ? colorScheme.error.withOpacity(0.14)
+                        : Colors.amber.withOpacity(0.14),
                     borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
                   ),
                   child: Icon(
-                    hayBelow ? Icons.error_outline_rounded : Icons.warning_amber_rounded,
+                    hayBelow
+                        ? Icons.error_outline_rounded
+                        : Icons.warning_amber_rounded,
                     color: hayBelow ? colorScheme.error : Colors.amber.shade700,
                     size: iconSize,
                   ),
@@ -935,7 +1044,9 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                         'Alerta de inventario',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: hayBelow ? colorScheme.error : Colors.amber.shade800,
+                          color: hayBelow
+                              ? colorScheme.error
+                              : Colors.amber.shade800,
                           fontSize: titleFontSize,
                         ),
                       ),
@@ -945,7 +1056,9 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                             ? '1 insumo requiere atención'
                             : '$totalCriticos insumos requieren atención',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: hayBelow ? colorScheme.error.withOpacity(0.85) : Colors.amber.shade700,
+                          color: hayBelow
+                              ? colorScheme.error.withOpacity(0.85)
+                              : Colors.amber.shade700,
                           fontSize: subtitleFontSize,
                         ),
                       ),
@@ -982,12 +1095,16 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildModernChip(BuildContext context, String count, String label, Color color, {bool compact = false}) {
+  Widget _buildModernChip(
+      BuildContext context, String count, String label, Color color,
+      {bool compact = false}) {
     final theme = Theme.of(context);
     final horizontal = compact ? 8.0 : 10.0;
     final vertical = compact ? 6.0 : 6.0;
     final radius = compact ? 10.0 : 12.0;
-    final titleSize = compact ? (theme.textTheme.titleSmall?.fontSize ?? 14) - 2 : theme.textTheme.titleSmall?.fontSize;
+    final titleSize = compact
+        ? (theme.textTheme.titleSmall?.fontSize ?? 14) - 2
+        : theme.textTheme.titleSmall?.fontSize;
     final labelSize = compact ? 10.0 : 11.0;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),
@@ -1028,24 +1145,20 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
 
   // Nota: la versión moderna de los chips se implementa en _buildModernChip
 
-  Widget _buildResponsiveGrid(BuildContext context, List<Insumo> insumos, bool isWideScreen, bool isTablet) {
+  Widget _buildResponsiveGrid(BuildContext context, List<Insumo> insumos,
+      bool isWideScreen, bool isTablet) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallPhone = screenWidth < 380;
 
     // Tamaño máximo por tarjeta para calcular columnas automáticamente
     final maxExtent = isWideScreen
         ? 340.0
-        : (isTablet
-            ? 300.0
-            : (isSmallPhone ? 360.0 : 280.0));
+        : (isTablet ? 300.0 : (isSmallPhone ? 360.0 : 280.0));
 
     final spacing = isSmallPhone ? 12.0 : 16.0;
     // Reducimos la altura para hacer las tarjetas más compactas
-    final childAspectRatio = isWideScreen
-        ? 1.0
-        : (isTablet
-            ? 0.95
-            : (isSmallPhone ? 1.1 : 0.9));
+    final childAspectRatio =
+        isWideScreen ? 1.0 : (isTablet ? 0.95 : (isSmallPhone ? 1.1 : 0.9));
 
     return Padding(
       padding: EdgeInsets.all(isSmallPhone ? 12 : 16),
@@ -1056,18 +1169,22 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
             _agitationController.reset();
             _waveController.reset();
             _agitationController.forward();
-            _waveController.repeat(reverse: true); // Movimiento izq-der solo al agitar
+            _waveController.repeat(
+                reverse: true); // Movimiento izq-der solo al agitar
           } else if (scrollNotification is ScrollEndNotification) {
             // Al terminar de deslizar, calmar progresivamente
             _agitationController.animateBack(
               0.0,
-              duration: const Duration(milliseconds: 6000), // Calma muy gradual - 6 segundos
-              curve: Curves.easeOutCubic, // Curva más suave que simula agua calmándose
+              duration: const Duration(
+                  milliseconds: 6000), // Calma muy gradual - 6 segundos
+              curve: Curves
+                  .easeOutCubic, // Curva más suave que simula agua calmándose
             );
             // Detener movimiento horizontal gradualmente
             Future.delayed(const Duration(milliseconds: 3000), () {
               _waveController.stop();
-              _waveController.animateTo(0.5, 
+              _waveController.animateTo(
+                0.5,
                 duration: const Duration(milliseconds: 2000),
                 curve: Curves.easeOutQuad,
               ); // Volver al centro suavemente
@@ -1083,13 +1200,15 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
             crossAxisSpacing: spacing,
           ),
           itemCount: insumos.length,
-          itemBuilder: (context, index) => _buildInsumoCard(context, insumos[index], isWideScreen),
+          itemBuilder: (context, index) =>
+              _buildInsumoCard(context, insumos[index], isWideScreen),
         ),
       ),
     );
   }
 
-  Widget _buildInsumoCard(BuildContext context, Insumo insumo, bool isWideScreen) {
+  Widget _buildInsumoCard(
+      BuildContext context, Insumo insumo, bool isWideScreen) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -1103,7 +1222,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
     final actual = insumo.stockActual ?? insumo.stockTotal;
     final esBelow = actual < insumo.stockMinimo;
     final esEqual = actual == insumo.stockMinimo;
-    final esAdvertencia = !esBelow && !esEqual && actual <= (insumo.stockMinimo * 1.2);
+    final esAdvertencia =
+        !esBelow && !esEqual && actual <= (insumo.stockMinimo * 1.2);
 
     final cardColor = esBelow
         ? colorScheme.errorContainer.withOpacity(0.3)
@@ -1156,13 +1276,15 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                                 insumo.icono!,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) =>
-                                    Icon(Icons.broken_image, color: colorScheme.onSurfaceVariant),
+                                    Icon(Icons.broken_image,
+                                        color: colorScheme.onSurfaceVariant),
                               )
                             : Image.asset(
                                 insumo.icono!,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) =>
-                                    Icon(Icons.broken_image, color: colorScheme.onSurfaceVariant),
+                                    Icon(Icons.broken_image,
+                                        color: colorScheme.onSurfaceVariant),
                               ),
                       ),
                     )
@@ -1238,7 +1360,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                             children: [
                               Icon(Icons.delete_outline, color: Colors.red),
                               SizedBox(width: 8),
-                              Text('Eliminar', style: TextStyle(color: Colors.red)),
+                              Text('Eliminar',
+                                  style: TextStyle(color: Colors.red)),
                             ],
                           ),
                         ),
@@ -1247,24 +1370,24 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Visualización dinámica del stock
               Expanded(
                 child: _buildStockVisualization(
-                  context, 
-                  actual: actual, 
-                  total: insumo.stockTotal, 
-                  minimo: insumo.stockMinimo, 
+                  context,
+                  actual: actual,
+                  total: insumo.stockTotal,
+                  minimo: insumo.stockMinimo,
                   compact: compact,
                   colorScheme: colorScheme,
                   theme: theme,
                 ),
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               // Precio unitario
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1298,16 +1421,18 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
   }) {
     final actualPercent = total > 0 ? (actual / total).clamp(0.0, 1.0) : 0.0;
     final minimoPercent = total > 0 ? (minimo / total).clamp(0.0, 1.0) : 0.0;
-    final consumidoPercent = total > 0 ? ((total - actual) / total).clamp(0.0, 1.0) : 0.0;
-    
+    final consumidoPercent =
+        total > 0 ? ((total - actual) / total).clamp(0.0, 1.0) : 0.0;
+
     final esBelow = actual < minimo;
     final esEqual = actual == minimo;
     final esCompleto = actual >= total; // Stock completo al 100%
-    
+
     final statusColor = esBelow
         ? colorScheme.error // Rojo cuando está por debajo del mínimo
         : esEqual
-            ? Colors.amber.shade700 // Naranja cuando está exactamente en el mínimo
+            ? Colors
+                .amber.shade700 // Naranja cuando está exactamente en el mínimo
             : esCompleto
                 ? Colors.green // Verde cuando está al 100% (stock completo)
                 : colorScheme.primary; // Azul cuando está entre mínimo y total
@@ -1315,7 +1440,7 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
     // Solo usar animación inicial si recién cargamos o hay cambios importantes
     final shouldAnimate = !_hasInitiallyLoaded;
 
-    return shouldAnimate 
+    return shouldAnimate
         ? TweenAnimationBuilder<double>(
             duration: const Duration(milliseconds: 1500),
             tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -1423,9 +1548,9 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
             ),
           ],
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         // Visualización innovadora tipo tanque/contenedor con olas
         Expanded(
           child: Stack(
@@ -1456,14 +1581,16 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                               Colors.grey.withOpacity(0.05),
                             ],
                             stops: [
-                              (consumidoPercent * animationProgress).clamp(0.0, 1.0),
-                              (consumidoPercent * animationProgress).clamp(0.0, 1.0),
+                              (consumidoPercent * animationProgress)
+                                  .clamp(0.0, 1.0),
+                              (consumidoPercent * animationProgress)
+                                  .clamp(0.0, 1.0),
                             ],
                           ),
                         ),
                       ),
                     ),
-                    
+
                     // Líquido actual con animación de olas
                     // Contenedor de líquido que usa toda la altura disponible
                     Positioned.fill(
@@ -1480,44 +1607,77 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                                 color: statusColor,
                                 waveAnimationValue: _waveController.value,
                                 agitationValue: _agitationController.value,
-                                fillPercent: actualPercent * animationProgress, // Usar toda la altura disponible
+                                fillPercent: actualPercent *
+                                    animationProgress, // Usar toda la altura disponible
                               ),
                               size: Size.infinite,
                             ),
-                            
-                            
+
                             // Partículas flotantes que siguen las olas
                             AnimatedBuilder(
-                              animation: Listenable.merge([_waveController, _agitationController]),
+                              animation: Listenable.merge(
+                                  [_waveController, _agitationController]),
                               builder: (context, child) {
                                 return Stack(
                                   children: List.generate(5, (index) {
-                                    final baseX = (index + 1) * (MediaQuery.of(context).size.width * 0.15);
-                                    final waveOffset = math.sin((_waveController.value * 2 * math.pi) + (index * 0.8)) * 20;
-                                    final agitationOffset = _agitationController.value * math.sin((_waveController.value * 8 * math.pi) + (index * 1.2)) * 10;
-                                    
-                                    final particleY = (MediaQuery.of(context).size.height * 0.15 * (actualPercent * animationProgress)) * 0.3 + 
-                                                    (math.sin((_waveController.value * 3 * math.pi) + (index * 0.6)) * 8) +
-                                                    agitationOffset;
-                                    
+                                    final baseX = (index + 1) *
+                                        (MediaQuery.of(context).size.width *
+                                            0.15);
+                                    final waveOffset = math.sin(
+                                            (_waveController.value *
+                                                    2 *
+                                                    math.pi) +
+                                                (index * 0.8)) *
+                                        20;
+                                    final agitationOffset =
+                                        _agitationController.value *
+                                            math.sin((_waveController.value *
+                                                    8 *
+                                                    math.pi) +
+                                                (index * 1.2)) *
+                                            10;
+
+                                    final particleY =
+                                        (MediaQuery.of(context).size.height *
+                                                    0.15 *
+                                                    (actualPercent *
+                                                        animationProgress)) *
+                                                0.3 +
+                                            (math.sin((_waveController.value *
+                                                        3 *
+                                                        math.pi) +
+                                                    (index * 0.6)) *
+                                                8) +
+                                            agitationOffset;
+
                                     return Positioned(
                                       left: baseX + waveOffset,
                                       top: particleY,
                                       child: Container(
-                                        width: 8 + (_agitationController.value * 4),
-                                        height: 3 + (_agitationController.value * 2),
+                                        width: 8 +
+                                            (_agitationController.value * 4),
+                                        height: 3 +
+                                            (_agitationController.value * 2),
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(10),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
                                           gradient: LinearGradient(
                                             colors: [
-                                              Colors.white.withOpacity(0.8 + (_agitationController.value * 0.2)),
-                                              Colors.white.withOpacity(0.4 + (_agitationController.value * 0.4)),
+                                              Colors.white.withOpacity(0.8 +
+                                                  (_agitationController.value *
+                                                      0.2)),
+                                              Colors.white.withOpacity(0.4 +
+                                                  (_agitationController.value *
+                                                      0.4)),
                                             ],
                                           ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.white.withOpacity(0.6),
-                                              blurRadius: 4 + (_agitationController.value * 4),
+                                              color:
+                                                  Colors.white.withOpacity(0.6),
+                                              blurRadius: 4 +
+                                                  (_agitationController.value *
+                                                      4),
                                               spreadRadius: 1,
                                             ),
                                           ],
@@ -1532,11 +1692,12 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                         ),
                       ),
                     ),
-                    
+
                     // Línea del mínimo con olas (no recta)
                     if (minimoPercent > 0)
                       AnimatedBuilder(
-                        animation: Listenable.merge([_waveController, _agitationController]),
+                        animation: Listenable.merge(
+                            [_waveController, _agitationController]),
                         builder: (context, child) {
                           return Positioned.fill(
                             child: CustomPaint(
@@ -1551,7 +1712,7 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                           );
                         },
                       ),
-                    
+
                     // Valores centrales
                     Center(
                       child: Column(
@@ -1593,21 +1754,33 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                   ],
                 ),
               ),
-              
+
               // Burbujas decorativas con movimiento sutil
               if (actualPercent > 0.3)
                 ...List.generate(3, (index) {
                   return AnimatedBuilder(
-                    animation: Listenable.merge([_waveController, _agitationController]),
+                    animation: Listenable.merge(
+                        [_waveController, _agitationController]),
                     builder: (context, child) {
-                      final waveOffset = math.sin((_waveController.value * 2 * math.pi) + (index * 0.5)) * 8;
-                      final agitationIntensity = 1.0 + (_agitationController.value * 3.0);
-                      final verticalWave = math.cos(_waveController.value * 2 * math.pi + index) * 5 * agitationIntensity;
-                      
+                      final waveOffset = math.sin(
+                              (_waveController.value * 2 * math.pi) +
+                                  (index * 0.5)) *
+                          8;
+                      final agitationIntensity =
+                          1.0 + (_agitationController.value * 3.0);
+                      final verticalWave = math.cos(
+                              _waveController.value * 2 * math.pi + index) *
+                          5 *
+                          agitationIntensity;
+
                       return Positioned(
                         left: 20.0 + (index * 18) + waveOffset,
-                        bottom: (actualPercent * MediaQuery.of(context).size.height * 0.15 * 0.7) + 
-                               (index * 12) + verticalWave,
+                        bottom: (actualPercent *
+                                MediaQuery.of(context).size.height *
+                                0.15 *
+                                0.7) +
+                            (index * 12) +
+                            verticalWave,
                         child: Container(
                           width: (6 + (_agitationController.value * 3)),
                           height: (6 + (_agitationController.value * 3)),
@@ -1615,8 +1788,10 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                             shape: BoxShape.circle,
                             gradient: RadialGradient(
                               colors: [
-                                Colors.white.withOpacity(0.8 + (_agitationController.value * 0.2)),
-                                Colors.white.withOpacity(0.3 + (_agitationController.value * 0.4)),
+                                Colors.white.withOpacity(
+                                    0.8 + (_agitationController.value * 0.2)),
+                                Colors.white.withOpacity(
+                                    0.3 + (_agitationController.value * 0.4)),
                                 Colors.transparent,
                               ],
                               stops: const [0.0, 0.7, 1.0],
@@ -1624,7 +1799,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.white.withOpacity(0.4),
-                                blurRadius: 4 + (_agitationController.value * 6),
+                                blurRadius:
+                                    4 + (_agitationController.value * 6),
                                 spreadRadius: 1,
                               ),
                             ],
@@ -1637,9 +1813,9 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
             ],
           ),
         ),
-        
+
         const SizedBox(height: 8),
-        
+
         // Indicadores inferiores más compactos
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1671,7 +1847,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildIndicator(String label, String value, Color color, ThemeData theme, bool compact) {
+  Widget _buildIndicator(
+      String label, String value, Color color, ThemeData theme, bool compact) {
     return Column(
       children: [
         Text(
@@ -1714,7 +1891,8 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
             hintText: 'Nombre del insumo...',
             prefixIcon: Icon(Icons.search_rounded),
           ),
-          onChanged: (value) => setState(() => _searchQuery = value.trim().toLowerCase()),
+          onChanged: (value) =>
+              setState(() => _searchQuery = value.trim().toLowerCase()),
         ),
         actions: [
           TextButton(
@@ -1951,9 +2129,12 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                               icon: const Icon(Icons.upload_file),
                               label: const Text('Subir imagen'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primary,
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.onPrimary,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1971,7 +2152,9 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                                     children: [
                                       ListTile(
                                         leading: Icon(Icons.photo_library,
-                                            color: Theme.of(context).colorScheme.primary),
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary),
                                         title:
                                             const Text('Subir desde el equipo'),
                                         onTap: () =>
@@ -1979,7 +2162,9 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                                       ),
                                       ListTile(
                                         leading: Icon(Icons.cloud,
-                                            color: Theme.of(context).colorScheme.secondary),
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .secondary),
                                         title:
                                             const Text('Elegir desde Storage'),
                                         onTap: () =>
@@ -2043,7 +2228,9 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                                   onPressed: () => Navigator.of(context).pop(),
                                   child: Text('Cancelar',
                                       style: TextStyle(
-                                          color: Theme.of(context).colorScheme.primary,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
                                           fontWeight: FontWeight.w500)),
                                 ),
                                 const SizedBox(width: 12),
@@ -2135,8 +2322,10 @@ class _AlmacenPageState extends State<AlmacenPage> with TickerProviderStateMixin
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).colorScheme.primary,
-                                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.onPrimary,
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 28, vertical: 14),
                                     shape: RoundedRectangleBorder(
@@ -2249,8 +2438,10 @@ class WavePainter extends CustomPainter {
     path.moveTo(0, waveHeight);
 
     for (double x = 0; x <= size.width; x += 1) {
-      final y = waveHeight + 
-          math.sin((x / waveLength * 2 * math.pi) + (animationValue * 2 * math.pi)) * waveHeight;
+      final y = waveHeight +
+          math.sin((x / waveLength * 2 * math.pi) +
+                  (animationValue * 2 * math.pi)) *
+              waveHeight;
       path.lineTo(x, y);
     }
 
@@ -2296,45 +2487,54 @@ class LiquidWavePainter extends CustomPainter {
     final path = Path();
     final shadowPath = Path();
     final darkLayerPath = Path();
-    
+
     // Configuración de olas que se aplanan PROGRESIVAMENTE en reposo
-    final baseWaveHeight = size.height * 0.08 * math.max(0.1, agitationValue); // Mínimo 10% para transición suave
+    final baseWaveHeight = size.height *
+        0.08 *
+        math.max(0.1, agitationValue); // Mínimo 10% para transición suave
     final agitationMultiplier = 1.0 + (agitationValue * 3.0);
     final waveHeight = baseWaveHeight * agitationMultiplier;
-    
+
     final waveLength = size.width / 1.2;
     final baseHeight = size.height * fillPercent;
-    
+
     // Movimiento horizontal SOLO durante agitación
-    final horizontalOffset = agitationValue > 0.1 
+    final horizontalOffset = agitationValue > 0.1
         ? (waveAnimationValue - 0.5) * size.width * 0.4 * agitationValue
         : 0.0;
-    
+
     // Crear el path principal
     path.moveTo(0, size.height);
     darkLayerPath.moveTo(0, size.height);
-    
+
     // Línea inferior
     path.lineTo(size.width, size.height);
     darkLayerPath.lineTo(size.width, size.height);
-    
+
     // Superficie superior - olas que se calman progresivamente
     for (double x = size.width; x >= 0; x -= 1) {
       double y;
       double darkY;
-      
-      if (agitationValue > 0.02) { // Umbral más bajo para transición suave
+
+      if (agitationValue > 0.02) {
+        // Umbral más bajo para transición suave
         // Estado de agitación - con olas que disminuyen progresivamente
         final adjustedX = x + horizontalOffset;
         final normalizedX = adjustedX / waveLength;
-        
-        final wave1 = math.sin((normalizedX * 2 * math.pi) + (waveAnimationValue * 2 * math.pi)) * waveHeight;
+
+        final wave1 = math.sin((normalizedX * 2 * math.pi) +
+                (waveAnimationValue * 2 * math.pi)) *
+            waveHeight;
         final agitationSpeed = 1.0 + (agitationValue * 6.0);
-        final wave2 = math.sin((normalizedX * 3 * math.pi) + (waveAnimationValue * 3 * math.pi * agitationSpeed)) * (waveHeight * 0.7);
-        final wave3 = agitationValue > 0.3 
-            ? math.sin((normalizedX * 7 * math.pi) + (waveAnimationValue * 7 * math.pi * agitationSpeed)) * (waveHeight * 0.5 * agitationValue)
+        final wave2 = math.sin((normalizedX * 3 * math.pi) +
+                (waveAnimationValue * 3 * math.pi * agitationSpeed)) *
+            (waveHeight * 0.7);
+        final wave3 = agitationValue > 0.3
+            ? math.sin((normalizedX * 7 * math.pi) +
+                    (waveAnimationValue * 7 * math.pi * agitationSpeed)) *
+                (waveHeight * 0.5 * agitationValue)
             : 0.0;
-        
+
         y = size.height - baseHeight + wave1 + wave2 + wave3;
         darkY = y + (waveHeight * 0.1);
       } else {
@@ -2342,53 +2542,59 @@ class LiquidWavePainter extends CustomPainter {
         y = size.height - baseHeight;
         darkY = y;
       }
-      
+
       path.lineTo(x, y.clamp(0.0, size.height));
       darkLayerPath.lineTo(x, darkY.clamp(0.0, size.height));
     }
-    
+
     path.close();
     darkLayerPath.close();
-    
+
     // Crear sombra
     shadowPath.addPath(path, const Offset(0, 4));
-    
+
     // Dibujar en capas
     canvas.drawPath(shadowPath, shadowPaint);
     canvas.drawPath(darkLayerPath, darkLayerPaint);
     canvas.drawPath(path, paint);
-    
+
     // Brillos y decoraciones SOLO durante agitación Y siguiendo el nivel del líquido
     if (agitationValue > 0.02) {
       final primaryGlossIntensity = 0.6 + (agitationValue * 0.4);
-      
+
       final primaryGlossPaint = Paint()
         ..color = Colors.white.withOpacity(primaryGlossIntensity)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5 + (agitationValue * 2.0);
-        
+
       final secondaryGlossPaint = Paint()
         ..color = color.withOpacity(0.8)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0 + (agitationValue * 1.5);
-        
+
       final primaryGlossPath = Path();
       final secondaryGlossPath = Path();
-      
+
       for (double x = 0; x <= size.width; x += 1) {
         final adjustedX = x + horizontalOffset;
         final normalizedX = adjustedX / waveLength;
-        
-        final wave1 = math.sin((normalizedX * 2 * math.pi) + (waveAnimationValue * 2 * math.pi)) * waveHeight;
+
+        final wave1 = math.sin((normalizedX * 2 * math.pi) +
+                (waveAnimationValue * 2 * math.pi)) *
+            waveHeight;
         final agitationSpeed = 1.0 + (agitationValue * 6.0);
-        final wave2 = math.sin((normalizedX * 3 * math.pi) + (waveAnimationValue * 3 * math.pi * agitationSpeed)) * (waveHeight * 0.7);
-        final wave3 = agitationValue > 0.3 
-            ? math.sin((normalizedX * 7 * math.pi) + (waveAnimationValue * 7 * math.pi * agitationSpeed)) * (waveHeight * 0.5 * agitationValue)
+        final wave2 = math.sin((normalizedX * 3 * math.pi) +
+                (waveAnimationValue * 3 * math.pi * agitationSpeed)) *
+            (waveHeight * 0.7);
+        final wave3 = agitationValue > 0.3
+            ? math.sin((normalizedX * 7 * math.pi) +
+                    (waveAnimationValue * 7 * math.pi * agitationSpeed)) *
+                (waveHeight * 0.5 * agitationValue)
             : 0.0;
-        
+
         final y = size.height - baseHeight + wave1 + wave2 + wave3;
         final secondaryY = y + (waveHeight * 0.05);
-        
+
         if (x == 0) {
           primaryGlossPath.moveTo(x, y.clamp(0.0, size.height));
           secondaryGlossPath.moveTo(x, secondaryY.clamp(0.0, size.height));
@@ -2397,38 +2603,47 @@ class LiquidWavePainter extends CustomPainter {
           secondaryGlossPath.lineTo(x, secondaryY.clamp(0.0, size.height));
         }
       }
-      
+
       canvas.drawPath(secondaryGlossPath, secondaryGlossPaint);
       canvas.drawPath(primaryGlossPath, primaryGlossPaint);
-      
+
       // Puntos blancos decorativos que siguen el nivel del líquido
       final bubblePaint = Paint()
         ..color = Colors.white.withOpacity(0.7 + (agitationValue * 0.3))
         ..style = PaintingStyle.fill;
-      
+
       // Generar burbujas/puntos que se mueven con el líquido
       final bubbleCount = (6 + (agitationValue * 8)).round();
       for (int i = 0; i < bubbleCount; i++) {
-        final bubbleX = (size.width * (i + 1) / (bubbleCount + 1)) + 
-                       (horizontalOffset * 0.3) + 
-                       (math.sin(waveAnimationValue * 4 + i) * 15 * agitationValue);
+        final bubbleX = (size.width * (i + 1) / (bubbleCount + 1)) +
+            (horizontalOffset * 0.3) +
+            (math.sin(waveAnimationValue * 4 + i) * 15 * agitationValue);
         final normalizedX = bubbleX / waveLength;
-        
+
         // Las burbujas siguen exactamente el nivel del líquido
-        final wave1 = math.sin((normalizedX * 2 * math.pi) + (waveAnimationValue * 2 * math.pi)) * waveHeight;
+        final wave1 = math.sin((normalizedX * 2 * math.pi) +
+                (waveAnimationValue * 2 * math.pi)) *
+            waveHeight;
         final agitationSpeed = 1.0 + (agitationValue * 6.0);
-        final wave2 = math.sin((normalizedX * 3 * math.pi) + (waveAnimationValue * 3 * math.pi * agitationSpeed)) * (waveHeight * 0.7);
-        
-        final bubbleY = size.height - baseHeight + wave1 + wave2 - (20 + (i % 3) * 10);
-        final bubbleSize = (2.0 + (agitationValue * 3.0) + (i % 2)) * (1.0 + math.sin(waveAnimationValue * 3 + i) * 0.3);
-        
-        if (bubbleX >= 0 && bubbleX <= size.width && bubbleY >= 0 && bubbleY <= size.height) {
+        final wave2 = math.sin((normalizedX * 3 * math.pi) +
+                (waveAnimationValue * 3 * math.pi * agitationSpeed)) *
+            (waveHeight * 0.7);
+
+        final bubbleY =
+            size.height - baseHeight + wave1 + wave2 - (20 + (i % 3) * 10);
+        final bubbleSize = (2.0 + (agitationValue * 3.0) + (i % 2)) *
+            (1.0 + math.sin(waveAnimationValue * 3 + i) * 0.3);
+
+        if (bubbleX >= 0 &&
+            bubbleX <= size.width &&
+            bubbleY >= 0 &&
+            bubbleY <= size.height) {
           canvas.drawCircle(
             Offset(bubbleX, bubbleY),
             bubbleSize,
             bubblePaint,
           );
-          
+
           // Brillo adicional en las burbujas
           final bubbleGlowPaint = Paint()
             ..color = Colors.white.withOpacity(0.9)
@@ -2474,44 +2689,51 @@ class MinimumLinePainter extends CustomPainter {
       ..color = color
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
-    
+
     // Calcular la posición exacta donde debe estar la línea mínima
     // (igual que el cálculo del líquido)
     final minimumFillPercent = stockMinimo / stockTotal;
     final lineY = size.height * (1.0 - minimumFillPercent);
-    
-    if (agitationValue > 0.02) { // Umbral más bajo para transición suave
+
+    if (agitationValue > 0.02) {
+      // Umbral más bajo para transición suave
       // Durante agitación - línea con olas pequeñas sincronizadas
       final shadowPaint = Paint()
         ..color = color.withOpacity(0.3)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.0
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-        
+
       final path = Path();
       final shadowPath = Path();
-      
+
       // Olas que se calman progresivamente (igual que el líquido)
-      final waveHeight = size.height * 0.012 * math.max(0.1, agitationValue); // Mínimo 10% para transición suave
+      final waveHeight = size.height *
+          0.012 *
+          math.max(0.1, agitationValue); // Mínimo 10% para transición suave
       final waveLength = size.width / 1.2; // Misma longitud que el líquido
-      
+
       // Mismo movimiento horizontal que el líquido
-      final horizontalOffset = agitationValue > 0.1 
+      final horizontalOffset = agitationValue > 0.1
           ? (waveAnimationValue - 0.5) * size.width * 0.4 * agitationValue
           : 0.0;
-      
+
       bool isFirst = true;
       for (double x = 0; x <= size.width; x += 1) {
         final adjustedX = x + horizontalOffset;
         final normalizedX = adjustedX / waveLength;
-        
+
         // Misma configuración de olas que el líquido pero más sutil
-        final wave1 = math.sin((normalizedX * 2 * math.pi) + (waveAnimationValue * 2 * math.pi)) * waveHeight;
+        final wave1 = math.sin((normalizedX * 2 * math.pi) +
+                (waveAnimationValue * 2 * math.pi)) *
+            waveHeight;
         final agitationSpeed = 1.0 + (agitationValue * 6.0);
-        final wave2 = math.sin((normalizedX * 3 * math.pi) + (waveAnimationValue * 3 * math.pi * agitationSpeed)) * (waveHeight * 0.7);
-        
+        final wave2 = math.sin((normalizedX * 3 * math.pi) +
+                (waveAnimationValue * 3 * math.pi * agitationSpeed)) *
+            (waveHeight * 0.7);
+
         final y = lineY + wave1 + wave2;
-        
+
         if (isFirst) {
           path.moveTo(x, y);
           shadowPath.moveTo(x, y + 1);
@@ -2521,7 +2743,7 @@ class MinimumLinePainter extends CustomPainter {
           shadowPath.lineTo(x, y + 1);
         }
       }
-      
+
       canvas.drawPath(shadowPath, shadowPaint);
       canvas.drawPath(path, paint);
     } else {
@@ -2530,8 +2752,9 @@ class MinimumLinePainter extends CustomPainter {
         ..color = color.withOpacity(0.3)
         ..strokeWidth = 3.0
         ..style = PaintingStyle.stroke;
-        
-      canvas.drawLine(Offset(0, lineY + 1), Offset(size.width, lineY + 1), shadowPaint);
+
+      canvas.drawLine(
+          Offset(0, lineY + 1), Offset(size.width, lineY + 1), shadowPaint);
       canvas.drawLine(Offset(0, lineY), Offset(size.width, lineY), paint);
     }
   }

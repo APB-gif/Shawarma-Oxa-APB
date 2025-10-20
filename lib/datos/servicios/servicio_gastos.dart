@@ -14,7 +14,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:shawarma_pos_nuevo/datos/modelos/gasto.dart';
 import 'package:shawarma_pos_nuevo/datos/modelos/app_user.dart';
-import 'package:shawarma_pos_nuevo/core/net/connectivity_utils.dart' show hasInternet;
+import 'package:shawarma_pos_nuevo/core/net/connectivity_utils.dart'
+    show hasInternet;
 import 'package:shawarma_pos_nuevo/core/offline/offline_pending.dart' as off;
 
 const _kOfflineMode = 'offline_mode';
@@ -149,7 +150,8 @@ class ServicioGastos with ChangeNotifier {
 
       // OFFLINE: solo admins (admin real logueado o admin local)
       if (!esAdmin) {
-        throw Exception('Sin conexión. Solo un administrador puede registrar gastos en modo offline.');
+        throw Exception(
+            'Sin conexión. Solo un administrador puede registrar gastos en modo offline.');
       }
 
       // Creamos id temporal y mapa simple (solo primitivas) para guardar en cola
@@ -160,13 +162,15 @@ class ServicioGastos with ChangeNotifier {
         'fecha': gasto.fecha.toIso8601String(),
         'proveedor': gasto.proveedor,
         'descripcion': gasto.descripcion,
-        'items': gasto.items.map((it) => {
-              'id': it.id,
-              'nombre': it.nombre,
-              'precio': it.precio,
-              'cantidad': it.cantidad,
-              if (it.categoriaId != null) 'categoriaId': it.categoriaId,
-            }).toList(),
+        'items': gasto.items
+            .map((it) => {
+                  'id': it.id,
+                  'nombre': it.nombre,
+                  'precio': it.precio,
+                  'cantidad': it.cantidad,
+                  if (it.categoriaId != null) 'categoriaId': it.categoriaId,
+                })
+            .toList(),
         'pagos': gasto.pagos,
         'total': gasto.total,
         'usuarioId': gasto.usuarioId.isEmpty ? 'admin_local' : gasto.usuarioId,
@@ -193,7 +197,8 @@ class ServicioGastos with ChangeNotifier {
 
     bool esAdmin = (_me?.rol == 'administrador');
     if (!esAdmin) {
-      esAdmin = await _isOfflineAdmin(); // permite sync si estabas como admin local
+      esAdmin =
+          await _isOfflineAdmin(); // permite sync si estabas como admin local
     }
     if (!esAdmin) return;
 
@@ -240,10 +245,12 @@ class ServicioGastos with ChangeNotifier {
         .limit(limit)
         .get();
 
-    final fresh = snap.docs.map((d) => Gasto.fromFirestore(d.id, d.data())).toList();
+    final fresh =
+        snap.docs.map((d) => Gasto.fromFirestore(d.id, d.data())).toList();
 
     // Mantener arriba los temporales (tmp_) si existieran
-    final temporales = _gastos.where((g) => (g.id ?? '').startsWith('tmp_')).toList();
+    final temporales =
+        _gastos.where((g) => (g.id ?? '').startsWith('tmp_')).toList();
     _gastos = [...temporales, ...fresh];
     await _saveCache();
     notifyListeners();

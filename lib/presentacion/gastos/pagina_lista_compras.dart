@@ -1,4 +1,3 @@
-
 // lib/presentacion/gastos/pagina_lista_compras.dart
 import 'package:flutter/material.dart';
 import 'package:shawarma_pos_nuevo/datos/modelos/producto.dart';
@@ -113,7 +112,7 @@ class _PaginaListaComprasState extends State<PaginaListaCompras> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     if (_loading) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
@@ -220,7 +219,8 @@ class _PaginaListaComprasState extends State<PaginaListaCompras> {
                                 Text(
                                   'Compras de Hoy',
                                   style: TextStyle(
-                                    color: theme.colorScheme.onPrimary.withOpacity(0.9),
+                                    color: theme.colorScheme.onPrimary
+                                        .withOpacity(0.9),
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -238,7 +238,8 @@ class _PaginaListaComprasState extends State<PaginaListaCompras> {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
@@ -262,7 +263,8 @@ class _PaginaListaComprasState extends State<PaginaListaCompras> {
                           value: total > 0 ? comprados / total : 0,
                           minHeight: 8,
                           backgroundColor: Colors.white.withOpacity(0.3),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              const AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -272,13 +274,15 @@ class _PaginaListaComprasState extends State<PaginaListaCompras> {
                           Text(
                             '$comprados de $total completados',
                             style: TextStyle(
-                              color: theme.colorScheme.onPrimary.withOpacity(0.9),
+                              color:
+                                  theme.colorScheme.onPrimary.withOpacity(0.9),
                               fontSize: 13,
                             ),
                           ),
                           if (comprados == total)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: Colors.green.shade400,
                                 borderRadius: BorderRadius.circular(12),
@@ -286,7 +290,8 @@ class _PaginaListaComprasState extends State<PaginaListaCompras> {
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.check_circle, size: 14, color: Colors.white),
+                                  Icon(Icons.check_circle,
+                                      size: 14, color: Colors.white),
                                   SizedBox(width: 4),
                                   Text(
                                     'Completo',
@@ -304,7 +309,7 @@ class _PaginaListaComprasState extends State<PaginaListaCompras> {
                     ],
                   ),
                 ),
-                
+
                 // Lista de items
                 Expanded(
                   child: ListView.builder(
@@ -388,16 +393,15 @@ class _ItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final precio = 'S/ ${item.precioEstimado.toStringAsFixed(2)}';
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: item.comprado 
-            ? Colors.green.shade300 
-            : const Color(0xFFE2E8F0),
+          color:
+              item.comprado ? Colors.green.shade300 : const Color(0xFFE2E8F0),
           width: item.comprado ? 2 : 1,
         ),
         boxShadow: [
@@ -422,28 +426,28 @@ class _ItemTile extends StatelessWidget {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: item.comprado 
-                      ? Colors.green.shade500 
-                      : Colors.transparent,
+                    color: item.comprado
+                        ? Colors.green.shade500
+                        : Colors.transparent,
                     border: Border.all(
-                      color: item.comprado 
-                        ? Colors.green.shade500 
-                        : Colors.grey.shade400,
+                      color: item.comprado
+                          ? Colors.green.shade500
+                          : Colors.grey.shade400,
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: item.comprado
-                    ? const Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      )
-                    : null,
+                      ? const Icon(
+                          Icons.check_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        )
+                      : null,
                 ),
-                
+
                 const SizedBox(width: 16),
-                
+
                 // Información del producto
                 Expanded(
                   child: Column(
@@ -454,12 +458,11 @@ class _ItemTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: item.comprado 
-                            ? Colors.grey.shade500 
-                            : const Color(0xFF1E293B),
-                          decoration: item.comprado 
-                            ? TextDecoration.lineThrough 
-                            : null,
+                          color: item.comprado
+                              ? Colors.grey.shade500
+                              : const Color(0xFF1E293B),
+                          decoration:
+                              item.comprado ? TextDecoration.lineThrough : null,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -472,8 +475,9 @@ class _ItemTile extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: item.comprado
-                                ? Colors.grey.shade200
-                                : theme.colorScheme.primaryContainer.withOpacity(0.3),
+                                  ? Colors.grey.shade200
+                                  : theme.colorScheme.primaryContainer
+                                      .withOpacity(0.3),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -482,8 +486,8 @@ class _ItemTile extends StatelessWidget {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: item.comprado
-                                  ? Colors.grey.shade600
-                                  : theme.colorScheme.primary,
+                                    ? Colors.grey.shade600
+                                    : theme.colorScheme.primary,
                               ),
                             ),
                           ),
@@ -492,9 +496,9 @@ class _ItemTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(width: 8),
-                
+
                 // Botones de acción
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -520,9 +524,9 @@ class _ItemTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(width: 4),
-                    
+
                     // Botón eliminar
                     Container(
                       decoration: BoxDecoration(

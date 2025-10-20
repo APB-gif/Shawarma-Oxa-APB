@@ -8,7 +8,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shawarma_pos_nuevo/core/net/connectivity_utils.dart' as net;
 
 // Traemos SOLO las keys globales desde main.dart (sin mezclar hide/show)
-import 'package:shawarma_pos_nuevo/main.dart' show navigatorKey, scaffoldMessengerKey;
+import 'package:shawarma_pos_nuevo/main.dart'
+    show navigatorKey, scaffoldMessengerKey;
 
 import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service.dart';
 import 'package:shawarma_pos_nuevo/datos/servicios/caja_service.dart';
@@ -27,8 +28,10 @@ class NetStatusStrip extends StatefulWidget {
     super.key,
     this.syncCaja = true,
     this.syncGastos = true,
-    this.autoSyncOnBackOnline = true, // intenta sincronizar cuando vuelve internet (si hay user)
-    this.showGreenForAuthed = true,   // muestra banner verde con botón "Sincronizar" para usuarios autenticados
+    this.autoSyncOnBackOnline =
+        true, // intenta sincronizar cuando vuelve internet (si hay user)
+    this.showGreenForAuthed =
+        true, // muestra banner verde con botón "Sincronizar" para usuarios autenticados
   });
 
   final bool syncCaja;
@@ -45,7 +48,8 @@ class _NetStatusStripState extends State<NetStatusStrip> {
   StreamSubscription? _connSub;
   Timer? _poller;
   bool _working = false;
-  bool _justCameOnline = false; // para mostrar 1 vez el verde cuando vuelve la red
+  bool _justCameOnline =
+      false; // para mostrar 1 vez el verde cuando vuelve la red
 
   @override
   void initState() {
@@ -100,7 +104,8 @@ class _NetStatusStripState extends State<NetStatusStrip> {
       return await net.hasInternet();
     }
     if (event is List<ConnectivityResult>) {
-      if (event.isEmpty || event.contains(ConnectivityResult.none)) return false;
+      if (event.isEmpty || event.contains(ConnectivityResult.none))
+        return false;
       return await net.hasInternet();
     }
     // Fallback con verificación real
@@ -133,25 +138,27 @@ class _NetStatusStripState extends State<NetStatusStrip> {
     return ValueListenableBuilder<bool>(
       valueListenable: auth.offlineListenable,
       builder: (_, isOfflineMode, __) {
-    // 🟢 Con internet + sin usuario (invitado) => botón de login
-    if (_online && (!hasUser || isOfflineMode)) {
-      return _buildStrip(
-        bg: Colors.green.shade600,
-        icon: Icons.wifi,
-        text: 'Conexión restablecida. Estás en modo invitado.',
-        trailing: _actionButton(
-          label: _working ? 'Conectando...' : 'Iniciar sesión',
-          icon: _working ? null : Icons.login,
-          busy: _working,
-          onTap: _working ? null : () => _handleLoginAndSync(context),
-        ),
-      );
-    }
-
+        // 🟢 Con internet + sin usuario (invitado) => botón de login
+        if (_online && (!hasUser || isOfflineMode)) {
+          return _buildStrip(
+            bg: Colors.green.shade600,
+            icon: Icons.wifi,
+            text: 'Conexión restablecida. Estás en modo invitado.',
+            trailing: _actionButton(
+              label: _working ? 'Conectando...' : 'Iniciar sesión',
+              icon: _working ? null : Icons.login,
+              busy: _working,
+              onTap: _working ? null : () => _handleLoginAndSync(context),
+            ),
+          );
+        }
 
         // 🟢 Con internet + usuario autenticado:
         //     si se acaba de recuperar la conexión, muestra tira verde con botón "Sincronizar ahora".
-        if (_online && hasUser && widget.showGreenForAuthed && _justCameOnline) {
+        if (_online &&
+            hasUser &&
+            widget.showGreenForAuthed &&
+            _justCameOnline) {
           // se auto-oculta después de unos segundos si no interactúan
           Future.delayed(const Duration(seconds: 4), () {
             if (mounted) setState(() => _justCameOnline = false);
@@ -227,7 +234,8 @@ class _NetStatusStripState extends State<NetStatusStrip> {
           ? const SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.white),
             )
           : Icon(icon ?? Icons.sync),
       label: Text(label),
@@ -312,7 +320,8 @@ class _NetStatusStripState extends State<NetStatusStrip> {
 
       if (user == null) {
         scaffoldMessengerKey.currentState?.showSnackBar(
-          const SnackBar(content: Text('No se pudo iniciar sesión. Inténtalo de nuevo.')),
+          const SnackBar(
+              content: Text('No se pudo iniciar sesión. Inténtalo de nuevo.')),
         );
         setState(() => _working = false);
         return;
@@ -321,7 +330,8 @@ class _NetStatusStripState extends State<NetStatusStrip> {
       await auth.ensureUserDocForCurrentUser();
 
       // Reasigna caja local si estaba en 'local'
-      if (caja.cajaActiva != null && (caja.cajaActiva!.usuarioAperturaId == 'local')) {
+      if (caja.cajaActiva != null &&
+          (caja.cajaActiva!.usuarioAperturaId == 'local')) {
         await caja.actualizarUsuarioSesion(
           user.uid,
           (user.displayName?.trim().isNotEmpty ?? false)
@@ -332,10 +342,14 @@ class _NetStatusStripState extends State<NetStatusStrip> {
 
       // Sincronizar pendientes
       if (widget.syncGastos) {
-        try { await gastos.syncPendientes(); } catch (_) {}
+        try {
+          await gastos.syncPendientes();
+        } catch (_) {}
       }
       if (widget.syncCaja) {
-        try { await caja.syncPendientes(); } catch (_) {}
+        try {
+          await caja.syncPendientes();
+        } catch (_) {}
       }
 
       // Salimos del modo invitado

@@ -56,7 +56,8 @@ class Producto {
       imagenUrl: map['imagenUrl']?.toString(),
       orden: _asInt(map['orden'], fallback: 999), // 👈 lee 'orden' si existe
       stock: _asInt(map['stock'], fallback: 0), // NUEVO: lee 'stock'
-      stockMinimo: _asInt(map['stockMinimo'], fallback: 5), // NUEVO: lee 'stockMinimo'
+      stockMinimo:
+          _asInt(map['stockMinimo'], fallback: 5), // NUEVO: lee 'stockMinimo'
     );
   }
 
@@ -68,7 +69,7 @@ class Producto {
 
   /// Exporta a mapa (útil para cache/local).
   Map<String, dynamic> toMap({bool lean = false, bool includePrecio = true}) {
-    final base = <String, dynamic> {
+    final base = <String, dynamic>{
       'id': id,
       'nombre': nombre,
       'categoriaId': categoriaId,
@@ -89,7 +90,7 @@ class Producto {
   }
 
   /// Para guardar en Firestore.
-  Map<String, dynamic> toFirestore() => <String, dynamic> {
+  Map<String, dynamic> toFirestore() => <String, dynamic>{
         'nombre': nombre,
         'precio': precio,
         'categoriaId': categoriaId,

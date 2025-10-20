@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shawarma_pos_nuevo/datos/modelos/producto.dart';
@@ -12,6 +11,7 @@ class CatalogoVentas extends StatelessWidget {
   final Map<String, int> cartQuantities;
   final bool showAddButton;
   final double childAspectRatio;
+
   /// Si un producto no tiene `imagenUrl`, se usará este asset SVG como fallback (por ejemplo el ícono de la categoría).
   final String? fallbackAssetSvg;
 
@@ -92,17 +92,22 @@ class _ProductCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                Expanded(child: _ProductImage(src: producto.imagenUrl, fallbackAssetSvg: fallbackAssetSvg)),
+                Expanded(
+                    child: _ProductImage(
+                        src: producto.imagenUrl,
+                        fallbackAssetSvg: fallbackAssetSvg)),
                 const SizedBox(height: 8),
                 Text(
                   producto.nombre,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
                 Text('S/ ${producto.precio.toStringAsFixed(2)}',
-                    style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(color: theme.colorScheme.primary)),
                 const SizedBox(height: 8),
                 if (showAddButton)
                   FilledButton.icon(
@@ -110,10 +115,12 @@ class _ProductCard extends StatelessWidget {
                     icon: const Icon(Icons.add),
                     label: const Text('Agregar'),
                   ),
-                if (qty > 0) Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text('En carrito: $qty', style: theme.textTheme.labelMedium),
-                ),
+                if (qty > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text('En carrito: $qty',
+                        style: theme.textTheme.labelMedium),
+                  ),
               ],
             ),
           ),
@@ -146,11 +153,14 @@ class _ProductImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final placeholder = Icon(Icons.lunch_dining, size: 72, color: Theme.of(context).colorScheme.primary);
+    final placeholder = Icon(Icons.lunch_dining,
+        size: 72, color: Theme.of(context).colorScheme.primary);
 
     if (src == null || src!.trim().isEmpty) {
       if (fallbackAssetSvg != null && fallbackAssetSvg!.isNotEmpty) {
-        return Center(child: SvgPicture.asset(fallbackAssetSvg!, height: 120, fit: BoxFit.contain));
+        return Center(
+            child: SvgPicture.asset(fallbackAssetSvg!,
+                height: 120, fit: BoxFit.contain));
       }
       return Center(child: placeholder);
     }
@@ -158,20 +168,31 @@ class _ProductImage extends StatelessWidget {
     try {
       if (_isNetwork) {
         if (_isSvg) {
-          return Center(child: CachedSvgImage(imageUrl: src!, height: 120, width: 120, url: '',));
+          return Center(
+              child: CachedSvgImage(
+            imageUrl: src!,
+            height: 120,
+            width: 120,
+            url: '',
+          ));
         } else {
-          return Center(child: Image.network(src!, height: 120, fit: BoxFit.contain));
+          return Center(
+              child: Image.network(src!, height: 120, fit: BoxFit.contain));
         }
       } else {
         if (_isSvg) {
-          return Center(child: SvgPicture.asset(src!, height: 120, fit: BoxFit.contain));
+          return Center(
+              child: SvgPicture.asset(src!, height: 120, fit: BoxFit.contain));
         } else {
-          return Center(child: Image.asset(src!, height: 120, fit: BoxFit.contain));
+          return Center(
+              child: Image.asset(src!, height: 120, fit: BoxFit.contain));
         }
       }
     } catch (_) {
       if (fallbackAssetSvg != null && fallbackAssetSvg!.isNotEmpty) {
-        return Center(child: SvgPicture.asset(fallbackAssetSvg!, height: 120, fit: BoxFit.contain));
+        return Center(
+            child: SvgPicture.asset(fallbackAssetSvg!,
+                height: 120, fit: BoxFit.contain));
       }
       return Center(child: placeholder);
     }

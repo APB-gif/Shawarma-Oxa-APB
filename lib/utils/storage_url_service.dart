@@ -8,14 +8,19 @@ class StorageUrlService {
   final String baseUrl; // e.g. https://us-central1-PROJECT.cloudfunctions.net
   final Duration defaultTtl;
 
-  StorageUrlService({required this.baseUrl, this.defaultTtl = const Duration(hours: 6)});
+  StorageUrlService(
+      {required this.baseUrl, this.defaultTtl = const Duration(hours: 6)});
 
-  Future<Map<String, dynamic>> _callGetSignedUrls(List<String> paths, {int ttlSeconds = 21600}) async {
+  Future<Map<String, dynamic>> _callGetSignedUrls(List<String> paths,
+      {int ttlSeconds = 21600}) async {
     final url = Uri.parse('$baseUrl/getSignedUrls');
-    final resp = await http.post(url, headers: {
-      'Content-Type': 'application/json',
-    }, body: jsonEncode({'paths': paths, 'ttlSeconds': ttlSeconds}));
-    if (resp.statusCode != 200) throw Exception('Failed to get signed urls: ${resp.statusCode}');
+    final resp = await http.post(url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'paths': paths, 'ttlSeconds': ttlSeconds}));
+    if (resp.statusCode != 200)
+      throw Exception('Failed to get signed urls: ${resp.statusCode}');
     return jsonDecode(resp.body) as Map<String, dynamic>;
   }
 
@@ -36,12 +41,14 @@ class StorageUrlService {
     }
     // Request from server
     try {
-      final api = await _callGetSignedUrls([path], ttlSeconds: defaultTtl.inSeconds);
+      final api =
+          await _callGetSignedUrls([path], ttlSeconds: defaultTtl.inSeconds);
       final results = api['results'] as Map<String, dynamic>?;
       final info = results?[path] as Map<String, dynamic>?;
       final url = info?['url'] as String?;
       if (url != null) {
-        final metaVal = jsonEncode({'expires': DateTime.now().add(defaultTtl).toIso8601String()});
+        final metaVal = jsonEncode(
+            {'expires': DateTime.now().add(defaultTtl).toIso8601String()});
         await prefs.setString(key, url);
         await prefs.setString(metaKey, metaVal);
         return url;
@@ -82,7 +89,8 @@ class StorageUrlService {
     }
     if (toRequest.isNotEmpty) {
       try {
-        final api = await _callGetSignedUrls(toRequest, ttlSeconds: defaultTtl.inSeconds);
+        final api = await _callGetSignedUrls(toRequest,
+            ttlSeconds: defaultTtl.inSeconds);
         final results = api['results'] as Map<String, dynamic>?;
         for (final p in toRequest) {
           final info = results?[p] as Map<String, dynamic>?;
@@ -91,7 +99,8 @@ class StorageUrlService {
           if (url != null) {
             final key = 'signedurl:$p';
             final metaKey = '$key:meta';
-            final metaVal = jsonEncode({'expires': DateTime.now().add(defaultTtl).toIso8601String()});
+            final metaVal = jsonEncode(
+                {'expires': DateTime.now().add(defaultTtl).toIso8601String()});
             await prefs.setString(key, url);
             await prefs.setString(metaKey, metaVal);
           }

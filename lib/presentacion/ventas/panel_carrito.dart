@@ -238,6 +238,15 @@ class PanelCarrito extends StatefulWidget {
     required DateTime fechaVenta,
   }) onConfirm;
 
+  // Optional: handler for partial payments (only these item IDs). If provided,
+  // PanelCarrito will call this when paying a split group so the parent can
+  // remove only the paid items instead of clearing the whole cart.
+  final Future<void> Function({
+    required Map<String, double> pagos,
+    required DateTime fechaVenta,
+    required Set<String> itemIds,
+  })? onConfirmPartial;
+
   final void Function(Set<String> uniqueIds) onRemoveSelected;
 
   const PanelCarrito({
@@ -252,6 +261,7 @@ class PanelCarrito extends StatefulWidget {
     required this.onUpdateComment,
     required this.onUpdatePrice,
     required this.onConfirm,
+  this.onConfirmPartial,
     required this.onRemoveSelected,
   });
 
@@ -260,6 +270,62 @@ class PanelCarrito extends StatefulWidget {
 }
 
 class _PanelCarritoState extends State<PanelCarrito> {
+  // Persist split sessions per cajaId so the UI state survives closing the panel.
+  static final Map<String, Map<String, Object>> _splitSessions = {};
+
+  void _saveSplitSession() {
+    try {
+      _splitSessions[widget.cajaId] = {
+        'splitCount': _splitCount,
+        'itemToSplit': Map<String, int>.from(_itemToSplit),
+        'batchAssignTarget': _batchAssignTarget,
+        'scrollOffset': _sheetController?.offset ?? 0.0,
+      };
+    } catch (_) {}
+  }
+
+  void _clearSplitSession() {
+    _splitSessions.remove(widget.cajaId);
+  }
+
+  void _restoreSplitSession() {
+    final s = _splitSessions[widget.cajaId];
+    if (s != null) {
+      setState(() {
+        _splitCount = (s['splitCount'] as int?) ?? 0;
+        final m = s['itemToSplit'] as Map<dynamic, dynamic>?;
+        _itemToSplit
+          ..clear()
+          ..addAll(m != null
+              ? Map<String, int>.from(m.map((k, v) => MapEntry(k.toString(), v as int)))
+              : {});
+        // Prune assignments for items no longer in the cart
+        final existingIds = widget.items.map((e) => e.uniqueId).toSet();
+        _itemToSplit.removeWhere((k, _) => !existingIds.contains(k));
+        _batchAssignTarget = (s['batchAssignTarget'] as int?) ?? 1;
+        // Only activate split mode if we have a split count and there are assignments left
+        if (_splitCount >= 2 && _itemToSplit.isNotEmpty) _splitModeActive = true;
+        // Restore scroll offset if available (apply when controller attached)
+        final savedOffset = (s['scrollOffset'] as double?) ?? 0.0;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_sheetController != null && _sheetController!.hasClients) {
+            final max = _sheetController!.position.maxScrollExtent;
+            final target = savedOffset.clamp(0.0, max);
+            _sheetController!.jumpTo(target);
+          }
+        });
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    // Save last-known offset into the session so reopening restores position
+    try {
+      _saveSplitSession();
+    } catch (_) {}
+    super.dispose();
+  }
   final Set<String> _selectedItems = {};
   ScrollController? _sheetController;
   double _discountAmount = 0;
@@ -269,12 +335,64 @@ class _PanelCarritoState extends State<PanelCarrito> {
   int _splitCount = 0;
   // map item.uniqueId -> cuentaIndex (1.._splitCount)
   final Map<String, int> _itemToSplit = {};
+  // batch assign target (default 1)
+  int _batchAssignTarget = 1;
+
+  int get _assignedCount => _itemToSplit.length;
+
+  final List<Color> _splitColors = [
+    Color(0xFF3B82F6), // blue
+    Color(0xFF10B981), // green
+    Color(0xFFF59E0B), // amber
+    Color(0xFFEF4444), // red
+    Color(0xFF8B5CF6), // purple
+  ];
 
   double get _currentSubtotal =>
       widget.items.fold(0.0, (sum, item) => sum + item.precioEditable);
 
   double get _finalTotal =>
       (_currentSubtotal - _discountAmount).clamp(0.0, double.infinity);
+
+  bool get _hasSavedSplit => _splitSessions.containsKey(widget.cajaId);
+
+  int get _pendingAccountsCount {
+    if (_itemToSplit.isEmpty) return 0;
+    return _itemToSplit.values.toSet().length;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Restaurar sesión guardada al abrir el panel
+    WidgetsBinding.instance.addPostFrameCallback((_) => _restoreSplitSession());
+  }
+
+  @override
+  void didUpdateWidget(covariant PanelCarrito oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Si cambió la lista de items, podar cualquier asignación que ya no exista.
+    final existingIds = widget.items.map((e) => e.uniqueId).toSet();
+    final removed = _itemToSplit.keys.where((k) => !existingIds.contains(k)).toList();
+    if (removed.isNotEmpty) {
+      setState(() {
+        for (final r in removed) _itemToSplit.remove(r);
+        // Si quedan asignaciones, mantener modo split activo para que el usuario continúe
+        if (_itemToSplit.isNotEmpty) {
+          _splitModeActive = true;
+        } else {
+          _splitModeActive = false;
+          _splitCount = 0;
+        }
+      });
+      // Actualizar sesión almacenada
+      if (_itemToSplit.isNotEmpty) {
+        _saveSplitSession();
+      } else {
+        _clearSplitSession();
+      }
+    }
+  }
 
   Future<void> _showComentarioDialog(ItemCarrito item) async {
     final comentarioController = TextEditingController(text: item.comentario);
@@ -471,13 +589,77 @@ class _PanelCarritoState extends State<PanelCarrito> {
         _splitCount = selected;
         _splitModeActive = true;
         _itemToSplit.clear();
+        _batchAssignTarget = 1;
       });
+      _saveSplitSession();
     }
   }
 
+  // Assign currently selected items to a given account (batch)
+  void _assignSelectedTo(int cuenta) {
+    if (!_splitModeActive || cuenta < 1 || cuenta > _splitCount) return;
+    setState(() {
+      for (final id in _selectedItems) {
+        _itemToSplit[id] = cuenta;
+      }
+      _selectedItems.clear();
+    });
+    _saveSplitSession();
+  }
+
   // Aplicar split: genera grupos y abre panel de pago por cada cuenta (o devuelve datos al parent)
-  void _applySplit() {
+  Future<void> _applySplit() async {
     if (!_splitModeActive || _splitCount < 2) return;
+    // Validar si hay items sin asignar
+    final unassigned = widget.items
+        .where((it) => !_itemToSplit.containsKey(it.uniqueId))
+        .toList();
+    if (unassigned.isNotEmpty) {
+      final choice = await showDialog<int>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: Row(children: [
+            const Icon(Icons.call_split_rounded, color: Color(0xFF1E40AF)),
+            const SizedBox(width: 8),
+            const Text('Ítems sin asignar')
+          ]),
+          content: Text(
+              'Existen ${unassigned.length} ítem(s) sin asignar a ninguna cuenta. Selecciona cómo proceder.'),
+          actions: [
+            TextButton.icon(
+              icon: const Icon(Icons.cancel_outlined),
+              onPressed: () => Navigator.of(ctx).pop(0),
+              label: const Text('Cancelar'),
+            ),
+            TextButton.icon(
+              icon: const Icon(Icons.looks_one_outlined),
+              onPressed: () => Navigator.of(ctx).pop(1),
+              label: const Text('Asignar todo a Cuenta 1'),
+            ),
+            FilledButton.icon(
+              icon: const Icon(Icons.auto_fix_high),
+              onPressed: () => Navigator.of(ctx).pop(2),
+              label: const Text('Auto repartir'),
+            ),
+          ],
+        ),
+      );
+
+      if (choice == null || choice == 0) return; // cancelar
+      if (choice == 1) {
+        for (final item in unassigned) _itemToSplit[item.uniqueId] = 1;
+      } else if (choice == 2) {
+        int idx = 0;
+        for (final item in unassigned) {
+          final cuenta = (idx % _splitCount) + 1;
+          _itemToSplit[item.uniqueId] = cuenta;
+          idx++;
+        }
+      }
+    }
+
     // construir mapa cuenta -> items
     final Map<int, List<ItemCarrito>> groups = {};
     for (var i = 1; i <= _splitCount; i++) groups[i] = [];
@@ -487,16 +669,14 @@ class _PanelCarritoState extends State<PanelCarrito> {
       groups[assigned]!.add(item);
     }
 
-    // Por ahora, notificamos al padre con onRemoveSelected para marcar los items seleccionados
-    // Alternativamente podríamos emitir un evento más complejo. Aquí simplemente cerramos el modo.
-    // Abrir modal de revisión para pagar cada grupo localmente (sin persistencia)
+    // Abrir modal de revisión para pagar cada grupo localmente. Las acciones de pago
+    // actualizarán la sesión guardada para que el usuario pueda volver donde quedó.
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => ReviewSplitDialog(
         groups: groups,
         onPayGroup: (groupIndex, items, subtotal) async {
-          // Abrir PanelPago para este grupo y esperar confirmación
           final idsToRemove = items.map((e) => e.uniqueId).toSet();
           await showModalBottomSheet(
             context: ctx,
@@ -506,14 +686,22 @@ class _PanelCarritoState extends State<PanelCarrito> {
               subtotal: subtotal,
               items: items,
               onConfirm: ({required pagos, required fechaVenta}) async {
-                // Llamar al handler general (si está conectado) para procesar la venta
                 try {
-                  await widget.onConfirm(pagos: pagos, fechaVenta: fechaVenta);
-                } catch (_) {
-                  // Ignorar errores de backend en este flujo local si existen
-                }
-                // Eliminar los items pagados del carrito local
-                widget.onRemoveSelected(idsToRemove);
+                  if (widget.onConfirmPartial != null) {
+                    await widget.onConfirmPartial!(pagos: pagos, fechaVenta: fechaVenta, itemIds: idsToRemove);
+                  } else {
+                    await widget.onConfirm(pagos: pagos, fechaVenta: fechaVenta);
+                    // Fallback: parent likely cleared full cart; mirror removal
+                    widget.onRemoveSelected(idsToRemove);
+                  }
+                } catch (_) {}
+
+                // Actualizar asignaciones y sesión localmente (prune paid ids)
+                setState(() {
+                  for (final id in idsToRemove) _itemToSplit.remove(id);
+                });
+                _saveSplitSession();
+                if (_itemToSplit.isEmpty) _clearSplitSession();
               },
             ),
           );
@@ -521,11 +709,9 @@ class _PanelCarritoState extends State<PanelCarrito> {
       ),
     );
 
-    // Salir del modo split (la revisión/acciones seguirán en el modal)
+    // Salir del modo split pero conservar la sesión (el usuario podrá reabrir el panel y continuar).
     setState(() {
       _splitModeActive = false;
-      _splitCount = 0;
-      _itemToSplit.clear();
     });
   }
 
@@ -534,7 +720,61 @@ class _PanelCarritoState extends State<PanelCarrito> {
       _splitModeActive = false;
       _splitCount = 0;
       _itemToSplit.clear();
+      _clearSplitSession();
     });
+  }
+
+  // Reopen the review dialog from a saved split session without resetting assignments
+  void _reopenReviewDialog() {
+    if (_itemToSplit.isEmpty || _splitCount < 2) return;
+
+    // construir mapa cuenta -> items usando asignaciones actuales
+    final Map<int, List<ItemCarrito>> groups = {};
+    for (var i = 1; i <= _splitCount; i++) groups[i] = [];
+    for (final item in widget.items) {
+      final assigned = _itemToSplit[item.uniqueId];
+      if (assigned != null && assigned >= 1 && assigned <= _splitCount) {
+        groups[assigned]!.add(item);
+      }
+    }
+
+    // Abrir el mismo diálogo de revisión que _applySplit
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => ReviewSplitDialog(
+        groups: groups,
+        onPayGroup: (groupIndex, items, subtotal) async {
+          final idsToRemove = items.map((e) => e.uniqueId).toSet();
+          await showModalBottomSheet(
+            context: ctx,
+            isScrollControlled: true,
+            showDragHandle: true,
+            builder: (_) => PanelPago(
+              subtotal: subtotal,
+              items: items,
+              onConfirm: ({required pagos, required fechaVenta}) async {
+                try {
+                  if (widget.onConfirmPartial != null) {
+                    await widget.onConfirmPartial!(pagos: pagos, fechaVenta: fechaVenta, itemIds: idsToRemove);
+                  } else {
+                    await widget.onConfirm(pagos: pagos, fechaVenta: fechaVenta);
+                    widget.onRemoveSelected(idsToRemove);
+                  }
+                } catch (_) {}
+
+                // Actualizar asignaciones y sesión localmente (prune paid ids)
+                setState(() {
+                  for (final id in idsToRemove) _itemToSplit.remove(id);
+                });
+                _saveSplitSession();
+                if (_itemToSplit.isEmpty) _clearSplitSession();
+              },
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _showDiscountDialog() async {
@@ -669,7 +909,35 @@ class _PanelCarritoState extends State<PanelCarrito> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (widget.items.isNotEmpty)
+                            if (_pendingAccountsCount > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6.0),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.account_balance_wallet, size: 14, color: Colors.white),
+                                      const SizedBox(width: 6),
+                                      Text('${_pendingAccountsCount} cuentas pendientes', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            if (_splitModeActive)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4.0),
+                                child: Text(
+                                  'Asignados $_assignedCount / ${widget.items.length}',
+                                  style:
+                                      const TextStyle(color: Colors.white70, fontSize: 12),
+                                ),
+                              )
+                            else if (widget.items.isNotEmpty)
                               Text(
                                 '${widget.items.length} producto${widget.items.length != 1 ? 's' : ''}',
                                 style: TextStyle(
@@ -677,29 +945,55 @@ class _PanelCarritoState extends State<PanelCarrito> {
                                   fontSize: 12,
                                 ),
                               ),
+                            // Segunda línea: acciones del header con scroll horizontal
+                            if (!_splitModeActive)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: [
+                                      FilledButton.icon(
+                                        onPressed: widget.items.isEmpty
+                                            ? null
+                                            : _startSplitDialog,
+                                        icon: const Icon(Icons.call_split_rounded,
+                                            color: Colors.white, size: 18),
+                                        label: const Text('Dividir'),
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor:
+                                              Colors.white.withOpacity(0.12),
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 6),
+                                          minimumSize: const Size(0, 36),
+                                          textStyle: const TextStyle(fontSize: 12),
+                                        ),
+                                      ),
+                                      if (_hasSavedSplit && _itemToSplit.isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.only(left: 8.0),
+                                          child: OutlinedButton.icon(
+                                            onPressed: _reopenReviewDialog,
+                                            icon: const Icon(Icons.playlist_play, size: 18),
+                                            label: const Text('Revisión'),
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: Colors.white,
+                                              side: BorderSide(color: Colors.white.withOpacity(0.18)),
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              minimumSize: const Size(0, 36),
+                                              textStyle: const TextStyle(fontSize: 12),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
-                      // Nuevo: botón para dividir cuentas
-                      if (!_splitModeActive) ...[
-                        Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          child: FilledButton.icon(
-                            onPressed:
-                                widget.items.isEmpty ? null : _startSplitDialog,
-                            icon: const Icon(Icons.call_split_rounded,
-                                color: Colors.white, size: 18),
-                            label: const Text('Dividir'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.12),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                            ),
-                          ),
-                        ),
-                      ],
                       Container(
                         padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
@@ -724,130 +1018,270 @@ class _PanelCarritoState extends State<PanelCarrito> {
                     ? _buildEmptyState()
                     : Container(
                         padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-                        child: ListView.builder(
-                          controller: controller,
-                          padding: EdgeInsets.zero,
-                          itemCount: groupedItems.length,
-                          itemBuilder: (context, index) {
-                            final itemsInGroup =
-                                groupedItems.values.elementAt(index);
-
-                            if (itemsInGroup.length == 1) {
-                              return _buildIndividualItemTile(
-                                  itemsInGroup.first);
-                            }
-
-                            final bool allSelected = itemsInGroup.every(
-                                (item) =>
-                                    _selectedItems.contains(item.uniqueId));
-                            final bool someSelected = !allSelected &&
-                                itemsInGroup.any((item) =>
-                                    _selectedItems.contains(item.uniqueId));
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: allSelected
-                                      ? const Color(0xFF3B82F6)
-                                      : Colors.grey.shade200,
-                                  width: allSelected ? 2 : 1,
+                        child: Column(
+                          children: [
+                            if (_splitModeActive && _selectedItems.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.grey.shade200),
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: ExpansionTile(
-                                leading: _selectedItems.isEmpty
-                                    ? Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: const Color(0xFF3B82F6)
-                                                .withOpacity(0.15),
+                                child: SizedBox(
+                                  height: 44,
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: PopupMenuButton<int>(
+                                          tooltip: 'Asignar selección',
+                                          onSelected: (value) {
+                                            if (value == -1) {
+                                              // Auto repartir
+                                              final ids = _selectedItems.toList();
+                                              int idx = 0;
+                                              setState(() {
+                                                for (final id in ids) {
+                                                  final cuenta = (idx % _splitCount) + 1;
+                                                  _itemToSplit[id] = cuenta;
+                                                  idx++;
+                                                }
+                                                _selectedItems.clear();
+                                                _saveSplitSession();
+                                              });
+                                            } else if (value == 0) {
+                                              // Quitar asignación
+                                              setState(() {
+                                                for (final id in _selectedItems) {
+                                                  _itemToSplit.remove(id);
+                                                }
+                                                _selectedItems.clear();
+                                                _saveSplitSession();
+                                              });
+                                            } else if (value >= 1 && value <= _splitCount) {
+                                              // Asignar a cuenta específica
+                                              _assignSelectedTo(value);
+                                              _saveSplitSession();
+                                            }
+                                          },
+                                          itemBuilder: (ctx) => [
+                                            ...List.generate(
+                                              _splitCount,
+                                              (i) => PopupMenuItem(
+                                                value: i + 1,
+                                                child: Text('Cuenta ${i + 1}'),
+                                              ),
+                                            ),
+                                            const PopupMenuDivider(),
+                                            const PopupMenuItem(
+                                              value: -1,
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.auto_fix_high, size: 18),
+                                                  SizedBox(width: 8),
+                                                  Text('Auto repartir'),
+                                                ],
+                                              ),
+                                            ),
+                                            const PopupMenuItem(
+                                              value: 0,
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.clear, color: Colors.red, size: 18),
+                                                  SizedBox(width: 8),
+                                                  Text('Quitar asignación'),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                          child: Container(
+                                            height: 44,
+                                            alignment: Alignment.center,
+                                            decoration: BoxDecoration(
+                                              gradient: const LinearGradient(
+                                                colors: [Color(0xFF10B981), Color(0xFF34D399)],
+                                              ),
+                                              borderRadius: BorderRadius.circular(10),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: const Color(0xFF10B981).withOpacity(0.25),
+                                                  blurRadius: 6,
+                                                  offset: const Offset(0, 2),
+                                                )
+                                              ],
+                                            ),
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.rule, size: 18, color: Colors.white),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    'Asignar (${_selectedItems.length})',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                        child: _ProductoImage(
-                                          producto: itemsInGroup.first.producto,
-                                          size: 28,
-                                        ),
-                                      )
-                                    : Container(
-                                        decoration: BoxDecoration(
-                                          color: allSelected
-                                              ? const Color(0xFF3B82F6)
-                                              : Colors.grey.shade100,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: Checkbox(
-                                          value: allSelected,
-                                          tristate: someSelected,
-                                          onChanged: (value) {
-                                            setState(() {
-                                              if (value == false) {
-                                                for (var item in itemsInGroup) {
-                                                  _selectedItems
-                                                      .remove(item.uniqueId);
-                                                }
-                                              } else {
-                                                for (var item in itemsInGroup) {
-                                                  _selectedItems
-                                                      .add(item.uniqueId);
-                                                }
-                                              }
-                                            });
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: () {
+                                            setState(() => _selectedItems.clear());
                                           },
+                                          icon: const Icon(Icons.close, size: 18),
+                                          label: const Text('Cancelar'),
+                                          style: OutlinedButton.styleFrom(
+                                            backgroundColor: Colors.white,
+                                            foregroundColor: const Color(0xFF374151),
+                                            side: BorderSide(color: Colors.grey.shade300),
+                                            minimumSize: const Size(0, 44),
+                                            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          ),
                                         ),
                                       ),
-                                title: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        _shortCategoriaName(itemsInGroup
-                                            .first.producto.categoriaNombre),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF3B82F6)
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        '${itemsInGroup.length}',
-                                        style: const TextStyle(
-                                          color: Color(0xFF1E40AF),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                                children: itemsInGroup
-                                    .map((item) => _buildIndividualItemTile(
-                                        item,
-                                        isSubItem: true))
-                                    .toList(),
                               ),
-                            );
-                          },
+                            Expanded(
+                              child: ListView.builder(
+                                controller: controller,
+                                padding: EdgeInsets.zero,
+                                itemCount: groupedItems.length,
+                                itemBuilder: (context, index) {
+                                  final itemsInGroup =
+                                      groupedItems.values.elementAt(index);
+
+                                  if (itemsInGroup.length == 1) {
+                                    return _buildIndividualItemTile(
+                                        itemsInGroup.first);
+                                  }
+
+                                  final bool allSelected = itemsInGroup.every(
+                                      (item) => _selectedItems
+                                          .contains(item.uniqueId));
+                                  final bool someSelected = !allSelected &&
+                                      itemsInGroup.any((item) => _selectedItems
+                                          .contains(item.uniqueId));
+
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: allSelected
+                                            ? const Color(0xFF3B82F6)
+                                            : Colors.grey.shade200,
+                                        width: allSelected ? 2 : 1,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.08),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ExpansionTile(
+                                      leading: _selectedItems.isEmpty
+                                          ? Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                    color:
+                                                        const Color(0xFF3B82F6)
+                                                            .withOpacity(0.15)),
+                                              ),
+                                              child: _ProductoImage(
+                                                  producto: itemsInGroup
+                                                      .first.producto,
+                                                  size: 28),
+                                            )
+                                          : Container(
+                                              decoration: BoxDecoration(
+                                                color: allSelected
+                                                    ? const Color(0xFF3B82F6)
+                                                    : Colors.grey.shade100,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Checkbox(
+                                                value: allSelected,
+                                                tristate: someSelected,
+                                                onChanged: (value) {
+                                                  setState(() {
+                                                    if (value == false) {
+                                                      for (var item
+                                                          in itemsInGroup) {
+                                                        _selectedItems.remove(
+                                                            item.uniqueId);
+                                                      }
+                                                    } else {
+                                                      for (var item
+                                                          in itemsInGroup) {
+                                                        _selectedItems
+                                                            .add(item.uniqueId);
+                                                      }
+                                                    }
+                                                  });
+                                                },
+                                              ),
+                                            ),
+                                      title: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                                _shortCategoriaName(itemsInGroup
+                                                    .first
+                                                    .producto
+                                                    .categoriaNombre),
+                                                style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 16)),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                                color: const Color(0xFF3B82F6)
+                                                    .withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(12)),
+                                            child: Text(
+                                                '${itemsInGroup.length}',
+                                                style: const TextStyle(
+                                                    color: Color(0xFF1E40AF),
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14)),
+                                          ),
+                                        ],
+                                      ),
+                                      children: itemsInGroup
+                                          .map((item) =>
+                                              _buildIndividualItemTile(item,
+                                                  isSubItem: true))
+                                          .toList(),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ),
               ),
@@ -1209,6 +1643,90 @@ class _PanelCarritoState extends State<PanelCarrito> {
 
                 // Single action button that opens a contextual menu (no overlap)
                 const SizedBox(width: 8),
+
+                // If split mode is active show ChoiceChips to assign this item to an account.
+                if (_splitModeActive) ...[
+                  // Botón compacto para asignar sin chips
+                  PopupMenuButton<int>(
+                    tooltip: 'Asignar a cuenta',
+                    icon: const Icon(Icons.call_split_rounded, color: Color(0xFF1E40AF)),
+                    onSelected: (value) {
+                      setState(() {
+                        if (value == 0) {
+                          _itemToSplit.remove(item.uniqueId);
+                        } else if (value >= 1 && value <= _splitCount) {
+                          _itemToSplit[item.uniqueId] = value;
+                        }
+                        _saveSplitSession();
+                      });
+                    },
+                    itemBuilder: (ctx) => [
+                      ...List.generate(_splitCount, (i) => PopupMenuItem(
+                            value: i + 1,
+                            child: Text('Cuenta ${i + 1}'),
+                          )),
+                      if (_itemToSplit.containsKey(item.uniqueId)) ...[
+                        const PopupMenuDivider(),
+                        const PopupMenuItem(
+                          value: 0,
+                          child: Row(
+                            children: [
+                              Icon(Icons.clear, color: Colors.red, size: 18),
+                              SizedBox(width: 8),
+                              Text('Quitar asignación'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(width: 6),
+
+                  // Also show circular badge for quick visibility when assigned
+                  Builder(builder: (_) {
+                    final assigned = _itemToSplit[item.uniqueId];
+                    if (assigned == null) return const SizedBox.shrink();
+                    final color =
+                        _splitColors[(assigned - 1) % _splitColors.length];
+                    return Container(
+                      margin: const EdgeInsets.only(top: 2),
+                      width: 24,
+                      height: 24,
+                      decoration:
+                          BoxDecoration(color: color, shape: BoxShape.circle),
+                      child: Center(
+                        child: Text('$assigned',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11)),
+                      ),
+                    );
+                  }),
+                ] else ...[
+                  const SizedBox(width: 6),
+                  Builder(builder: (_) {
+                    final assigned = _itemToSplit[item.uniqueId];
+                    if (assigned == null) return const SizedBox.shrink();
+                    final color =
+                        _splitColors[(assigned - 1) % _splitColors.length];
+                    return Container(
+                      margin: const EdgeInsets.only(top: 2),
+                      width: 24,
+                      height: 24,
+                      decoration:
+                          BoxDecoration(color: color, shape: BoxShape.circle),
+                      child: Center(
+                        child: Text('$assigned',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11)),
+                      ),
+                    );
+                  }),
+                ],
+
                 Builder(builder: (ctx) {
                   return Container(
                     margin: const EdgeInsets.only(left: 6),
@@ -1321,78 +1839,80 @@ class _PanelCarritoState extends State<PanelCarrito> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Totals section
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _line('Subtotal', 'S/ ${_currentSubtotal.toStringAsFixed(2)}',
-                    const TextStyle(color: Colors.white70, fontSize: 14)),
-                if (_discountAmount > 0) ...[
-                  const SizedBox(height: 4),
+          // Totals section (oculto cuando hay selección en modo split)
+          if (!(_splitModeActive && _selectedItems.isNotEmpty))
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _line('Subtotal', 'S/ ${_currentSubtotal.toStringAsFixed(2)}',
+                      const TextStyle(color: Colors.white70, fontSize: 14)),
+                  if (_discountAmount > 0) ...[
+                    const SizedBox(height: 4),
+                    _line(
+                        'Descuento',
+                        '- S/ ${_discountAmount.toStringAsFixed(2)}',
+                        TextStyle(color: Colors.orange.shade200, fontSize: 14)),
+                  ],
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 1,
+                    color: Colors.white.withOpacity(0.3),
+                  ),
+                  const SizedBox(height: 8),
                   _line(
-                      'Descuento',
-                      '- S/ ${_discountAmount.toStringAsFixed(2)}',
-                      TextStyle(color: Colors.orange.shade200, fontSize: 14)),
+                      'Total',
+                      'S/ ${_finalTotal.toStringAsFixed(2)}',
+                      const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold)),
                 ],
-                const SizedBox(height: 8),
-                Container(
-                  height: 1,
-                  color: Colors.white.withOpacity(0.3),
-                ),
-                const SizedBox(height: 8),
-                _line(
-                    'Total',
-                    'S/ ${_finalTotal.toStringAsFixed(2)}',
-                    const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold)),
-              ],
+              ),
             ),
-          ),
 
           // Actions section
           Container(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Column(
               children: [
-                // First row: Save and Discount
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionButtonStyled(
-                        icon: Icons.save_outlined,
-                        label: 'Guardar',
-                        color: Colors.white,
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        onPressed: widget.items.isEmpty
-                            ? null
-                            : () async {
-                                final success = await widget.onSavePending(
-                                  items: widget.items,
-                                  subtotal: _currentSubtotal,
-                                );
-                                if (success && mounted) {
-                                  Navigator.of(context).pop();
-                                }
-                              },
+                // First row: Save and Discount (oculto cuando hay selección en modo split)
+                if (!(_splitModeActive && _selectedItems.isNotEmpty))
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionButtonStyled(
+                          icon: Icons.save_outlined,
+                          label: 'Guardar',
+                          color: Colors.white,
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          onPressed: widget.items.isEmpty
+                              ? null
+                              : () async {
+                                  final success = await widget.onSavePending(
+                                    items: widget.items,
+                                    subtotal: _currentSubtotal,
+                                  );
+                                  if (success && mounted) {
+                                    Navigator.of(context).pop();
+                                  }
+                                },
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildActionButtonStyled(
-                        icon: Icons.local_offer_outlined,
-                        label:
-                            _discountAmount > 0 ? _discountLabel! : 'Descuento',
-                        color: Colors.white,
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        onPressed:
-                            widget.items.isEmpty ? null : _showDiscountDialog,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildActionButtonStyled(
+                          icon: Icons.local_offer_outlined,
+                          label:
+                              _discountAmount > 0 ? _discountLabel! : 'Descuento',
+                          color: Colors.white,
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          onPressed:
+                              widget.items.isEmpty ? null : _showDiscountDialog,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
                 const SizedBox(height: 8),
 
                 // Second row: Clear/Pay or Split Apply/Cancel
@@ -1548,13 +2068,24 @@ class _PanelCarritoState extends State<PanelCarrito> {
 }
 
 // Diálogo para revisar los grupos generados por el split y pagar cada uno localmente
-class ReviewSplitDialog extends StatelessWidget {
+class ReviewSplitDialog extends StatefulWidget {
   final Map<int, List<ItemCarrito>> groups;
   final Future<void> Function(
       int groupIndex, List<ItemCarrito> items, double subtotal) onPayGroup;
 
-  const ReviewSplitDialog(
-      {super.key, required this.groups, required this.onPayGroup});
+  const ReviewSplitDialog({
+    super.key,
+    required this.groups,
+    required this.onPayGroup,
+  });
+
+  @override
+  State<ReviewSplitDialog> createState() => _ReviewSplitDialogState();
+}
+
+class _ReviewSplitDialogState extends State<ReviewSplitDialog> {
+  // Track paid state per group index
+  final Set<int> _paid = {};
 
   @override
   Widget build(BuildContext context) {
@@ -1581,13 +2112,15 @@ class ReviewSplitDialog extends StatelessWidget {
                   child: ListView.builder(
                     controller: controller,
                     padding: const EdgeInsets.all(12),
-                    itemCount: groups.length,
+                    itemCount: widget.groups.length,
                     itemBuilder: (context, index) {
-                      final key = groups.keys.elementAt(index);
-                      final items = groups[key]!;
+                      final key = widget.groups.keys.elementAt(index);
+                      final items = widget.groups[key]!;
                       final subtotal = items.fold<double>(
                           0.0, (s, e) => s + e.precioEditable);
+                      final isPaid = _paid.contains(key);
                       return Card(
+                        color: isPaid ? Colors.green.shade50 : null,
                         margin: const EdgeInsets.only(bottom: 12),
                         child: Padding(
                           padding: const EdgeInsets.all(12),
@@ -1598,10 +2131,23 @@ class ReviewSplitDialog extends StatelessWidget {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('Cuenta $key',
-                                      style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold)),
+                                  Row(children: [
+                                    CircleAvatar(
+                                      radius: 14,
+                                      backgroundColor: isPaid
+                                          ? Colors.green
+                                          : const Color(0xFF3B82F6),
+                                      child: Text('$key',
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text('Cuenta $key',
+                                        style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold)),
+                                  ]),
                                   Text('S/ ${subtotal.toStringAsFixed(2)}',
                                       style: const TextStyle(
                                           fontSize: 16,
@@ -1630,23 +2176,29 @@ class ReviewSplitDialog extends StatelessWidget {
                               Row(
                                 children: [
                                   Expanded(
-                                    child: OutlinedButton(
+                                    child: OutlinedButton.icon(
+                                      icon: const Icon(Icons.close),
                                       onPressed: () =>
                                           Navigator.of(context).pop(),
-                                      child: const Text('Cerrar'),
+                                      label: const Text('Cerrar'),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
-                                    child: FilledButton(
-                                      onPressed: () async {
-                                        await onPayGroup(key, items, subtotal);
-                                        // Cerrar el dialogo de revisión para que el flujo de pago muestre el panel de pago
-                                        // Aquí no forzamos recarga; se espera que el caller elimine items al confirmar pago
-                                      },
-                                      child: const Text('Pagar'),
+                                    child: FilledButton.icon(
+                                      icon: const Icon(Icons.payment),
+                                      onPressed: isPaid
+                                          ? null
+                                          : () async {
+                                              await widget.onPayGroup(
+                                                  key, items, subtotal);
+                                              // opcional: marcar como pagada localmente
+                                              setState(() => _paid.add(key));
+                                            },
+                                      label: const Text('Pagar'),
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                 ],
                               ),
                             ],

@@ -14,9 +14,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service.dart';
 
 /// Claves en SharedPreferences
-const _kOfflineMode = 'offline_mode';              // bool
-const _kOfflineUserName = 'offline_user_name';     // String
-const _kOfflineRole = 'offline_role';              // 'guest' | 'admin'
+const _kOfflineMode = 'offline_mode'; // bool
+const _kOfflineUserName = 'offline_user_name'; // String
+const _kOfflineRole = 'offline_role'; // 'guest' | 'admin'
 const _kOfflineAdminPinHash = 'offline_admin_pin'; // String (sha256)
 
 /// Estado interno (singleton) para exponer si la app está en modo offline.
@@ -47,7 +47,7 @@ extension AuthServiceOfflineX on AuthService {
   Future<bool> isOfflineAdmin() async {
     final p = await SharedPreferences.getInstance();
     return (p.getBool(_kOfflineMode) ?? false) &&
-           (p.getString(_kOfflineRole) == 'admin');
+        (p.getString(_kOfflineRole) == 'admin');
   }
 
   /// ¿Ya hay PIN configurado para admin local?

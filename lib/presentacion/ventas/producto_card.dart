@@ -35,15 +35,19 @@ class ProductoCard extends StatelessWidget {
   bool _isSvgUrl(String? src) {
     if (src == null) return false;
     final s = src.toLowerCase();
-    return s.endsWith('.svg') || s.contains('image%2fsvg') || s.contains('svg+xml');
+    return s.endsWith('.svg') ||
+        s.contains('image%2fsvg') ||
+        s.contains('svg+xml');
   }
 
   bool _isGsUrl(String? src) => src?.startsWith('gs://') ?? false;
 
   // ====== 🚀 OPTIMIZACIÓN: caches compartidos ======
-  static final Map<String, String> _gsDownloadCache = <String, String>{};            // gs:// -> https
-  static final Map<String, Future<String>> _gsPending = <String, Future<String>>{};  // evita llamadas duplicadas
-  static final Set<String> _precached = <String>{};                                  // evita precache repetido
+  static final Map<String, String> _gsDownloadCache =
+      <String, String>{}; // gs:// -> https
+  static final Map<String, Future<String>> _gsPending =
+      <String, Future<String>>{}; // evita llamadas duplicadas
+  static final Set<String> _precached = <String>{}; // evita precache repetido
 
   Future<String?> _gsToHttps(String? src) async {
     if (src == null || src.trim().isEmpty) return null;
@@ -89,7 +93,8 @@ class ProductoCard extends StatelessWidget {
 
   Widget _buildImageFromUrl(String url, BuildContext context) {
     const placeholder = SizedBox(
-      width: 24, height: 24,
+      width: 24,
+      height: 24,
       child: CircularProgressIndicator(strokeWidth: 2),
     );
 
@@ -112,7 +117,8 @@ class ProductoCard extends StatelessWidget {
       width: 140,
       height: 140,
       fit: BoxFit.contain,
-      loadingBuilder: (ctx, child, progress) => progress == null ? child : placeholder,
+      loadingBuilder: (ctx, child, progress) =>
+          progress == null ? child : placeholder,
       errorBuilder: (ctx, err, st) =>
           Icon(Icons.fastfood_outlined, size: 80, color: Colors.grey.shade400),
     );
@@ -135,7 +141,8 @@ class ProductoCard extends StatelessWidget {
     }
 
     const spinner = SizedBox(
-      width: 24, height: 24,
+      width: 24,
+      height: 24,
       child: CircularProgressIndicator(strokeWidth: 2),
     );
 
@@ -144,7 +151,8 @@ class ProductoCard extends StatelessWidget {
       if (fallbackAssetSvg != null && fallbackAssetSvg!.isNotEmpty) {
         imageWidget = Image.asset(fallbackAssetSvg!, fit: BoxFit.contain);
       } else {
-        imageWidget = Icon(Icons.fastfood_outlined, size: 80, color: Colors.grey.shade400);
+        imageWidget = Icon(Icons.fastfood_outlined,
+            size: 80, color: Colors.grey.shade400);
       }
     } else if (_isGsUrl(src)) {
       // 🔁 Ahora reusa/memoiza la resolución gs:// → https y hace precache
@@ -154,7 +162,8 @@ class ProductoCard extends StatelessWidget {
           if (snap.connectionState == ConnectionState.waiting) return spinner;
           final url = snap.data;
           if (url == null || url.isEmpty) {
-            return Icon(Icons.fastfood_outlined, size: 80, color: Colors.grey.shade400);
+            return Icon(Icons.fastfood_outlined,
+                size: 80, color: Colors.grey.shade400);
           }
           return _buildImageFromUrl(url, context);
         },
@@ -187,7 +196,8 @@ class ProductoCard extends StatelessWidget {
                   producto.nombre,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -206,7 +216,8 @@ class ProductoCard extends StatelessWidget {
                 if (qty > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Text('En carrito: $qty', style: theme.textTheme.labelMedium),
+                    child: Text('En carrito: $qty',
+                        style: theme.textTheme.labelMedium),
                   ),
               ],
             ),

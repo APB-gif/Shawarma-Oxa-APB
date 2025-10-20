@@ -57,353 +57,362 @@ class _PerfilSheetState extends State<PerfilSheet> {
                 ],
               ),
             ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Handle drag bar
-                    Container(
-                      width: 48,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 24),
-                      decoration: BoxDecoration(
-                        color: colorScheme.onSurface.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(2),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle drag bar
+                  Container(
+                    width: 48,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: colorScheme.onSurface.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+
+                  // Header con avatar y información básica
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          colorScheme.primaryContainer.withOpacity(0.7),
+                          colorScheme.primaryContainer.withOpacity(0.3),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: colorScheme.outline.withOpacity(0.2),
+                        width: 1,
                       ),
                     ),
-
-                    // Header con avatar y información básica
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            colorScheme.primaryContainer.withOpacity(0.7),
-                            colorScheme.primaryContainer.withOpacity(0.3),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: colorScheme.outline.withOpacity(0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          // Avatar con efecto hero y overlay
-                          Hero(
-                            tag: 'profile-avatar',
-                            child: Stack(
-                              children: [
-                                Container(
+                    child: Row(
+                      children: [
+                        // Avatar con efecto hero y overlay
+                        Hero(
+                          tag: 'profile-avatar',
+                          child: Stack(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          colorScheme.primary.withOpacity(0.3),
+                                      blurRadius: 12,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                                child: CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor:
+                                      colorScheme.primary.withOpacity(0.1),
+                                  backgroundImage: (_currentPhoto != null &&
+                                          _currentPhoto!.isNotEmpty)
+                                      ? NetworkImage(_currentPhoto!)
+                                      : null,
+                                  child: (_currentPhoto == null ||
+                                          _currentPhoto!.isEmpty)
+                                      ? Icon(
+                                          Icons.person_rounded,
+                                          size: 40,
+                                          color: colorScheme.primary,
+                                        )
+                                      : null,
+                                ),
+                              ),
+                              // Indicador de cámara
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
+                                    color: colorScheme.primary,
                                     shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: colorScheme.surface,
+                                      width: 2,
+                                    ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: colorScheme.primary.withOpacity(0.3),
-                                        blurRadius: 12,
-                                        spreadRadius: 2,
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 4,
+                                        spreadRadius: 1,
                                       ),
                                     ],
                                   ),
-                                  child: CircleAvatar(
-                                    radius: 40,
-                                    backgroundColor: colorScheme.primary.withOpacity(0.1),
-                                    backgroundImage: (_currentPhoto != null && _currentPhoto!.isNotEmpty)
-                                        ? NetworkImage(_currentPhoto!)
-                                        : null,
-                                    child: (_currentPhoto == null || _currentPhoto!.isEmpty)
-                                        ? Icon(
-                                            Icons.person_rounded,
-                                            size: 40,
-                                            color: colorScheme.primary,
-                                          )
-                                        : null,
+                                  child: Icon(
+                                    Icons.camera_alt_rounded,
+                                    size: 14,
+                                    color: colorScheme.onPrimary,
                                   ),
                                 ),
-                                // Indicador de cámara
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.primary,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: colorScheme.surface,
-                                        width: 2,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
-                                          blurRadius: 4,
-                                          spreadRadius: 1,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Icon(
-                                      Icons.camera_alt_rounded,
-                                      size: 14,
-                                      color: colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                          
-                          const SizedBox(width: 20),
-                          
-                          // Información del usuario
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  nombre.isNotEmpty ? nombre : 'Sin nombre',
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onSurface,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  email,
-                                  style: TextStyle(
-                                    color: colorScheme.onSurface.withOpacity(0.7),
-                                    fontSize: 13,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 8),
-                                // Badge de rol mejorado
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isAdmin 
-                                      ? const Color.fromARGB(255, 255, 255, 255).withOpacity(0.2)
-                                      : Colors.green.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isAdmin 
-                                        ? const Color.fromARGB(255, 255, 255, 255)
-                                        : Colors.green,
-                                      width: 1,
+                        ),
+
+                        const SizedBox(width: 20),
+
+                        // Información del usuario
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                nombre.isNotEmpty ? nombre : 'Sin nombre',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface,
                                     ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                email,
+                                style: TextStyle(
+                                  color: colorScheme.onSurface.withOpacity(0.7),
+                                  fontSize: 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              // Badge de rol mejorado
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isAdmin
+                                      ? const Color.fromARGB(255, 255, 255, 255)
+                                          .withOpacity(0.2)
+                                      : Colors.green.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isAdmin
+                                        ? const Color.fromARGB(
+                                            255, 255, 255, 255)
+                                        : Colors.green,
+                                    width: 1,
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        isAdmin 
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isAdmin
                                           ? Icons.admin_panel_settings_rounded
                                           : Icons.badge_rounded,
-                                        size: 16,
-                                        color: isAdmin 
-                                          ? const Color.fromARGB(255, 255, 255, 255)
+                                      size: 16,
+                                      color: isAdmin
+                                          ? const Color.fromARGB(
+                                              255, 255, 255, 255)
                                           : Colors.green.shade700,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        isAdmin ? 'Administrador' : 'Trabajador',
-                                        style: TextStyle(
-                                          color: isAdmin 
-                                            ? const Color.fromARGB(255, 255, 255, 255)
-                                            : Colors.green.shade700,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Campo de texto mejorado
-                    Container(
-                      decoration: BoxDecoration(
-                        color: colorScheme.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: colorScheme.shadow.withOpacity(0.1),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _nameCtrl,
-                        decoration: InputDecoration(
-                          labelText: 'Nombre para mostrar',
-                          prefixIcon: Icon(
-                            Icons.person_outline_rounded,
-                            color: colorScheme.primary,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
-                              color: colorScheme.outline.withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
-                              color: colorScheme.primary,
-                              width: 2,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: colorScheme.surface,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 16,
-                          ),
-                        ),
-                        textInputAction: TextInputAction.done,
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Botones mejorados
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            height: 52,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: colorScheme.shadow.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  spreadRadius: 1,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: OutlinedButton.icon(
-                              onPressed: _saving ? null : _pickAndUploadPhoto,
-                              style: OutlinedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                side: BorderSide(
-                                  color: colorScheme.outline.withOpacity(0.5),
-                                  width: 1,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                              ),
-                              icon: Icon(
-                                Icons.photo_camera_back_rounded,
-                                color: colorScheme.primary,
-                                size: 20,
-                              ),
-                              label: Text(
-                                'Cambiar foto',
-                                style: TextStyle(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        
-                        const SizedBox(width: 16),
-                        
-                        Expanded(
-                          child: Container(
-                            height: 52,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  colorScheme.primary,
-                                  colorScheme.primary.withOpacity(0.8),
-                                ],
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: colorScheme.primary.withOpacity(0.3),
-                                  blurRadius: 8,
-                                  spreadRadius: 1,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: FilledButton.icon(
-                              onPressed: _saving ? null : _saveName,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                              ),
-                              icon: _saving
-                                  ? SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: colorScheme.onPrimary,
-                                      ),
-                                    )
-                                  : Icon(
-                                      Icons.check_rounded,
-                                      color: colorScheme.onPrimary,
-                                      size: 20,
                                     ),
-                              label: Text(
-                                'Guardar',
-                                style: TextStyle(
-                                  color: colorScheme.onPrimary,
-                                  fontWeight: FontWeight.w600,
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      isAdmin ? 'Administrador' : 'Trabajador',
+                                      style: TextStyle(
+                                        color: isAdmin
+                                            ? const Color.fromARGB(
+                                                255, 255, 255, 255)
+                                            : Colors.green.shade700,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
+                            ],
                           ),
                         ),
                       ],
                     ),
+                  ),
 
-                    const SizedBox(height: 16),
-                  ],
-                ),
+                  const SizedBox(height: 24),
+
+                  // Campo de texto mejorado
+                  Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.shadow.withOpacity(0.1),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _nameCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Nombre para mostrar',
+                        prefixIcon: Icon(
+                          Icons.person_outline_rounded,
+                          color: colorScheme.primary,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: colorScheme.outline.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: colorScheme.primary,
+                            width: 2,
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surface,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
+                      textInputAction: TextInputAction.done,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Botones mejorados
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colorScheme.shadow.withOpacity(0.1),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: OutlinedButton.icon(
+                            onPressed: _saving ? null : _pickAndUploadPhoto,
+                            style: OutlinedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              side: BorderSide(
+                                color: colorScheme.outline.withOpacity(0.5),
+                                width: 1,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
+                            icon: Icon(
+                              Icons.photo_camera_back_rounded,
+                              color: colorScheme.primary,
+                              size: 20,
+                            ),
+                            label: Text(
+                              'Cambiar foto',
+                              style: TextStyle(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                colorScheme.primary,
+                                colorScheme.primary.withOpacity(0.8),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colorScheme.primary.withOpacity(0.3),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: FilledButton.icon(
+                            onPressed: _saving ? null : _saveName,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
+                            icon: _saving
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: colorScheme.onPrimary,
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.check_rounded,
+                                    color: colorScheme.onPrimary,
+                                    size: 20,
+                                  ),
+                            label: Text(
+                              'Guardar',
+                              style: TextStyle(
+                                color: colorScheme.onPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+                ],
               ),
-            );
+            ),
+          );
         },
       ),
     );
@@ -491,9 +500,8 @@ class _PerfilSheetState extends State<PerfilSheet> {
       if (bytes == null) throw Exception('No se pudo leer el archivo');
 
       final filename = file.name;
-      final contentType = (file.extension?.toLowerCase() == 'png')
-          ? 'image/png'
-          : 'image/jpeg';
+      final contentType =
+          (file.extension?.toLowerCase() == 'png') ? 'image/png' : 'image/jpeg';
 
       final url = await auth.uploadProfilePhoto(
         bytes,

@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shawarma_pos_nuevo/datos/modelos/categoria.dart';
 
@@ -13,8 +12,8 @@ class CategoriaService {
       if (tipo != null) {
         q = q.where('tipo', isEqualTo: tipo);
       }
-  final snapshot = await q.get();
-  return snapshot.docs.map((d) => Categoria.fromFirestore(d)).toList();
+      final snapshot = await q.get();
+      return snapshot.docs.map((d) => Categoria.fromFirestore(d)).toList();
     } on FirebaseException catch (e) {
       // Si Firestore rechaza la lectura por permisos, devolvemos lista vacía en lugar
       // de propagar la excepción para evitar que la UI se pare.

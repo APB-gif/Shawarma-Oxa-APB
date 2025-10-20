@@ -22,7 +22,8 @@ import 'package:shawarma_pos_nuevo/datos/servicios/servicio_gastos.dart';
 import 'package:shawarma_pos_nuevo/datos/catalogo_gastos.dart';
 
 // Helpers
-import 'package:shawarma_pos_nuevo/core/net/connectivity_utils.dart' show hasInternet;
+import 'package:shawarma_pos_nuevo/core/net/connectivity_utils.dart'
+    show hasInternet;
 
 // UI Gastos
 import 'package:shawarma_pos_nuevo/presentacion/gastos/panel_gastos.dart' as pg;
@@ -76,65 +77,65 @@ class _PaginaGastosState extends State<PaginaGastos> {
     _cargarDatosDeGastos();
   }
 
-Future<void> _cargarDatosDeGastos() async {
-  if (!mounted) return;
+  Future<void> _cargarDatosDeGastos() async {
+    if (!mounted) return;
 
-  // Puedes mostrar loading aquí si quieres, pero también lo haré al final:
-  // setState(() => _isLoading = true);
+    // Puedes mostrar loading aquí si quieres, pero también lo haré al final:
+    // setState(() => _isLoading = true);
 
-  Map<String, List<Producto>> mapa = <String, List<Producto>>{};
-  List<Categoria> cats = <Categoria>[];
+    Map<String, List<Producto>> mapa = <String, List<Producto>>{};
+    List<Categoria> cats = <Categoria>[];
 
-  try {
-    await _repo.cargarDatos();
+    try {
+      await _repo.cargarDatos();
 
-    final productosRemotos = List<Producto>.from(_repo.getProductosGastos());
-    final categoriasRemotas = List<Categoria>.from(_repo.getCategoriasGastos());
+      final productosRemotos = List<Producto>.from(_repo.getProductosGastos());
+      final categoriasRemotas =
+          List<Categoria>.from(_repo.getCategoriasGastos());
 
-    cats = categoriasRemotas.isNotEmpty
-        ? categoriasRemotas
-        : List<Categoria>.from(CatalogoGastos.categories);
+      cats = categoriasRemotas.isNotEmpty
+          ? categoriasRemotas
+          : List<Categoria>.from(CatalogoGastos.categories);
 
-    if (productosRemotos.isNotEmpty) {
-      for (final p in productosRemotos) {
-        (mapa[p.categoriaId] ??= <Producto>[]).add(p);
+      if (productosRemotos.isNotEmpty) {
+        for (final p in productosRemotos) {
+          (mapa[p.categoriaId] ??= <Producto>[]).add(p);
+        }
+      } else {
+        CatalogoGastos.productsByCategory.forEach((catId, list) {
+          mapa[catId] = List<Producto>.from(list);
+        });
       }
-    } else {
+    } catch (e, st) {
+      debugPrint('Error cargando gastos: $e\n$st');
+
+      // Fallback local
       CatalogoGastos.productsByCategory.forEach((catId, list) {
         mapa[catId] = List<Producto>.from(list);
       });
+      cats = List<Categoria>.from(CatalogoGastos.categories);
     }
-  } catch (e, st) {
-    debugPrint('Error cargando gastos: $e\n$st');
 
-    // Fallback local
-    CatalogoGastos.productsByCategory.forEach((catId, list) {
-      mapa[catId] = List<Producto>.from(list);
+    // Ordenamientos (se hacen en memoria, sin tocar el estado)
+    cats.sort((a, b) => a.orden.compareTo(b.orden));
+    for (final list in mapa.values) {
+      list.sort((a, b) {
+        final cmp = a.orden.compareTo(b.orden);
+        return (cmp != 0)
+            ? cmp
+            : a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase());
+      });
+    }
+
+    if (!mounted) return; // <- CLAVE
+
+    setState(() {
+      _productosPorCategoria = mapa;
+      _categoriasDeGastos = cats;
+      _selectedCategory = cats.isNotEmpty ? cats.first : null;
+      _isLoading = false;
     });
-    cats = List<Categoria>.from(CatalogoGastos.categories);
   }
-
-  // Ordenamientos (se hacen en memoria, sin tocar el estado)
-  cats.sort((a, b) => a.orden.compareTo(b.orden));
-  for (final list in mapa.values) {
-    list.sort((a, b) {
-      final cmp = a.orden.compareTo(b.orden);
-      return (cmp != 0)
-          ? cmp
-          : a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase());
-    });
-  }
-
-  if (!mounted) return; // <- CLAVE
-
-  setState(() {
-    _productosPorCategoria = mapa;
-    _categoriasDeGastos = cats;
-    _selectedCategory = cats.isNotEmpty ? cats.first : null;
-    _isLoading = false;
-  });
-}
-
 
   void _addGastoToCart(Producto producto) {
     final uniqueId = '${producto.id}_${DateTime.now().millisecondsSinceEpoch}';
@@ -187,7 +188,8 @@ Future<void> _cargarDatosDeGastos() async {
     );
     if (res is Map && res['action'] == 'comprar') {
       final producto = res['producto'] as Producto;
-      final double precio = (res['precio'] as num?)?.toDouble() ?? producto.precio;
+      final double precio =
+          (res['precio'] as num?)?.toDouble() ?? producto.precio;
       final String shoppingId = res['shoppingId'] as String;
       _addGastoFromShopping(producto, precio, shoppingId);
       _openGastosCart();
@@ -218,9 +220,11 @@ Future<void> _cargarDatosDeGastos() async {
               },
               onUpdatePrice: (uniqueId, newPrice) {
                 setState(() {
-                  final i = _gastosCart.indexWhere((e) => e.uniqueId == uniqueId);
+                  final i =
+                      _gastosCart.indexWhere((e) => e.uniqueId == uniqueId);
                   if (i != -1) {
-                    _gastosCart[i] = _gastosCart[i].copyWith(precioEditable: newPrice);
+                    _gastosCart[i] =
+                        _gastosCart[i].copyWith(precioEditable: newPrice);
                   }
                 });
                 setSheetState(() {});
@@ -258,7 +262,7 @@ Future<void> _cargarDatosDeGastos() async {
 
   void _showPaymentPanelForExpenses(double totalFromPanel) {
     if (_gastosCart.isEmpty) return;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -287,15 +291,18 @@ Future<void> _cargarDatosDeGastos() async {
               ))
           .toList();
 
-      final total = _gastosCart.fold<double>(0.0, (a, it) => a + it.precioEditable);
+      final total =
+          _gastosCart.fold<double>(0.0, (a, it) => a + it.precioEditable);
       final pagos = <String, double>{_metodoKey(method): _norm(total)};
-      
+
       final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
       String nombre = 'Usuario';
       try {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        final doc =
+            await FirebaseFirestore.instance.collection('users').doc(uid).get();
         if (doc.exists) {
-          final me = AppUser.fromFirestore(doc.data() as Map<String, dynamic>, uid);
+          final me =
+              AppUser.fromFirestore(doc.data() as Map<String, dynamic>, uid);
           nombre = me.nombre;
         }
       } catch (_) {}
@@ -312,7 +319,8 @@ Future<void> _cargarDatosDeGastos() async {
       );
 
       if (_mapUniqueToShoppingId.isNotEmpty) {
-        await _servicioListaCompras.marcarCompradoPorIds(_mapUniqueToShoppingId.values);
+        await _servicioListaCompras
+            .marcarCompradoPorIds(_mapUniqueToShoppingId.values);
       }
 
       if (!mounted) return;
@@ -323,7 +331,10 @@ Future<void> _cargarDatosDeGastos() async {
 
       final online = await hasInternet();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(online ? 'Gasto registrado' : 'Gasto en cola (offline, admin).')),
+        SnackBar(
+            content: Text(online
+                ? 'Gasto registrado'
+                : 'Gasto en cola (offline, admin).')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -381,8 +392,8 @@ Future<void> _cargarDatosDeGastos() async {
                   child: _buildGastosGrid(
                     productos: productosDeCategoria,
                     qtyById: qtyById,
-                    categoryFallbackIcon:
-                        _selectedCategory?.iconAssetPath ?? 'assets/icons/default.svg',
+                    categoryFallbackIcon: _selectedCategory?.iconAssetPath ??
+                        'assets/icons/default.svg',
                   ),
                 ),
               ],
@@ -401,7 +412,8 @@ Future<void> _cargarDatosDeGastos() async {
                   tooltip: 'Vaciar lista de gastos',
                   mini: true,
                   heroTag: 'clear_gastos_fab',
-                  child: const Icon(Icons.delete_sweep_outlined, color: Colors.white),
+                  child: const Icon(Icons.delete_sweep_outlined,
+                      color: Colors.white),
                 ),
                 const SizedBox(width: 8),
                 FloatingActionButton.extended(
@@ -423,7 +435,9 @@ Future<void> _cargarDatosDeGastos() async {
         title: const Text('Vaciar lista de gastos'),
         content: const Text('¿Seguro que quieres quitar todos los ítems?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancelar')),
           FilledButton(
             onPressed: () {
               Navigator.of(ctx).pop();
@@ -478,11 +492,16 @@ Future<void> _cargarDatosDeGastos() async {
       builder: (context, constraints) {
         final w = constraints.maxWidth;
         int cols = 4;
-        if (w < 480) cols = 2;
-        else if (w < 720) cols = 3;
-        else if (w < 1024) cols = 4;
-        else if (w < 1280) cols = 5;
-        else cols = 6;
+        if (w < 480)
+          cols = 2;
+        else if (w < 720)
+          cols = 3;
+        else if (w < 1024)
+          cols = 4;
+        else if (w < 1280)
+          cols = 5;
+        else
+          cols = 6;
 
         return GridView.builder(
           padding: const EdgeInsets.all(12),
@@ -526,8 +545,10 @@ class _CategoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final bg = selected ? theme.colorScheme.primary.withOpacity(.10) : theme.cardColor;
-    final borderColor = selected ? theme.colorScheme.primary : Colors.grey.shade300;
+    final bg =
+        selected ? theme.colorScheme.primary.withOpacity(.10) : theme.cardColor;
+    final borderColor =
+        selected ? theme.colorScheme.primary : Colors.grey.shade300;
 
     return InkWell(
       onTap: onTap,
@@ -575,7 +596,8 @@ class _CategoryTile extends StatelessWidget {
                       color: theme.colorScheme.primary,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.check, size: 14, color: theme.colorScheme.onPrimary),
+                    child: Icon(Icons.check,
+                        size: 14, color: theme.colorScheme.onPrimary),
                   ),
                 ),
             ],
@@ -618,7 +640,9 @@ class _ProductoTile extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: currentQty > 0 ? theme.colorScheme.primary : Colors.grey.shade300,
+              color: currentQty > 0
+                  ? theme.colorScheme.primary
+                  : Colors.grey.shade300,
               width: currentQty > 0 ? 1.5 : 1,
             ),
           ),
@@ -632,7 +656,8 @@ class _ProductoTile extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: Container(
-                          color: theme.colorScheme.surfaceVariant.withOpacity(.25),
+                          color:
+                              theme.colorScheme.surfaceVariant.withOpacity(.25),
                           alignment: Alignment.center,
                           child: ProductoImage(
                             path: (producto.imagenUrl ?? '').trim(),
@@ -647,7 +672,8 @@ class _ProductoTile extends StatelessWidget {
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -658,7 +684,8 @@ class _ProductoTile extends StatelessWidget {
                     right: 0,
                     child: Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.primary,
                           borderRadius: BorderRadius.circular(999),
@@ -710,7 +737,8 @@ class ProductoImage extends StatelessWidget {
   const ProductoImage({super.key, this.path, this.fallback});
 
   static bool _isSvg(String s) => s.toLowerCase().endsWith('.svg');
-  static bool _isHttp(String s) => s.startsWith('http://') || s.startsWith('https://');
+  static bool _isHttp(String s) =>
+      s.startsWith('http://') || s.startsWith('https://');
   static bool _isGs(String s) => s.startsWith('gs://');
 
   Future<String> _gsToUrl(String gs) async {
@@ -742,8 +770,10 @@ class ProductoImage extends StatelessWidget {
       return CachedNetworkImage(
         imageUrl: src,
         fit: BoxFit.contain,
-        placeholder: (_, __) =>
-            const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+        placeholder: (_, __) => const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2)),
         errorWidget: (_, __, ___) => const Icon(Icons.broken_image_outlined),
       );
     }
@@ -762,8 +792,10 @@ class ProductoImage extends StatelessWidget {
         return CachedNetworkImage(
           imageUrl: url,
           fit: BoxFit.contain,
-          placeholder: (_, __) =>
-              const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+          placeholder: (_, __) => const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2)),
           errorWidget: (_, __, ___) => const Icon(Icons.broken_image_outlined),
         );
       },
@@ -776,7 +808,8 @@ class _CategoriaIcon extends StatelessWidget {
   const _CategoriaIcon({required this.path});
 
   static bool _isSvg(String s) => s.toLowerCase().endsWith('.svg');
-  static bool _isHttp(String s) => s.startsWith('http://') || s.startsWith('https://');
+  static bool _isHttp(String s) =>
+      s.startsWith('http://') || s.startsWith('https://');
   static bool _isGs(String s) => s.startsWith('gs://');
 
   Future<String> _gsToUrl(String gs) async {
@@ -799,9 +832,12 @@ class _CategoriaIcon extends StatelessWidget {
       return CachedNetworkImage(
         imageUrl: src,
         fit: BoxFit.contain,
-        placeholder: (_, __) =>
-            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-        errorWidget: (_, __, ___) => const Icon(Icons.image_not_supported_outlined),
+        placeholder: (_, __) => const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2)),
+        errorWidget: (_, __, ___) =>
+            const Icon(Icons.image_not_supported_outlined),
       );
     }
     return FutureBuilder<String>(
@@ -819,9 +855,12 @@ class _CategoriaIcon extends StatelessWidget {
         return CachedNetworkImage(
           imageUrl: url,
           fit: BoxFit.contain,
-          placeholder: (_, __) =>
-              const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-          errorWidget: (_, __, ___) => const Icon(Icons.image_not_supported_outlined),
+          placeholder: (_, __) => const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2)),
+          errorWidget: (_, __, ___) =>
+              const Icon(Icons.image_not_supported_outlined),
         );
       },
     );

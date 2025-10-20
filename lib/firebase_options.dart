@@ -62,8 +62,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1052131573052',
     projectId: 'shawarmaoxa-pos',
     storageBucket: 'shawarmaoxa-pos.firebasestorage.app',
-    androidClientId: '1052131573052-dnrfgattri5q9227cl3tumft88u6idas.apps.googleusercontent.com',
-    iosClientId: '1052131573052-ka0t98agf8ttcfeak24erbvjrp3scr80.apps.googleusercontent.com',
+    androidClientId:
+        '1052131573052-dnrfgattri5q9227cl3tumft88u6idas.apps.googleusercontent.com',
+    iosClientId:
+        '1052131573052-ka0t98agf8ttcfeak24erbvjrp3scr80.apps.googleusercontent.com',
     iosBundleId: 'com.example.shawarmaPosNuevo',
   );
 
@@ -73,8 +75,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1052131573052',
     projectId: 'shawarmaoxa-pos',
     storageBucket: 'shawarmaoxa-pos.firebasestorage.app',
-    androidClientId: '1052131573052-dnrfgattri5q9227cl3tumft88u6idas.apps.googleusercontent.com',
-    iosClientId: '1052131573052-ka0t98agf8ttcfeak24erbvjrp3scr80.apps.googleusercontent.com',
+    androidClientId:
+        '1052131573052-dnrfgattri5q9227cl3tumft88u6idas.apps.googleusercontent.com',
+    iosClientId:
+        '1052131573052-ka0t98agf8ttcfeak24erbvjrp3scr80.apps.googleusercontent.com',
     iosBundleId: 'com.example.shawarmaPosNuevo',
   );
 
@@ -86,5 +90,4 @@ class DefaultFirebaseOptions {
     authDomain: 'shawarmaoxa-pos.firebaseapp.com',
     storageBucket: 'shawarmaoxa-pos.firebasestorage.app',
   );
-
 }

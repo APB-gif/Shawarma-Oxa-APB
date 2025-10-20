@@ -45,9 +45,9 @@ class PedidoPendiente {
   });
 }
 
-    // Nota: la funcionalidad de registrar gasto de insumos por apertura ahora
-    // se realiza desde el diálogo centralizado en `gasto_apertura_dialog.dart`
-    
+// Nota: la funcionalidad de registrar gasto de insumos por apertura ahora
+// se realiza desde el diálogo centralizado en `gasto_apertura_dialog.dart`
+
 class PaginaVentas extends StatefulWidget {
   const PaginaVentas({super.key});
 
@@ -74,7 +74,7 @@ class _PaginaVentasState extends State<PaginaVentas> {
     {'id': 3, 'fraccion': 1.0},
   ];
   int _nextPoteId = 4;
-  
+
   // Listener de Firestore para sincronización en tiempo real
   StreamSubscription<DocumentSnapshot>? _salsaSubscription;
 
@@ -99,20 +99,25 @@ class _PaginaVentasState extends State<PaginaVentas> {
   /// Carga el estado de salsa desde Firestore y configura listener en tiempo real
   Future<void> _loadSalsaEstado() async {
     try {
-      final docRef = FirebaseFirestore.instance.collection('configuracion').doc('salsa_de_ajo');
-      
+      final docRef = FirebaseFirestore.instance
+          .collection('configuracion')
+          .doc('salsa_de_ajo');
+
       // Configurar listener en tiempo real
       _salsaSubscription = docRef.snapshots().listen((snapshot) {
         if (!mounted) return;
-        
+
         if (snapshot.exists) {
           try {
             final data = snapshot.data();
             if (data != null && data['potes'] != null) {
               final List<dynamic> potesData = data['potes'];
-              final potes = potesData.map((p) => Map<String, dynamic>.from(p as Map)).toList();
-              final maxId = potes.fold<int>(0, (max, p) => (p['id'] as int) > max ? (p['id'] as int) : max);
-              
+              final potes = potesData
+                  .map((p) => Map<String, dynamic>.from(p as Map))
+                  .toList();
+              final maxId = potes.fold<int>(0,
+                  (max, p) => (p['id'] as int) > max ? (p['id'] as int) : max);
+
               setState(() {
                 _salsaPotes = potes;
                 _nextPoteId = maxId + 1;
@@ -136,7 +141,9 @@ class _PaginaVentasState extends State<PaginaVentas> {
   /// Guarda el estado de salsa en Firestore (visible para todos los dispositivos)
   Future<void> _saveSalsaEstado() async {
     try {
-      final docRef = FirebaseFirestore.instance.collection('configuracion').doc('salsa_de_ajo');
+      final docRef = FirebaseFirestore.instance
+          .collection('configuracion')
+          .doc('salsa_de_ajo');
       await docRef.set({
         'potes': _salsaPotes,
         'ultimaActualizacion': FieldValue.serverTimestamp(),
@@ -155,7 +162,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
 
   Future<void> _showSalsaDialog() async {
     // Copiar estado actual para editar
-    final tmpPotes = _salsaPotes.map((p) => Map<String, dynamic>.from(p)).toList();
+    final tmpPotes =
+        _salsaPotes.map((p) => Map<String, dynamic>.from(p)).toList();
     int tmpNextId = _nextPoteId;
 
     final result = await showDialog<bool>(
@@ -163,7 +171,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
       builder: (ctx) {
         final theme = Theme.of(ctx);
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 8,
           child: ConstrainedBox(
             constraints: BoxConstraints(
@@ -223,7 +232,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                               'Control de potes disponibles',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: theme.colorScheme.onPrimary.withOpacity(0.9),
+                                color: theme.colorScheme.onPrimary
+                                    .withOpacity(0.9),
                               ),
                             ),
                           ],
@@ -231,7 +241,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(ctx, false),
-                        icon: Icon(Icons.close_rounded, color: theme.colorScheme.onPrimary),
+                        icon: Icon(Icons.close_rounded,
+                            color: theme.colorScheme.onPrimary),
                         tooltip: 'Cerrar',
                       ),
                     ],
@@ -249,10 +260,12 @@ class _PaginaVentasState extends State<PaginaVentas> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                              color: theme.colorScheme.primaryContainer
+                                  .withOpacity(0.3),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: theme.colorScheme.primary.withOpacity(0.2),
+                                color:
+                                    theme.colorScheme.primary.withOpacity(0.2),
                               ),
                             ),
                             child: Row(
@@ -268,7 +281,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                     'Sincronizado en tiempo real • Visible desde cualquier dispositivo',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: theme.colorScheme.onSurface.withOpacity(0.8),
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.8),
                                       height: 1.3,
                                     ),
                                   ),
@@ -282,15 +296,16 @@ class _PaginaVentasState extends State<PaginaVentas> {
                             final index = entry.key;
                             final pote = entry.value;
                             final poteId = pote['id'] as int;
-                            final fraccion = (pote['fraccion'] as num).toDouble();
+                            final fraccion =
+                                (pote['fraccion'] as num).toDouble();
                             final porcentaje = (fraccion * 100).toInt();
-                            
+
                             // Determinar color según porcentaje
                             Color poteColor;
                             Color borderColor;
                             IconData iconData;
                             String estadoText;
-                            
+
                             if (porcentaje == 0) {
                               poteColor = Colors.red.shade100;
                               borderColor = Colors.red.shade600;
@@ -314,7 +329,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                               decoration: BoxDecoration(
                                 color: poteColor.withOpacity(0.3),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: borderColor, width: 2),
+                                border:
+                                    Border.all(color: borderColor, width: 2),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,29 +343,35 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                         height: 50,
                                         decoration: BoxDecoration(
                                           color: poteColor,
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(color: borderColor, width: 2),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                              color: borderColor, width: 2),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: borderColor.withOpacity(0.3),
+                                              color:
+                                                  borderColor.withOpacity(0.3),
                                               blurRadius: 6,
                                               offset: const Offset(0, 2),
                                             ),
                                           ],
                                         ),
-                                        child: Icon(iconData, color: borderColor, size: 28),
+                                        child: Icon(iconData,
+                                            color: borderColor, size: 28),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               'Pote $poteId',
                                               style: TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.bold,
-                                                color: theme.colorScheme.onSurface,
+                                                color:
+                                                    theme.colorScheme.onSurface,
                                               ),
                                             ),
                                             const SizedBox(height: 2),
@@ -372,7 +394,9 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                               tmpPotes.removeAt(index);
                                             });
                                           },
-                                          icon: Icon(Icons.delete_outline_rounded, color: theme.colorScheme.error),
+                                          icon: Icon(
+                                              Icons.delete_outline_rounded,
+                                              color: theme.colorScheme.error),
                                           tooltip: 'Eliminar pote',
                                         ),
                                     ],
@@ -382,11 +406,14 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                   SliderTheme(
                                     data: SliderTheme.of(ctx2).copyWith(
                                       activeTrackColor: borderColor,
-                                      inactiveTrackColor: theme.colorScheme.surfaceVariant,
+                                      inactiveTrackColor:
+                                          theme.colorScheme.surfaceVariant,
                                       thumbColor: borderColor,
-                                      overlayColor: borderColor.withOpacity(0.2),
+                                      overlayColor:
+                                          borderColor.withOpacity(0.2),
                                       trackHeight: 6,
-                                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                                      thumbShape: const RoundSliderThumbShape(
+                                          enabledThumbRadius: 10),
                                     ),
                                     child: Slider(
                                       value: fraccion,
@@ -402,52 +429,85 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                   ),
                                   // Marcadores de porcentaje
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8.0),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text('0%', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withOpacity(0.6))),
-                                        Text('25%', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withOpacity(0.6))),
-                                        Text('50%', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withOpacity(0.6))),
-                                        Text('75%', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withOpacity(0.6))),
-                                        Text('100%', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                                        Text('0%',
+                                            style: TextStyle(
+                                                fontSize: 10,
+                                                color: theme
+                                                    .colorScheme.onSurface
+                                                    .withOpacity(0.6))),
+                                        Text('25%',
+                                            style: TextStyle(
+                                                fontSize: 10,
+                                                color: theme
+                                                    .colorScheme.onSurface
+                                                    .withOpacity(0.6))),
+                                        Text('50%',
+                                            style: TextStyle(
+                                                fontSize: 10,
+                                                color: theme
+                                                    .colorScheme.onSurface
+                                                    .withOpacity(0.6))),
+                                        Text('75%',
+                                            style: TextStyle(
+                                                fontSize: 10,
+                                                color: theme
+                                                    .colorScheme.onSurface
+                                                    .withOpacity(0.6))),
+                                        Text('100%',
+                                            style: TextStyle(
+                                                fontSize: 10,
+                                                color: theme
+                                                    .colorScheme.onSurface
+                                                    .withOpacity(0.6))),
                                       ],
                                     ),
                                   ),
                                   // Botones rápidos
                                   const SizedBox(height: 8),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
                                     children: [
                                       _QuickButton(
                                         label: 'Vacío',
                                         icon: Icons.remove_circle_outline,
                                         color: Colors.red,
-                                        onTap: () => setStateDialog(() => tmpPotes[index]['fraccion'] = 0.0),
+                                        onTap: () => setStateDialog(() =>
+                                            tmpPotes[index]['fraccion'] = 0.0),
                                       ),
                                       _QuickButton(
                                         label: '1/4',
                                         icon: Icons.pie_chart_outline,
                                         color: Colors.orange,
-                                        onTap: () => setStateDialog(() => tmpPotes[index]['fraccion'] = 0.25),
+                                        onTap: () => setStateDialog(() =>
+                                            tmpPotes[index]['fraccion'] = 0.25),
                                       ),
                                       _QuickButton(
                                         label: '1/2',
                                         icon: Icons.donut_small,
                                         color: Colors.amber,
-                                        onTap: () => setStateDialog(() => tmpPotes[index]['fraccion'] = 0.5),
+                                        onTap: () => setStateDialog(() =>
+                                            tmpPotes[index]['fraccion'] = 0.5),
                                       ),
                                       _QuickButton(
                                         label: '3/4',
                                         icon: Icons.pie_chart,
                                         color: Colors.lightGreen,
-                                        onTap: () => setStateDialog(() => tmpPotes[index]['fraccion'] = 0.75),
+                                        onTap: () => setStateDialog(() =>
+                                            tmpPotes[index]['fraccion'] = 0.75),
                                       ),
                                       _QuickButton(
                                         label: 'Lleno',
                                         icon: Icons.check_circle,
                                         color: Colors.green,
-                                        onTap: () => setStateDialog(() => tmpPotes[index]['fraccion'] = 1.0),
+                                        onTap: () => setStateDialog(() =>
+                                            tmpPotes[index]['fraccion'] = 1.0),
                                       ),
                                     ],
                                   ),
@@ -463,17 +523,25 @@ class _PaginaVentasState extends State<PaginaVentas> {
                               onPressed: () {
                                 setStateDialog(() {
                                   // Recalcular el siguiente ID basado en los potes existentes
-                                  final maxId = tmpPotes.fold<int>(0, (max, p) => (p['id'] as int) > max ? (p['id'] as int) : max);
+                                  final maxId = tmpPotes.fold<int>(
+                                      0,
+                                      (max, p) => (p['id'] as int) > max
+                                          ? (p['id'] as int)
+                                          : max);
                                   final nuevoId = maxId + 1;
-                                  tmpPotes.add({'id': nuevoId, 'fraccion': 1.0});
+                                  tmpPotes
+                                      .add({'id': nuevoId, 'fraccion': 1.0});
                                   tmpNextId = nuevoId + 1;
                                 });
                               },
-                              icon: const Icon(Icons.add_circle_outline_rounded),
+                              icon:
+                                  const Icon(Icons.add_circle_outline_rounded),
                               label: const Text('Agregar otro pote'),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                side: BorderSide(color: theme.colorScheme.primary, width: 2),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                side: BorderSide(
+                                    color: theme.colorScheme.primary, width: 2),
                               ),
                             ),
                           ),
@@ -482,7 +550,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.secondaryContainer.withOpacity(0.3),
+                              color: theme.colorScheme.secondaryContainer
+                                  .withOpacity(0.3),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
@@ -495,14 +564,16 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Total disponible',
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                          color: theme.colorScheme.onSurface
+                                              .withOpacity(0.7),
                                         ),
                                       ),
                                       const SizedBox(height: 2),
@@ -546,7 +617,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                       TextButton(
                         onPressed: () => Navigator.pop(ctx, false),
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 12),
                         ),
                         child: const Text('Cancelar'),
                       ),
@@ -555,7 +627,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                         onPressed: () => Navigator.pop(ctx, true),
                         icon: const Icon(Icons.check_circle_rounded, size: 18),
                         style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 12),
                         ),
                         label: const Text('Guardar'),
                       ),
@@ -568,7 +641,7 @@ class _PaginaVentasState extends State<PaginaVentas> {
         );
       },
     );
-    
+
     if (result == true) {
       setState(() {
         _salsaPotes = tmpPotes;
@@ -811,7 +884,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
               return Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 child: Column(
                   children: [
@@ -827,7 +901,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(20)),
                       ),
                       child: SafeArea(
                         bottom: false,
@@ -871,14 +946,15 @@ class _PaginaVentasState extends State<PaginaVentas> {
                             ),
                             IconButton(
                               onPressed: () => Navigator.pop(ctx),
-                              icon: const Icon(Icons.close_rounded, color: Colors.white),
+                              icon: const Icon(Icons.close_rounded,
+                                  color: Colors.white),
                               tooltip: 'Cerrar',
                             ),
                           ],
                         ),
                       ),
                     ),
-                    
+
                     // Contenido
                     Expanded(
                       child: _pedidosPendientes.isEmpty
@@ -926,13 +1002,14 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                 final pedido = _pedidosPendientes[index];
                                 final itemCount = pedido.items.length;
                                 final timeAgo = _formatTimeAgo(pedido.fecha);
-                                
+
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 12),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    border: Border.all(
+                                        color: const Color(0xFFE2E8F0)),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.black.withOpacity(0.04),
@@ -946,13 +1023,16 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                       dividerColor: Colors.transparent,
                                     ),
                                     child: ExpansionTile(
-                                      tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      tilePadding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 8),
                                       childrenPadding: const EdgeInsets.all(0),
                                       leading: Container(
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          color: theme.colorScheme.primary.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(10),
+                                          color: theme.colorScheme.primary
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
                                         ),
                                         child: Icon(
                                           Icons.restaurant_menu_rounded,
@@ -970,7 +1050,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                       subtitle: Padding(
                                         padding: const EdgeInsets.only(top: 6),
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Row(
                                               children: [
@@ -1005,11 +1086,17 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                             ),
                                             const SizedBox(height: 6),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4),
                                               decoration: BoxDecoration(
                                                 color: Colors.green.shade50,
-                                                borderRadius: BorderRadius.circular(6),
-                                                border: Border.all(color: Colors.green.shade200),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                                border: Border.all(
+                                                    color:
+                                                        Colors.green.shade200),
                                               ),
                                               child: Text(
                                                 'S/ ${pedido.subtotal.toStringAsFixed(2)}',
@@ -1023,31 +1110,47 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                           ],
                                         ),
                                       ),
-                                      trailing: const Icon(Icons.expand_more_rounded),
+                                      trailing:
+                                          const Icon(Icons.expand_more_rounded),
                                       children: [
                                         Container(
                                           padding: const EdgeInsets.all(16),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFF8FAFC),
                                             border: Border(
-                                              top: BorderSide(color: Colors.grey.shade200),
+                                              top: BorderSide(
+                                                  color: Colors.grey.shade200),
                                             ),
                                           ),
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              ..._buildPreviewItems(pedido.items),
+                                              ..._buildPreviewItems(
+                                                  pedido.items),
                                               const SizedBox(height: 12),
                                               Row(
                                                 children: [
                                                   Expanded(
                                                     child: FilledButton.icon(
-                                                      onPressed: () => _loadPendingOrder(pedido),
-                                                      icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                                                      label: const Text('Reanudar'),
-                                                      style: FilledButton.styleFrom(
-                                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                                        backgroundColor: theme.colorScheme.primary,
+                                                      onPressed: () =>
+                                                          _loadPendingOrder(
+                                                              pedido),
+                                                      icon: const Icon(
+                                                          Icons
+                                                              .play_arrow_rounded,
+                                                          size: 18),
+                                                      label: const Text(
+                                                          'Reanudar'),
+                                                      style: FilledButton
+                                                          .styleFrom(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                vertical: 12),
+                                                        backgroundColor: theme
+                                                            .colorScheme
+                                                            .primary,
                                                       ),
                                                     ),
                                                   ),
@@ -1055,17 +1158,26 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                                   OutlinedButton(
                                                     onPressed: () {
                                                       modalSetState(() {
-                                                        _pedidosPendientes.removeAt(index);
+                                                        _pedidosPendientes
+                                                            .removeAt(index);
                                                       });
                                                       setState(() {});
                                                     },
-                                                    style: OutlinedButton.styleFrom(
-                                                      padding: const EdgeInsets.all(12),
-                                                      side: BorderSide(color: Colors.red.shade400, width: 1.5),
+                                                    style: OutlinedButton
+                                                        .styleFrom(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              12),
+                                                      side: BorderSide(
+                                                          color: Colors
+                                                              .red.shade400,
+                                                          width: 1.5),
                                                     ),
                                                     child: Icon(
-                                                      Icons.delete_outline_rounded,
-                                                      color: Colors.red.shade600,
+                                                      Icons
+                                                          .delete_outline_rounded,
+                                                      color:
+                                                          Colors.red.shade600,
                                                     ),
                                                   ),
                                                 ],
@@ -1089,11 +1201,11 @@ class _PaginaVentasState extends State<PaginaVentas> {
       },
     );
   }
-  
+
   String _formatTimeAgo(DateTime fecha) {
     final now = DateTime.now();
     final diff = now.difference(fecha);
-    
+
     if (diff.inMinutes < 1) {
       return 'Ahora';
     } else if (diff.inMinutes < 60) {
@@ -1158,7 +1270,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                     if (firstItem.comentario.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.amber.shade50,
                           borderRadius: BorderRadius.circular(4),
@@ -1166,7 +1279,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.comment_rounded, size: 12, color: Colors.amber.shade700),
+                            Icon(Icons.comment_rounded,
+                                size: 12, color: Colors.amber.shade700),
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
@@ -1191,7 +1305,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.purple.shade50,
                       borderRadius: BorderRadius.circular(4),
@@ -1222,92 +1337,100 @@ class _PaginaVentasState extends State<PaginaVentas> {
         );
       } else {
         return Column(
-          children: groupItems.map((item) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.producto.nombre,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (item.comentario.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.shade50,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+          children: groupItems
+              .map((item) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(Icons.comment_rounded, size: 12, color: Colors.amber.shade700),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  item.comentario,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.amber.shade900,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              Text(
+                                item.producto.nombre,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              if (item.comentario.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.shade50,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.comment_rounded,
+                                          size: 12,
+                                          color: Colors.amber.shade700),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          item.comentario,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.amber.shade900,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B).withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: const Color(0xFF64748B)),
-                      ),
-                      child: Text(
-                        item.categoryName,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Color(0xFF1E293B),
-                          fontWeight: FontWeight.w600,
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color:
+                                    const Color(0xFF1E293B).withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(4),
+                                border:
+                                    Border.all(color: const Color(0xFF64748B)),
+                              ),
+                              child: Text(
+                                item.categoryName,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF1E293B),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'S/ ${item.precioEditable.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF059669),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'S/ ${item.precioEditable.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF059669),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          )).toList(),
+                  ))
+              .toList(),
         );
       }
     }).toList();
@@ -1366,6 +1489,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
         onClear: _clearCart,
         onConfirm: ({required pagos, required fechaVenta}) => _procesarVenta(
             pagos: pagos, fechaVenta: fechaVenta, cajaActiva: cajaActiva),
+        onConfirmPartial: ({required pagos, required fechaVenta, required itemIds}) => _procesarVentaParcial(
+            pagos: pagos, fechaVenta: fechaVenta, cajaActiva: cajaActiva, itemIds: itemIds),
         cajaId: cajaActiva.id,
         onAddItem: _addToCart,
         onUpdateComment: _updateComment,
@@ -1374,6 +1499,111 @@ class _PaginaVentasState extends State<PaginaVentas> {
         onRemoveSelected: _removeSelectedItems,
       ),
     );
+  }
+
+  Future<void> _procesarVentaParcial({
+    required Map<String, double> pagos,
+    required DateTime fechaVenta,
+    required Caja cajaActiva,
+    required Set<String> itemIds,
+  }) async {
+    final totalPagado = pagos.values.fold(0.0, (sum, amount) => sum + amount);
+
+    final ventaItems = _cart
+        .where((c) => itemIds.contains(c.uniqueId))
+        .map((c) => VentaItem(
+              producto: c.producto,
+              uniqueId: c.uniqueId,
+              precioEditable: c.precioEditable,
+              comentario: c.comentario,
+            ))
+        .toList();
+
+    if (ventaItems.isEmpty) return;
+
+    final nuevaVenta = Venta(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      cajaId: cajaActiva.id,
+      fecha: fechaVenta,
+      items: ventaItems,
+      total: totalPagado,
+      pagos: pagos,
+      usuarioId: cajaActiva.usuarioAperturaId,
+      usuarioNombre: cajaActiva.usuarioAperturaNombre,
+    );
+
+    try {
+      final cajaService = Provider.of<CajaService>(context, listen: false);
+      await cajaService.agregarVentaLocal(nuevaVenta);
+
+      // Descontar Pan Árabe por cada shawarma vendido (solo los items pagados)
+      final panArabeVendidos = ventaItems
+          .where((item) => item.producto.nombre.toLowerCase().contains('shawarma'))
+          .length;
+      if (panArabeVendidos > 0) {
+        try {
+          final insumosQuery = await FirebaseFirestore.instance
+              .collection('insumos')
+              .where('nombre', isGreaterThanOrEqualTo: 'Pan Árabe')
+              .where('nombre', isLessThan: 'Pan Áráz')
+              .get();
+          bool descontado = false;
+          for (final doc in insumosQuery.docs) {
+            final nombre = (doc.data()['nombre'] ?? '').toString();
+            if (nombre.startsWith('Pan Árabe')) {
+              final stockActual =
+                  (doc.data()['stockActual'] ?? doc.data()['stockTotal'] ?? 0)
+                      .toDouble();
+              final nuevoStock = stockActual - panArabeVendidos;
+              await doc.reference.update({'stockActual': nuevoStock});
+              descontado = true;
+              break;
+            }
+          }
+          if (!descontado) {
+            if (mainScaffoldContext != null) {
+              mostrarNotificacionElegante(
+                mainScaffoldContext!,
+                "No se encontró el insumo 'Pan Árabe' para descontar.",
+                esError: true,
+                messengerKey: principalMessengerKey,
+              );
+            }
+          }
+        } catch (e) {
+          if (mainScaffoldContext != null) {
+            mostrarNotificacionElegante(
+              mainScaffoldContext!,
+              "Error al descontar Pan Árabe: $e",
+              esError: true,
+              messengerKey: principalMessengerKey,
+            );
+          }
+        }
+      }
+
+      // Remove only the paid items from the cart
+      setState(() {
+        _cart.removeWhere((c) => itemIds.contains(c.uniqueId));
+      });
+
+      if (mounted && mainScaffoldContext != null) {
+        mostrarNotificacionElegante(
+          mainScaffoldContext!,
+          "Venta parcial registrada en la caja",
+          messengerKey: principalMessengerKey,
+        );
+      }
+    } catch (e) {
+      if (mounted && mainScaffoldContext != null) {
+        mostrarNotificacionElegante(
+          mainScaffoldContext!,
+          "Error al registrar la venta parcial: $e",
+          esError: true,
+          messengerKey: principalMessengerKey,
+        );
+      }
+    }
   }
 
   Future<void> _procesarVenta({
@@ -1595,12 +1825,11 @@ class _PaginaVentasState extends State<PaginaVentas> {
           // (Botón de Gasto de Insumos removido del AppBar)
           // 🧴 Estado salsa de ajo (mostramos en color si hay potes disponibles)
           IconButton(
-            icon: Icon(
-              Icons.invert_colors, 
-              color: _salsaPotes.any((p) => (p['fraccion'] as num).toDouble() > 0) 
-                ? Colors.orange 
-                : Colors.grey
-            ),
+            icon: Icon(Icons.invert_colors,
+                color: _salsaPotes
+                        .any((p) => (p['fraccion'] as num).toDouble() > 0)
+                    ? Colors.orange
+                    : Colors.grey),
             tooltip: 'Estado Salsa de ajo',
             onPressed: _showSalsaDialog,
           ),

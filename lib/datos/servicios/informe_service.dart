@@ -346,8 +346,10 @@ class InformeService with ChangeNotifier {
     try {
       final cajasClosedQuery = _db
           .collection('cajas')
-          .where('fechaCierre', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-          .where('fechaCierre', isLessThanOrEqualTo: Timestamp.fromDate(endInclusive));
+          .where('fechaCierre',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('fechaCierre',
+              isLessThanOrEqualTo: Timestamp.fromDate(endInclusive));
 
       QuerySnapshot<Map<String, dynamic>> cajasClosedSnap =
           await cajasClosedQuery.get(const GetOptions(source: Source.cache));

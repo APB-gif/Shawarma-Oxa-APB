@@ -36,16 +36,28 @@ class AdminRepository {
     final todosLosProductos = await _productoService.getProductos();
     final todasLasCategorias = await _categoriaService.getCategorias();
 
-    _categoriasVentas = todasLasCategorias.where((c) => c.tipo.toLowerCase() == 'venta').toList()
+    _categoriasVentas = todasLasCategorias
+        .where((c) => c.tipo.toLowerCase() == 'venta')
+        .toList()
       ..sort((a, b) => a.orden.compareTo(b.orden));
-    _categoriasGastos = todasLasCategorias.where((c) => c.tipo.toLowerCase() == 'gasto').toList()
+    _categoriasGastos = todasLasCategorias
+        .where((c) => c.tipo.toLowerCase() == 'gasto')
+        .toList()
       ..sort((a, b) => a.orden.compareTo(b.orden));
 
     final idsCategoriasVenta = _categoriasVentas.map((c) => c.id).toSet();
     final idsCategoriasGasto = _categoriasGastos.map((c) => c.id).toSet();
 
-    _productosVentas = todosLosProductos.where((p) => p.tipo.toLowerCase() == 'venta' && idsCategoriasVenta.contains(p.categoriaId)).toList();
-    _productosGastos = todosLosProductos.where((p) => p.tipo.toLowerCase() == 'gasto' && idsCategoriasGasto.contains(p.categoriaId)).toList();
+    _productosVentas = todosLosProductos
+        .where((p) =>
+            p.tipo.toLowerCase() == 'venta' &&
+            idsCategoriasVenta.contains(p.categoriaId))
+        .toList();
+    _productosGastos = todosLosProductos
+        .where((p) =>
+            p.tipo.toLowerCase() == 'gasto' &&
+            idsCategoriasGasto.contains(p.categoriaId))
+        .toList();
 
     _isDataLoaded = true;
   }
@@ -83,7 +95,8 @@ class AdminRepository {
   }
 
   /// Sube un SVG a Storage y actualiza el campo `iconAssetPath` de la categoría con su URL.
-  Future<void> actualizarIconoCategoria(Categoria categoria, File imagenSvg) async {
+  Future<void> actualizarIconoCategoria(
+      Categoria categoria, File imagenSvg) async {
     final ref = _storage.ref('category_icons/${categoria.id}.svg');
     await ref.putFile(imagenSvg);
     final downloadUrl = await ref.getDownloadURL();

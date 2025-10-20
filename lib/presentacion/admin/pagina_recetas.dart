@@ -17,7 +17,8 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
   List<InsumoReceta> _insumos = [];
   String? _editId;
 
-  Future<void> _abrirFormularioNuevaReceta({String? editId, Receta? receta}) async {
+  Future<void> _abrirFormularioNuevaReceta(
+      {String? editId, Receta? receta}) async {
     if (receta != null) {
       _nombreReceta = receta.nombre;
       _productosAsociados = List<String>.from(receta.productos);
@@ -30,10 +31,11 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
       _insumos = [];
       _editId = null;
     }
-    
+
     // Controladores persistentes por insumo para evitar recrearlos en cada build
     final List<TextEditingController> qtyControllers =
-        List<TextEditingController>.from(_insumos.map((ins) => TextEditingController(text: ins.cantidad.toStringAsFixed(2))));
+        List<TextEditingController>.from(_insumos.map((ins) =>
+            TextEditingController(text: ins.cantidad.toStringAsFixed(2))));
 
     await showDialog(
       context: context,
@@ -56,734 +58,1009 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
           child: FutureBuilder<Map<String, dynamic>>(
             future: _fetchProductosEInsumos(),
             builder: (context, snap) {
-        final productos =
-          snap.data?['productos'] as List<Map<String, String>>? ?? [];
-        final insumos = snap.data?['insumos'] as List<Map<String, String>>? ?? [];
-              
+              final productos =
+                  snap.data?['productos'] as List<Map<String, String>>? ?? [];
+              final insumos =
+                  snap.data?['insumos'] as List<Map<String, String>>? ?? [];
+
               if (snap.connectionState == ConnectionState.waiting) {
                 return Container(
                   height: 200,
                   alignment: Alignment.center,
-                  child: const CircularProgressIndicator(color: Color(0xFF6366F1)),
+                  child:
+                      const CircularProgressIndicator(color: Color(0xFF6366F1)),
                 );
               }
-              
+
               return LayoutBuilder(
                 builder: (context, constraints) {
                   // Usa toda la altura disponible del diálogo y permite que el área central sea scrollable
-          // Altura total disponible con un pequeño margen para evitar
-          // desbordes por redondeos/paddings en pantallas muy justas.
-          final double totalHeight = constraints.maxHeight.isFinite
-            ? (constraints.maxHeight - 8)
-            : 692.0;
+                  // Altura total disponible con un pequeño margen para evitar
+                  // desbordes por redondeos/paddings en pantallas muy justas.
+                  final double totalHeight = constraints.maxHeight.isFinite
+                      ? (constraints.maxHeight - 8)
+                      : 692.0;
 
                   return SizedBox(
                     height: totalHeight,
                     child: Column(
                       mainAxisSize: MainAxisSize.max,
                       children: [
-                      // Header con gradiente
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(24),
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(20),
-                            topRight: Radius.circular(20),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                FontAwesomeIcons.bookOpen,
-                                color: Colors.white,
-                                size: 20,
-                              ),
+                        // Header con gradiente
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                _editId == null ? 'Nueva Receta' : 'Editar Receta',
-                                style: const TextStyle(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  FontAwesomeIcons.bookOpen,
                                   color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                                  size: 20,
                                 ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, color: Colors.white),
-                              onPressed: () => Navigator.pop(ctx),
-                            ),
-                          ],
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _editId == null
+                                      ? 'Nueva Receta'
+                                      : 'Editar Receta',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close,
+                                    color: Colors.white),
+                                onPressed: () => Navigator.pop(ctx),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
 
-                      // Area central scrollable que ocupa el espacio restante
-                      Expanded(
-                        child: Form(
-                          key: _formKey,
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Campo nombre de receta
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          const Icon(FontAwesomeIcons.penToSquare,
-                                              color: Color(0xFF6366F1), size: 16),
-                                          const SizedBox(width: 8),
-                                          const Text(
-                                            'Información de la Receta',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF1E293B),
-                                              fontSize: 16,
+                        // Area central scrollable que ocupa el espacio restante
+                        Expanded(
+                          child: Form(
+                            key: _formKey,
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Campo nombre de receta
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                          color: const Color(0xFFE2E8F0)),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                                FontAwesomeIcons.penToSquare,
+                                                color: Color(0xFF6366F1),
+                                                size: 16),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'Información de la Receta',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: Color(0xFF1E293B),
+                                                fontSize: 16,
+                                              ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 16),
-                                      TextFormField(
-                                        initialValue: _nombreReceta,
-                                        decoration: InputDecoration(
-                                          labelText: 'Nombre de la receta',
-                                          prefixIcon: const Icon(FontAwesomeIcons.signature,
-                                              size: 16, color: Color(0xFF6366F1)),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(8),
-                                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(8),
-                                            borderSide: const BorderSide(color: Color(0xFF6366F1)),
-                                          ),
+                                          ],
                                         ),
-                                        onChanged: (v) => _nombreReceta = v,
-                                        validator: (v) => v == null || v.trim().isEmpty
-                                            ? 'Campo obligatorio'
-                                            : null,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                
-                                const SizedBox(height: 20),
-                                
-                                // Productos asociados
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  ),
-                                  child: StatefulBuilder(
-                                    builder: (context, setLocalState) {
-                                      return Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          // Reemplazamos por un selector con búsqueda para manejar listas largas
-                                          LayoutBuilder(
-                                            builder: (ctx, box) {
-                                              final narrow = box.maxWidth < 360;
-                                              final chip = Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                    horizontal: 8, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFF6366F1).withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                child: Text(
-                                                  '${_productosAsociados.length} seleccionados',
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    color: Color(0xFF6366F1),
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              );
-                                              if (narrow) {
-                                                return Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Row(
-                                                      children: const [
-                                                        Icon(FontAwesomeIcons.utensils,
-                                                            color: Color(0xFF6366F1), size: 16),
-                                                        SizedBox(width: 8),
-                                                        Expanded(
-                                                          child: Text(
-                                                            'Productos Asociados',
-                                                            overflow: TextOverflow.ellipsis,
-                                                            style: TextStyle(
-                                                              fontWeight: FontWeight.w600,
-                                                              color: Color(0xFF1E293B),
-                                                              fontSize: 16,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    Align(
-                                                      alignment: Alignment.centerRight,
-                                                      child: chip,
-                                                    ),
-                                                  ],
-                                                );
-                                              }
-                                              return Row(
-                                                children: [
-                                                  const Icon(FontAwesomeIcons.utensils,
-                                                      color: Color(0xFF6366F1), size: 16),
-                                                  const SizedBox(width: 8),
-                                                  const Expanded(
-                                                    child: Text(
-                                                      'Productos Asociados',
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: TextStyle(
-                                                        fontWeight: FontWeight.w600,
-                                                        color: Color(0xFF1E293B),
-                                                        fontSize: 16,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Flexible(
-                                                    child: FittedBox(
-                                                      fit: BoxFit.scaleDown,
-                                                      alignment: Alignment.centerRight,
-                                                      child: chip,
-                                                    ),
-                                                  ),
-                                                ],
-                                              );
-                                            },
-                                          ),
-                                          const SizedBox(height: 16),
-                                          if (productos.isEmpty)
-                                            Container(
-                                              padding: const EdgeInsets.all(16),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFFEF3C7),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: const Row(
-                                                children: [
-                                                  Icon(FontAwesomeIcons.triangleExclamation,
-                                                      color: Color(0xFFD97706), size: 16),
-                                                  SizedBox(width: 8),
-                                                  Text('No hay productos disponibles',
-                                                      style: TextStyle(color: Color(0xFFD97706))),
-                                                ],
-                                              ),
-                                            )
-                                          else
-                                            // Usamos un selector con búsqueda y resaltado para productos
-                                            _ProductosSelector(
-                                              productos: productos,
-                                              insumos: insumos,
-                                              selectedIds: _productosAsociados,
-                                              onSelectionChanged: (sel) => setLocalState(() {
-                                                _productosAsociados = List<String>.from(sel);
-                                              }),
+                                        const SizedBox(height: 16),
+                                        TextFormField(
+                                          initialValue: _nombreReceta,
+                                          decoration: InputDecoration(
+                                            labelText: 'Nombre de la receta',
+                                            prefixIcon: const Icon(
+                                                FontAwesomeIcons.signature,
+                                                size: 16,
+                                                color: Color(0xFF6366F1)),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: const BorderSide(
+                                                  color: Color(0xFFE2E8F0)),
                                             ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ),
-                                
-                                const SizedBox(height: 20),
-                                
-                                // Insumos de la receta
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  ),
-                                  child: StatefulBuilder(
-                                    builder: (context, setLocalState) {
-                                      return Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          LayoutBuilder(
-                                            builder: (ctx, box) {
-                                              final narrow = box.maxWidth < 360;
-                                              final chip = Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                    horizontal: 8, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                child: Text(
-                                                  '${_insumos.length} insumos',
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    color: Color(0xFF10B981),
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              );
-                                              if (narrow) {
-                                                return Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Row(
-                                                      children: const [
-                                                        Icon(FontAwesomeIcons.boxesStacked,
-                                                            color: Color(0xFF10B981), size: 16),
-                                                        SizedBox(width: 8),
-                                                        Expanded(
-                                                          child: Text(
-                                                            'Insumos de la Receta',
-                                                            overflow: TextOverflow.ellipsis,
-                                                            style: TextStyle(
-                                                              fontWeight: FontWeight.w600,
-                                                              color: Color(0xFF1E293B),
-                                                              fontSize: 16,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    Align(
-                                                      alignment: Alignment.centerRight,
-                                                      child: chip,
-                                                    ),
-                                                  ],
-                                                );
-                                              }
-                                              return Row(
-                                                children: [
-                                                  const Icon(FontAwesomeIcons.boxesStacked,
-                                                      color: Color(0xFF10B981), size: 16),
-                                                  const SizedBox(width: 8),
-                                                  const Expanded(
-                                                    child: Text(
-                                                      'Insumos de la Receta',
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: TextStyle(
-                                                        fontWeight: FontWeight.w600,
-                                                        color: Color(0xFF1E293B),
-                                                        fontSize: 16,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Flexible(
-                                                    child: FittedBox(
-                                                      fit: BoxFit.scaleDown,
-                                                      alignment: Alignment.centerRight,
-                                                      child: chip,
-                                                    ),
-                                                  ),
-                                                ],
-                                              );
-                                            },
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: const BorderSide(
+                                                  color: Color(0xFF6366F1)),
+                                            ),
                                           ),
-                                          const SizedBox(height: 16),
-                                           
-                                          // Lista de insumos
-                                          if (_insumos.isNotEmpty)
-                                            Column(
-                                              children: _insumos.asMap().entries.map((entry) {
-                                                final i = entry.key;
-                                                final insumo = entry.value;
-                                                final qtyController = qtyControllers[i];
-                                                
-                                                return Container(
-                                                  margin: const EdgeInsets.only(bottom: 12),
-                                                  padding: const EdgeInsets.all(12),
+                                          onChanged: (v) => _nombreReceta = v,
+                                          validator: (v) =>
+                                              v == null || v.trim().isEmpty
+                                                  ? 'Campo obligatorio'
+                                                  : null,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 20),
+
+                                  // Productos asociados
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                          color: const Color(0xFFE2E8F0)),
+                                    ),
+                                    child: StatefulBuilder(
+                                      builder: (context, setLocalState) {
+                                        return Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            // Reemplazamos por un selector con búsqueda para manejar listas largas
+                                            LayoutBuilder(
+                                              builder: (ctx, box) {
+                                                final narrow =
+                                                    box.maxWidth < 360;
+                                                final chip = Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4),
                                                   decoration: BoxDecoration(
-                                                    color: Colors.white,
-                                                    borderRadius: BorderRadius.circular(8),
-                                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                                    color:
+                                                        const Color(0xFF6366F1)
+                                                            .withValues(
+                                                                alpha: 0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12),
                                                   ),
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                                  child: Text(
+                                                    '${_productosAsociados.length} seleccionados',
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      color: Color(0xFF6366F1),
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                );
+                                                if (narrow) {
+                                                  return Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
                                                     children: [
-                                                      // Campo Insumo (siempre arriba)
-                                                      TextFormField(
-                                                        readOnly: true,
-                                                        controller: TextEditingController(text: insumo.nombre),
-                                                        decoration: InputDecoration(
-                                                          labelText: 'Insumo',
-                                                          prefixIcon: const Icon(FontAwesomeIcons.cubes, size: 14, color: Color(0xFF10B981)),
-                                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-                                                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                                                          isDense: true,
-                                                          suffixIcon: IconButton(
-                                                            icon: const Icon(Icons.search, size: 20),
-                                                            onPressed: () async {
-                                                              await _openInsumoPicker(context, insumos, insumo.id ?? insumo.nombre, (sel) {
-                                                                setLocalState(() {
-                                                                  _insumos[i] = InsumoReceta(
-                                                                    id: sel['id'], 
-                                                                    nombre: sel['nombre'] ?? '', 
-                                                                    cantidad: insumo.cantidad
-                                                                  );
-                                                                });
-                                                              });
-                                                            },
-                                                          ),
-                                                        ),
-                                                        onTap: () async {
-                                                          await _openInsumoPicker(context, insumos, insumo.id ?? insumo.nombre, (sel) {
-                                                            setLocalState(() {
-                                                              _insumos[i] = InsumoReceta(
-                                                                id: sel['id'], 
-                                                                nombre: sel['nombre'] ?? '', 
-                                                                cantidad: insumo.cantidad
-                                                              );
-                                                            });
-                                                          });
-                                                        },
-                                                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-                                                      ),
-                                                      
-                                                      const SizedBox(height: 12),
-                                                      
-                                                      // Fila de cantidad + botones + eliminar
                                                       Row(
-                                                        children: [
-                                                          // Campo Cantidad con botones +/-
+                                                        children: const [
+                                                          Icon(
+                                                              FontAwesomeIcons
+                                                                  .utensils,
+                                                              color: Color(
+                                                                  0xFF6366F1),
+                                                              size: 16),
+                                                          SizedBox(width: 8),
                                                           Expanded(
-                                                            child: Column(
-                                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                                              children: [
-                                                                // Etiqueta "Cantidad" separada
-                                                                const Padding(
-                                                                  padding: EdgeInsets.only(left: 4, bottom: 6),
-                                                                  child: Text(
-                                                                    'Cantidad',
-                                                                    style: TextStyle(
-                                                                      fontSize: 12,
-                                                                      color: Color(0xFF64748B),
-                                                                      fontWeight: FontWeight.w500,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                                // Fila con botones y campo
-                                                                Row(
-                                                                  children: [
-                                                                    // Botón -
-                                                                    IconButton(
-                                                                      icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF10B981), size: 20),
-                                                                      padding: EdgeInsets.zero,
-                                                                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                                                                      onPressed: () {
-                                                                        setLocalState(() {
-                                                                          var newVal = ((insumo.cantidad - 0.01) < 0 ? 0.0 : (insumo.cantidad - 0.01));
-                                                                          newVal = (newVal * 100).round() / 100.0;
-                                                                          _insumos[i] = InsumoReceta(
-                                                                            nombre: insumo.nombre, 
-                                                                            cantidad: newVal, 
-                                                                            id: insumo.id
-                                                                          );
-                                                                          qtyController.text = newVal.toStringAsFixed(2);
-                                                                        });
-                                                                      },
-                                                                    ),
-                                                                    
-                                                                    const SizedBox(width: 4),
-                                                                    
-                                                                    // Campo de texto cantidad (sin label flotante)
-                                                                    Expanded(
-                                                                      child: TextFormField(
-                                                                        controller: qtyController,
-                                                                        textAlign: TextAlign.center,
-                                                                        style: const TextStyle(
-                                                                          fontSize: 16,
-                                                                          fontWeight: FontWeight.w600,
-                                                                          color: Color(0xFF1E293B),
-                                                                        ),
-                                                                        decoration: InputDecoration(
-                                                                          hintText: '0.00',
-                                                                          border: OutlineInputBorder(
-                                                                            borderRadius: BorderRadius.circular(6),
-                                                                          ),
-                                                                          isDense: true,
-                                                                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                                                                        ),
-                                                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                                        onTap: () {
-                                                                          qtyController.selection = TextSelection(
-                                                                            baseOffset: 0, 
-                                                                            extentOffset: qtyController.text.length
-                                                                          );
-                                                                        },
-                                                                        onChanged: (v) {
-                                                                          setLocalState(() {
-                                                                            final parsed = double.tryParse(v);
-                                                                            var val = parsed ?? 0.0;
-                                                                            val = (val * 100).round() / 100.0;
-                                                                            _insumos[i] = InsumoReceta(
-                                                                              nombre: insumo.nombre,
-                                                                              cantidad: val,
-                                                                              id: insumo.id
-                                                                            );
-                                                                          });
-                                                                        },
-                                                                        validator: (v) => double.tryParse(v ?? '') != null 
-                                                                          ? null 
-                                                                          : 'Número válido',
-                                                                      ),
-                                                                    ),
-                                                                    
-                                                                    const SizedBox(width: 4),
-                                                                    
-                                                                    // Botón +
-                                                                    IconButton(
-                                                                      icon: const Icon(Icons.add_circle_outline, color: Color(0xFF10B981), size: 20),
-                                                                      padding: EdgeInsets.zero,
-                                                                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                                                                      onPressed: () {
-                                                                        setLocalState(() {
-                                                                          var newVal = insumo.cantidad + 0.01;
-                                                                          newVal = (newVal * 100).round() / 100.0;
-                                                                          _insumos[i] = InsumoReceta(
-                                                                            nombre: insumo.nombre, 
-                                                                            cantidad: newVal, 
-                                                                            id: insumo.id
-                                                                          );
-                                                                          qtyController.text = newVal.toStringAsFixed(2);
-                                                                        });
-                                                                      },
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                          
-                                                          const SizedBox(width: 8),
-                                                          
-                                                          // Botón eliminar
-                                                          Padding(
-                                                            padding: const EdgeInsets.only(top: 20),
-                                                            child: IconButton(
-                                                              icon: const Icon(
-                                                                FontAwesomeIcons.trash,
-                                                                color: Color(0xFFEF4444),
-                                                                size: 18,
+                                                            child: Text(
+                                                              'Productos Asociados',
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              style: TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                color: Color(
+                                                                    0xFF1E293B),
+                                                                fontSize: 16,
                                                               ),
-                                                              padding: EdgeInsets.zero,
-                                                              constraints: const BoxConstraints(
-                                                                minWidth: 40,
-                                                                minHeight: 40,
-                                                              ),
-                                                              onPressed: () {
-                                                                setLocalState(() {
-                                                                  qtyControllers[i].dispose();
-                                                                  qtyControllers.removeAt(i);
-                                                                  _insumos.removeAt(i);
-                                                                });
-                                                              },
-                                                              tooltip: 'Eliminar',
                                                             ),
                                                           ),
                                                         ],
                                                       ),
+                                                      const SizedBox(height: 8),
+                                                      Align(
+                                                        alignment: Alignment
+                                                            .centerRight,
+                                                        child: chip,
+                                                      ),
                                                     ],
-                                                  ),
+                                                  );
+                                                }
+                                                return Row(
+                                                  children: [
+                                                    const Icon(
+                                                        FontAwesomeIcons
+                                                            .utensils,
+                                                        color:
+                                                            Color(0xFF6366F1),
+                                                        size: 16),
+                                                    const SizedBox(width: 8),
+                                                    const Expanded(
+                                                      child: Text(
+                                                        'Productos Asociados',
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color:
+                                                              Color(0xFF1E293B),
+                                                          fontSize: 16,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Flexible(
+                                                      child: FittedBox(
+                                                        fit: BoxFit.scaleDown,
+                                                        alignment: Alignment
+                                                            .centerRight,
+                                                        child: chip,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 );
-                                              }).toList(),
-                                            ),
-                                          
-                                          // Botón agregar insumo
-                                          const SizedBox(height: 8),
-                                          SizedBox(
-                                            width: double.infinity,
-                                            child: OutlinedButton.icon(
-                                              icon: const Icon(FontAwesomeIcons.plus,
-                                                  size: 14, color: Color(0xFF10B981)),
-                                              label: const Text('Agregar Insumo',
-                                                  style: TextStyle(color: Color(0xFF10B981))),
-                                              style: OutlinedButton.styleFrom(
-                                                side: const BorderSide(color: Color(0xFF10B981)),
-                                                padding: const EdgeInsets.all(12),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                              ),
-                                              onPressed: () {
-                                                setLocalState(() {
-                                                  _insumos.add(InsumoReceta(nombre: '', cantidad: 0));
-                                                  qtyControllers.add(TextEditingController(text: '0.00'));
-                                                });
                                               },
                                             ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Footer con botones
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(20),
-                            bottomRight: Radius.circular(20),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => Navigator.pop(ctx),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.all(16),
-                                  side: const BorderSide(color: Color(0xFF6B7280)),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: const Text('Cancelar',
-                                    style: TextStyle(color: Color(0xFF6B7280))),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              flex: 2,
-                              child: ElevatedButton.icon(
-                                icon: Icon(_editId == null 
-                                    ? FontAwesomeIcons.floppyDisk 
-                                    : FontAwesomeIcons.penToSquare,
-                                    size: 16, color: Colors.white),
-                                label: Text(_editId == null
-                                    ? 'Guardar Receta'
-                                    : 'Actualizar Receta',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                    )),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF6366F1),
-                                  padding: const EdgeInsets.all(16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                onPressed: () async {
-                                  if ((_formKey.currentState?.validate() ?? false) &&
-                                      _productosAsociados.isNotEmpty) {
-                                    final recetaMap = {
-                                      'nombre': _nombreReceta,
-                                      'productos': _productosAsociados,
-                                      'insumos': _insumos.map((e) => e.toMap()).toList(),
-                                    };
-                                    final col = FirebaseFirestore.instance.collection('recetas');
-                                    if (_editId == null) {
-                                      await col.add(recetaMap);
-                                      if (ctx.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: const Row(
-                                              children: [
-                                                Icon(FontAwesomeIcons.circleCheck,
-                                                    color: Colors.white, size: 16),
-                                                SizedBox(width: 12),
-                                                Text('Receta guardada exitosamente'),
-                                              ],
-                                            ),
-                                            backgroundColor: const Color(0xFF10B981),
-                                            behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(10)),
-                                          ),
-                                        );
-                                      }
-                                    } else {
-                                      await col.doc(_editId).update(recetaMap);
-                                      if (ctx.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: const Row(
-                                              children: [
-                                                Icon(FontAwesomeIcons.circleCheck,
-                                                    color: Colors.white, size: 16),
-                                                SizedBox(width: 12),
-                                                Text('Receta actualizada exitosamente'),
-                                              ],
-                                            ),
-                                            backgroundColor: const Color(0xFF10B981),
-                                            behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(10)),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                    setState(() {});
-                                    Navigator.of(context).pop();
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Row(
-                                          children: [
-                                            Icon(FontAwesomeIcons.triangleExclamation,
-                                                color: Colors.white, size: 16),
-                                            SizedBox(width: 12),
-                                            Text('Complete todos los campos y seleccione al menos un producto'),
+                                            const SizedBox(height: 16),
+                                            if (productos.isEmpty)
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.all(16),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      const Color(0xFFFEF3C7),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: const Row(
+                                                  children: [
+                                                    Icon(
+                                                        FontAwesomeIcons
+                                                            .triangleExclamation,
+                                                        color:
+                                                            Color(0xFFD97706),
+                                                        size: 16),
+                                                    SizedBox(width: 8),
+                                                    Text(
+                                                        'No hay productos disponibles',
+                                                        style: TextStyle(
+                                                            color: Color(
+                                                                0xFFD97706))),
+                                                  ],
+                                                ),
+                                              )
+                                            else
+                                              // Usamos un selector con búsqueda y resaltado para productos
+                                              _ProductosSelector(
+                                                productos: productos,
+                                                insumos: insumos,
+                                                selectedIds:
+                                                    _productosAsociados,
+                                                onSelectionChanged: (sel) =>
+                                                    setLocalState(() {
+                                                  _productosAsociados =
+                                                      List<String>.from(sel);
+                                                }),
+                                              ),
                                           ],
-                                        ),
-                                        backgroundColor: const Color(0xFFEF4444),
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10)),
-                                      ),
-                                    );
-                                  }
-                                },
+                                        );
+                                      },
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 20),
+
+                                  // Insumos de la receta
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                          color: const Color(0xFFE2E8F0)),
+                                    ),
+                                    child: StatefulBuilder(
+                                      builder: (context, setLocalState) {
+                                        return Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            LayoutBuilder(
+                                              builder: (ctx, box) {
+                                                final narrow =
+                                                    box.maxWidth < 360;
+                                                final chip = Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        const Color(0xFF10B981)
+                                                            .withValues(
+                                                                alpha: 0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12),
+                                                  ),
+                                                  child: Text(
+                                                    '${_insumos.length} insumos',
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      color: Color(0xFF10B981),
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                );
+                                                if (narrow) {
+                                                  return Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Row(
+                                                        children: const [
+                                                          Icon(
+                                                              FontAwesomeIcons
+                                                                  .boxesStacked,
+                                                              color: Color(
+                                                                  0xFF10B981),
+                                                              size: 16),
+                                                          SizedBox(width: 8),
+                                                          Expanded(
+                                                            child: Text(
+                                                              'Insumos de la Receta',
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              style: TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                color: Color(
+                                                                    0xFF1E293B),
+                                                                fontSize: 16,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Align(
+                                                        alignment: Alignment
+                                                            .centerRight,
+                                                        child: chip,
+                                                      ),
+                                                    ],
+                                                  );
+                                                }
+                                                return Row(
+                                                  children: [
+                                                    const Icon(
+                                                        FontAwesomeIcons
+                                                            .boxesStacked,
+                                                        color:
+                                                            Color(0xFF10B981),
+                                                        size: 16),
+                                                    const SizedBox(width: 8),
+                                                    const Expanded(
+                                                      child: Text(
+                                                        'Insumos de la Receta',
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color:
+                                                              Color(0xFF1E293B),
+                                                          fontSize: 16,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Flexible(
+                                                      child: FittedBox(
+                                                        fit: BoxFit.scaleDown,
+                                                        alignment: Alignment
+                                                            .centerRight,
+                                                        child: chip,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                );
+                                              },
+                                            ),
+                                            const SizedBox(height: 16),
+
+                                            // Lista de insumos
+                                            if (_insumos.isNotEmpty)
+                                              Column(
+                                                children: _insumos
+                                                    .asMap()
+                                                    .entries
+                                                    .map((entry) {
+                                                  final i = entry.key;
+                                                  final insumo = entry.value;
+                                                  final qtyController =
+                                                      qtyControllers[i];
+
+                                                  return Container(
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                            bottom: 12),
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            12),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
+                                                      border: Border.all(
+                                                          color: const Color(
+                                                              0xFFE2E8F0)),
+                                                    ),
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .stretch,
+                                                      children: [
+                                                        // Campo Insumo (siempre arriba)
+                                                        TextFormField(
+                                                          readOnly: true,
+                                                          controller:
+                                                              TextEditingController(
+                                                                  text: insumo
+                                                                      .nombre),
+                                                          decoration:
+                                                              InputDecoration(
+                                                            labelText: 'Insumo',
+                                                            prefixIcon: const Icon(
+                                                                FontAwesomeIcons
+                                                                    .cubes,
+                                                                size: 14,
+                                                                color: Color(
+                                                                    0xFF10B981)),
+                                                            border: OutlineInputBorder(
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            6)),
+                                                            contentPadding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                                    horizontal:
+                                                                        10,
+                                                                    vertical:
+                                                                        12),
+                                                            isDense: true,
+                                                            suffixIcon:
+                                                                IconButton(
+                                                              icon: const Icon(
+                                                                  Icons.search,
+                                                                  size: 20),
+                                                              onPressed:
+                                                                  () async {
+                                                                await _openInsumoPicker(
+                                                                    context,
+                                                                    insumos,
+                                                                    insumo.id ??
+                                                                        insumo
+                                                                            .nombre,
+                                                                    (sel) {
+                                                                  setLocalState(
+                                                                      () {
+                                                                    _insumos[i] = InsumoReceta(
+                                                                        id: sel[
+                                                                            'id'],
+                                                                        nombre:
+                                                                            sel['nombre'] ??
+                                                                                '',
+                                                                        cantidad:
+                                                                            insumo.cantidad);
+                                                                  });
+                                                                });
+                                                              },
+                                                            ),
+                                                          ),
+                                                          onTap: () async {
+                                                            await _openInsumoPicker(
+                                                                context,
+                                                                insumos,
+                                                                insumo.id ??
+                                                                    insumo
+                                                                        .nombre,
+                                                                (sel) {
+                                                              setLocalState(() {
+                                                                _insumos[i] = InsumoReceta(
+                                                                    id: sel[
+                                                                        'id'],
+                                                                    nombre:
+                                                                        sel['nombre'] ??
+                                                                            '',
+                                                                    cantidad: insumo
+                                                                        .cantidad);
+                                                              });
+                                                            });
+                                                          },
+                                                          validator: (v) => (v ==
+                                                                      null ||
+                                                                  v
+                                                                      .trim()
+                                                                      .isEmpty)
+                                                              ? 'Requerido'
+                                                              : null,
+                                                        ),
+
+                                                        const SizedBox(
+                                                            height: 12),
+
+                                                        // Fila de cantidad + botones + eliminar
+                                                        Row(
+                                                          children: [
+                                                            // Campo Cantidad con botones +/-
+                                                            Expanded(
+                                                              child: Column(
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
+                                                                children: [
+                                                                  // Etiqueta "Cantidad" separada
+                                                                  const Padding(
+                                                                    padding: EdgeInsets.only(
+                                                                        left: 4,
+                                                                        bottom:
+                                                                            6),
+                                                                    child: Text(
+                                                                      'Cantidad',
+                                                                      style:
+                                                                          TextStyle(
+                                                                        fontSize:
+                                                                            12,
+                                                                        color: Color(
+                                                                            0xFF64748B),
+                                                                        fontWeight:
+                                                                            FontWeight.w500,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  // Fila con botones y campo
+                                                                  Row(
+                                                                    children: [
+                                                                      // Botón -
+                                                                      IconButton(
+                                                                        icon: const Icon(
+                                                                            Icons
+                                                                                .remove_circle_outline,
+                                                                            color:
+                                                                                Color(0xFF10B981),
+                                                                            size: 20),
+                                                                        padding:
+                                                                            EdgeInsets.zero,
+                                                                        constraints: const BoxConstraints(
+                                                                            minWidth:
+                                                                                36,
+                                                                            minHeight:
+                                                                                36),
+                                                                        onPressed:
+                                                                            () {
+                                                                          setLocalState(
+                                                                              () {
+                                                                            var newVal = ((insumo.cantidad - 0.01) < 0
+                                                                                ? 0.0
+                                                                                : (insumo.cantidad - 0.01));
+                                                                            newVal =
+                                                                                (newVal * 100).round() / 100.0;
+                                                                            _insumos[i] = InsumoReceta(
+                                                                                nombre: insumo.nombre,
+                                                                                cantidad: newVal,
+                                                                                id: insumo.id);
+                                                                            qtyController.text =
+                                                                                newVal.toStringAsFixed(2);
+                                                                          });
+                                                                        },
+                                                                      ),
+
+                                                                      const SizedBox(
+                                                                          width:
+                                                                              4),
+
+                                                                      // Campo de texto cantidad (sin label flotante)
+                                                                      Expanded(
+                                                                        child:
+                                                                            TextFormField(
+                                                                          controller:
+                                                                              qtyController,
+                                                                          textAlign:
+                                                                              TextAlign.center,
+                                                                          style:
+                                                                              const TextStyle(
+                                                                            fontSize:
+                                                                                16,
+                                                                            fontWeight:
+                                                                                FontWeight.w600,
+                                                                            color:
+                                                                                Color(0xFF1E293B),
+                                                                          ),
+                                                                          decoration:
+                                                                              InputDecoration(
+                                                                            hintText:
+                                                                                '0.00',
+                                                                            border:
+                                                                                OutlineInputBorder(
+                                                                              borderRadius: BorderRadius.circular(6),
+                                                                            ),
+                                                                            isDense:
+                                                                                true,
+                                                                            contentPadding:
+                                                                                const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                                                                          ),
+                                                                          keyboardType: const TextInputType
+                                                                              .numberWithOptions(
+                                                                              decimal: true),
+                                                                          onTap:
+                                                                              () {
+                                                                            qtyController.selection =
+                                                                                TextSelection(baseOffset: 0, extentOffset: qtyController.text.length);
+                                                                          },
+                                                                          onChanged:
+                                                                              (v) {
+                                                                            setLocalState(() {
+                                                                              final parsed = double.tryParse(v);
+                                                                              var val = parsed ?? 0.0;
+                                                                              val = (val * 100).round() / 100.0;
+                                                                              _insumos[i] = InsumoReceta(nombre: insumo.nombre, cantidad: val, id: insumo.id);
+                                                                            });
+                                                                          },
+                                                                          validator: (v) => double.tryParse(v ?? '') != null
+                                                                              ? null
+                                                                              : 'Número válido',
+                                                                        ),
+                                                                      ),
+
+                                                                      const SizedBox(
+                                                                          width:
+                                                                              4),
+
+                                                                      // Botón +
+                                                                      IconButton(
+                                                                        icon: const Icon(
+                                                                            Icons
+                                                                                .add_circle_outline,
+                                                                            color:
+                                                                                Color(0xFF10B981),
+                                                                            size: 20),
+                                                                        padding:
+                                                                            EdgeInsets.zero,
+                                                                        constraints: const BoxConstraints(
+                                                                            minWidth:
+                                                                                36,
+                                                                            minHeight:
+                                                                                36),
+                                                                        onPressed:
+                                                                            () {
+                                                                          setLocalState(
+                                                                              () {
+                                                                            var newVal =
+                                                                                insumo.cantidad + 0.01;
+                                                                            newVal =
+                                                                                (newVal * 100).round() / 100.0;
+                                                                            _insumos[i] = InsumoReceta(
+                                                                                nombre: insumo.nombre,
+                                                                                cantidad: newVal,
+                                                                                id: insumo.id);
+                                                                            qtyController.text =
+                                                                                newVal.toStringAsFixed(2);
+                                                                          });
+                                                                        },
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+
+                                                            const SizedBox(
+                                                                width: 8),
+
+                                                            // Botón eliminar
+                                                            Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                      top: 20),
+                                                              child: IconButton(
+                                                                icon:
+                                                                    const Icon(
+                                                                  FontAwesomeIcons
+                                                                      .trash,
+                                                                  color: Color(
+                                                                      0xFFEF4444),
+                                                                  size: 18,
+                                                                ),
+                                                                padding:
+                                                                    EdgeInsets
+                                                                        .zero,
+                                                                constraints:
+                                                                    const BoxConstraints(
+                                                                  minWidth: 40,
+                                                                  minHeight: 40,
+                                                                ),
+                                                                onPressed: () {
+                                                                  setLocalState(
+                                                                      () {
+                                                                    qtyControllers[
+                                                                            i]
+                                                                        .dispose();
+                                                                    qtyControllers
+                                                                        .removeAt(
+                                                                            i);
+                                                                    _insumos
+                                                                        .removeAt(
+                                                                            i);
+                                                                  });
+                                                                },
+                                                                tooltip:
+                                                                    'Eliminar',
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                              ),
+
+                                            // Botón agregar insumo
+                                            const SizedBox(height: 8),
+                                            SizedBox(
+                                              width: double.infinity,
+                                              child: OutlinedButton.icon(
+                                                icon: const Icon(
+                                                    FontAwesomeIcons.plus,
+                                                    size: 14,
+                                                    color: Color(0xFF10B981)),
+                                                label: const Text(
+                                                    'Agregar Insumo',
+                                                    style: TextStyle(
+                                                        color:
+                                                            Color(0xFF10B981))),
+                                                style: OutlinedButton.styleFrom(
+                                                  side: const BorderSide(
+                                                      color: Color(0xFF10B981)),
+                                                  padding:
+                                                      const EdgeInsets.all(12),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                  ),
+                                                ),
+                                                onPressed: () {
+                                                  setLocalState(() {
+                                                    _insumos.add(InsumoReceta(
+                                                        nombre: '',
+                                                        cantidad: 0));
+                                                    qtyControllers.add(
+                                                        TextEditingController(
+                                                            text: '0.00'));
+                                                  });
+                                                },
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+
+                        // Footer con botones
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(20),
+                              bottomRight: Radius.circular(20),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.all(16),
+                                    side: const BorderSide(
+                                        color: Color(0xFF6B7280)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: const Text('Cancelar',
+                                      style:
+                                          TextStyle(color: Color(0xFF6B7280))),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 2,
+                                child: ElevatedButton.icon(
+                                  icon: Icon(
+                                      _editId == null
+                                          ? FontAwesomeIcons.floppyDisk
+                                          : FontAwesomeIcons.penToSquare,
+                                      size: 16,
+                                      color: Colors.white),
+                                  label: Text(
+                                      _editId == null
+                                          ? 'Guardar Receta'
+                                          : 'Actualizar Receta',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      )),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF6366F1),
+                                    padding: const EdgeInsets.all(16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  onPressed: () async {
+                                    if ((_formKey.currentState?.validate() ??
+                                            false) &&
+                                        _productosAsociados.isNotEmpty) {
+                                      final recetaMap = {
+                                        'nombre': _nombreReceta,
+                                        'productos': _productosAsociados,
+                                        'insumos': _insumos
+                                            .map((e) => e.toMap())
+                                            .toList(),
+                                      };
+                                      final col = FirebaseFirestore.instance
+                                          .collection('recetas');
+                                      if (_editId == null) {
+                                        await col.add(recetaMap);
+                                        if (ctx.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Row(
+                                                children: [
+                                                  Icon(
+                                                      FontAwesomeIcons
+                                                          .circleCheck,
+                                                      color: Colors.white,
+                                                      size: 16),
+                                                  SizedBox(width: 12),
+                                                  Text(
+                                                      'Receta guardada exitosamente'),
+                                                ],
+                                              ),
+                                              backgroundColor:
+                                                  const Color(0xFF10B981),
+                                              behavior:
+                                                  SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          10)),
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        await col
+                                            .doc(_editId)
+                                            .update(recetaMap);
+                                        if (ctx.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Row(
+                                                children: [
+                                                  Icon(
+                                                      FontAwesomeIcons
+                                                          .circleCheck,
+                                                      color: Colors.white,
+                                                      size: 16),
+                                                  SizedBox(width: 12),
+                                                  Text(
+                                                      'Receta actualizada exitosamente'),
+                                                ],
+                                              ),
+                                              backgroundColor:
+                                                  const Color(0xFF10B981),
+                                              behavior:
+                                                  SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          10)),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                      setState(() {});
+                                      Navigator.of(context).pop();
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: const Row(
+                                            children: [
+                                              Icon(
+                                                  FontAwesomeIcons
+                                                      .triangleExclamation,
+                                                  color: Colors.white,
+                                                  size: 16),
+                                              SizedBox(width: 12),
+                                              Text(
+                                                  'Complete todos los campos y seleccione al menos un producto'),
+                                            ],
+                                          ),
+                                          backgroundColor:
+                                              const Color(0xFFEF4444),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10)),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -801,22 +1078,30 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
 
   Future<Map<String, dynamic>> _fetchProductosEInsumos() async {
     try {
-    // Solo traemos productos de tipo 'venta' para que las recetas se asocien únicamente a productos que se venden
-    final productosSnap =
-      await FirebaseFirestore.instance.collection('productos').where('tipo', isEqualTo: 'venta').get();
+      // Solo traemos productos de tipo 'venta' para que las recetas se asocien únicamente a productos que se venden
+      final productosSnap = await FirebaseFirestore.instance
+          .collection('productos')
+          .where('tipo', isEqualTo: 'venta')
+          .get();
       final insumosSnap =
           await FirebaseFirestore.instance.collection('insumos').get();
-    final productos = productosSnap.docs
-      .map((d) => {
-        'id': d.id,
-        'nombre': (d.data()['nombre'] ?? '').toString(),
-        // intentamos obtener la categoría si existe en el documento
-        'categoria': (d.data()['categoria'] ?? d.data()['categoriaNombre'] ?? '').toString(),
-        // intentamos obtener la ruta/URL de la imagen de categoría si existe
-        'categoriaImg': (d.data()['categoriaImg'] ?? d.data()['categoriaUrl'] ?? d.data()['categoriaIcon'] ?? '').toString(),
-        })
-      .where((p) => p['nombre']!.isNotEmpty)
-      .toList();
+      final productos = productosSnap.docs
+          .map((d) => {
+                'id': d.id,
+                'nombre': (d.data()['nombre'] ?? '').toString(),
+                // intentamos obtener la categoría si existe en el documento
+                'categoria':
+                    (d.data()['categoria'] ?? d.data()['categoriaNombre'] ?? '')
+                        .toString(),
+                // intentamos obtener la ruta/URL de la imagen de categoría si existe
+                'categoriaImg': (d.data()['categoriaImg'] ??
+                        d.data()['categoriaUrl'] ??
+                        d.data()['categoriaIcon'] ??
+                        '')
+                    .toString(),
+              })
+          .where((p) => p['nombre']!.isNotEmpty)
+          .toList();
       // Ahora retornamos insumos como lista de mapas {id, nombre}
       final insumos = insumosSnap.docs
           .map((d) => {
@@ -829,14 +1114,21 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
       return {'productos': productos, 'insumos': insumos};
     } catch (e) {
       if (e.toString().contains('PERMISSION_DENIED')) {
-        return {'productos': <Map<String, String>>[], 'insumos': <Map<String, String>>[]};
+        return {
+          'productos': <Map<String, String>>[],
+          'insumos': <Map<String, String>>[]
+        };
       }
       rethrow;
     }
   }
 
   // Muestra un selector fullscreen/modal con la lista de insumos (List<Map{id,nombre}>) y retorna el mapa seleccionado
-  Future<void> _openInsumoPicker(BuildContext ctx, List<Map<String, String>> insumos, String? current, ValueChanged<Map<String, String>> onSelected) async {
+  Future<void> _openInsumoPicker(
+      BuildContext ctx,
+      List<Map<String, String>> insumos,
+      String? current,
+      ValueChanged<Map<String, String>> onSelected) async {
     // Ahora insumos es List<Map{id,nombre}>; preparamos nombres y resolvemos nombre actual (si current es id)
     final names = insumos.map((m) => m['nombre'] ?? '').toList();
     String? currentName;
@@ -876,8 +1168,10 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
                     const SizedBox(height: 8),
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        child: _InsumoSearchList(insumos: names, current: currentName),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        child: _InsumoSearchList(
+                            insumos: names, current: currentName),
                       ),
                     ),
                   ],
@@ -910,11 +1204,14 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
               mainAxisSize: MainAxisSize.max,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
                       const Expanded(
-                        child: Text('Seleccionar Insumo', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                        child: Text('Seleccionar Insumo',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 16)),
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(ctx2),
@@ -925,7 +1222,8 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
                 ),
                 const Divider(height: 1),
                 Expanded(
-                  child: _InsumoSearchList(insumos: names, current: currentName),
+                  child:
+                      _InsumoSearchList(insumos: names, current: currentName),
                 ),
               ],
             ),
@@ -940,7 +1238,9 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
         }
       }
     }
-    if (selected != null) onSelected({'id': selected['id'] ?? '', 'nombre': selected['nombre'] ?? ''});
+    if (selected != null)
+      onSelected(
+          {'id': selected['id'] ?? '', 'nombre': selected['nombre'] ?? ''});
   }
 
   @override
@@ -972,7 +1272,8 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
         builder: (context, snapshot) {
           final productos =
               snapshot.data?['productos'] as List<Map<String, String>>? ?? [];
-          final insumos = snapshot.data?['insumos'] as List<Map<String, String>>? ?? [];
+          final insumos =
+              snapshot.data?['insumos'] as List<Map<String, String>>? ?? [];
           final productosMap = {for (var p in productos) p['id']: p['nombre']};
           // añadir insumos al mapa de nombres para poder mostrar tanto productos como insumos en la UI
           for (var ins in insumos) {
@@ -1058,7 +1359,10 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                                    colors: [
+                                      Color(0xFF6366F1),
+                                      Color(0xFF8B5CF6)
+                                    ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
@@ -1100,8 +1404,9 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
                                   IconButton(
                                     icon: const Icon(Icons.edit_outlined,
                                         color: Color(0xFF6366F1)),
-                                    onPressed: () => _abrirFormularioNuevaReceta(
-                                        editId: receta.id, receta: receta),
+                                    onPressed: () =>
+                                        _abrirFormularioNuevaReceta(
+                                            editId: receta.id, receta: receta),
                                     tooltip: 'Editar',
                                   ),
                                   IconButton(
@@ -1112,9 +1417,11 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
                                         context: context,
                                         builder: (ctx) => AlertDialog(
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(16),
+                                            borderRadius:
+                                                BorderRadius.circular(16),
                                           ),
-                                          title: const Text('¿Eliminar receta?'),
+                                          title:
+                                              const Text('¿Eliminar receta?'),
                                           content: const Text(
                                               'Esta acción no se puede deshacer.'),
                                           actions: [
@@ -1128,7 +1435,8 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
                                                   Navigator.pop(ctx, true),
                                               child: const Text('Eliminar',
                                                   style: TextStyle(
-                                                      color: Color(0xFFEF4444))),
+                                                      color:
+                                                          Color(0xFFEF4444))),
                                             ),
                                           ],
                                         ),
@@ -1152,10 +1460,12 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
                                               ),
                                               backgroundColor:
                                                   const Color(0xFF10B981),
-                                              behavior: SnackBarBehavior.floating,
+                                              behavior:
+                                                  SnackBarBehavior.floating,
                                               shape: RoundedRectangleBorder(
                                                   borderRadius:
-                                                      BorderRadius.circular(10)),
+                                                      BorderRadius.circular(
+                                                          10)),
                                             ),
                                           );
                                         }
@@ -1209,7 +1519,8 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Insumos:',
@@ -1263,7 +1574,8 @@ class _PaginaRecetasState extends State<PaginaRecetas> {
 class _InsumoSearchList extends StatefulWidget {
   final List<String> insumos;
   final String? current;
-  const _InsumoSearchList({required this.insumos, this.current, Key? key}) : super(key: key);
+  const _InsumoSearchList({required this.insumos, this.current, Key? key})
+      : super(key: key);
 
   @override
   State<_InsumoSearchList> createState() => _InsumoSearchListState();
@@ -1315,8 +1627,11 @@ class _InsumoSearchListState extends State<_InsumoSearchList> {
                     final ii = _filtered[idx];
                     return ListTile(
                       title: _highlightMatch(ii, _query),
-                      leading: const Icon(FontAwesomeIcons.cubes, color: Color(0xFF10B981)),
-                      trailing: (ii == widget.current) ? const Icon(Icons.check, color: Color(0xFF10B981)) : null,
+                      leading: const Icon(FontAwesomeIcons.cubes,
+                          color: Color(0xFF10B981)),
+                      trailing: (ii == widget.current)
+                          ? const Icon(Icons.check, color: Color(0xFF10B981))
+                          : null,
                       onTap: () => Navigator.pop(context, ii),
                     );
                   },
@@ -1329,13 +1644,15 @@ class _InsumoSearchListState extends State<_InsumoSearchList> {
   // Construye un Text.rich con la parte que coincide resaltada
   Widget _highlightMatch(String text, String query) {
     if (query.isEmpty) {
-      return Text(text, maxLines: 2, overflow: TextOverflow.ellipsis, softWrap: true);
+      return Text(text,
+          maxLines: 2, overflow: TextOverflow.ellipsis, softWrap: true);
     }
     final lower = text.toLowerCase();
     final q = query.toLowerCase();
     final start = lower.indexOf(q);
     if (start < 0) {
-      return Text(text, maxLines: 2, overflow: TextOverflow.ellipsis, softWrap: true);
+      return Text(text,
+          maxLines: 2, overflow: TextOverflow.ellipsis, softWrap: true);
     }
     final end = start + q.length;
     return RichText(
@@ -1347,7 +1664,8 @@ class _InsumoSearchListState extends State<_InsumoSearchList> {
           TextSpan(text: text.substring(0, start)),
           TextSpan(
               text: text.substring(start, end),
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0B6E4F))),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFF0B6E4F))),
           TextSpan(text: text.substring(end)),
         ],
       ),
@@ -1357,11 +1675,19 @@ class _InsumoSearchListState extends State<_InsumoSearchList> {
 
 // Selector reutilizable para productos con búsqueda y checkboxes
 class _ProductosSelector extends StatefulWidget {
-  final List<Map<String, String>> productos; // {'id','nombre','categoria','categoriaImg'}
-  final List<Map<String, String>>? insumos; // {id,nombre} del almacén (opcional)
+  final List<Map<String, String>>
+      productos; // {'id','nombre','categoria','categoriaImg'}
+  final List<Map<String, String>>?
+      insumos; // {id,nombre} del almacén (opcional)
   final List<String> selectedIds;
   final ValueChanged<List<String>> onSelectionChanged;
-  const _ProductosSelector({required this.productos, this.insumos, required this.selectedIds, required this.onSelectionChanged, Key? key}) : super(key: key);
+  const _ProductosSelector(
+      {required this.productos,
+      this.insumos,
+      required this.selectedIds,
+      required this.onSelectionChanged,
+      Key? key})
+      : super(key: key);
 
   @override
   State<_ProductosSelector> createState() => _ProductosSelectorState();
@@ -1379,25 +1705,28 @@ class _ProductosSelectorState extends State<_ProductosSelector> {
     _filtered = List.from(widget.productos);
     if ((widget.insumos ?? []).isNotEmpty) {
       // representamos insumos como mapas de producto con categoria especial
-      final insItems = (widget.insumos ?? []).map((m) => {
-            'id': m['id'] ?? '',
-            'nombre': m['nombre'] ?? '',
-            'categoria': 'Insumos (Almacén)',
-          }).toList();
+      final insItems = (widget.insumos ?? [])
+          .map((m) => {
+                'id': m['id'] ?? '',
+                'nombre': m['nombre'] ?? '',
+                'categoria': 'Insumos (Almacén)',
+              })
+          .toList();
       _filtered.addAll(insItems);
     }
     _selected = widget.selectedIds.toSet();
-  
   }
 
   void _filter(String q) {
     setState(() {
       _query = q;
       final base = widget.productos
-          .where((p) => (p['nombre'] ?? '').toLowerCase().contains(q.toLowerCase()))
+          .where((p) =>
+              (p['nombre'] ?? '').toLowerCase().contains(q.toLowerCase()))
           .toList();
       final ins = (widget.insumos ?? [])
-          .where((m) => (m['nombre'] ?? '').toLowerCase().contains(q.toLowerCase()))
+          .where((m) =>
+              (m['nombre'] ?? '').toLowerCase().contains(q.toLowerCase()))
           .map((m) => {
                 'id': m['id'] ?? '',
                 'nombre': m['nombre'] ?? '',
@@ -1412,7 +1741,10 @@ class _ProductosSelectorState extends State<_ProductosSelector> {
 
   void _toggle(String id) {
     setState(() {
-      if (_selected.contains(id)) _selected.remove(id); else _selected.add(id);
+      if (_selected.contains(id))
+        _selected.remove(id);
+      else
+        _selected.add(id);
       widget.onSelectionChanged(_selected.toList());
     });
   }
@@ -1423,17 +1755,22 @@ class _ProductosSelectorState extends State<_ProductosSelector> {
     // y con un color de destaque.
     const baseColor = Color(0xFF1E293B);
     const highlightColor = Color(0xFF0B6E4F);
-  if (_query.isEmpty) return TextSpan(text: text, style: const TextStyle(color: baseColor));
+    if (_query.isEmpty)
+      return TextSpan(text: text, style: const TextStyle(color: baseColor));
     final lower = text.toLowerCase();
     final q = _query.toLowerCase();
     final start = lower.indexOf(q);
-    if (start < 0) return TextSpan(text: text, style: const TextStyle(color: baseColor));
+    if (start < 0)
+      return TextSpan(text: text, style: const TextStyle(color: baseColor));
     final end = start + q.length;
     return TextSpan(
       style: const TextStyle(color: baseColor),
       children: [
         TextSpan(text: text.substring(0, start)),
-        TextSpan(text: text.substring(start, end), style: const TextStyle(fontWeight: FontWeight.bold, color: highlightColor)),
+        TextSpan(
+            text: text.substring(start, end),
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: highlightColor)),
         TextSpan(text: text.substring(end)),
       ],
     );
@@ -1458,14 +1795,16 @@ class _ProductosSelectorState extends State<_ProductosSelector> {
         ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 360),
           child: _filtered.isEmpty
-              ? const Center(child: Text('No se encontraron productos o insumos'))
+              ? const Center(
+                  child: Text('No se encontraron productos o insumos'))
               : SingleChildScrollView(
                   child: Column(
                     children: [
                       // Agrupar productos por categoría
                       ..._buildCategoryTiles(),
                       // Si hay insumos, ponerlos en un ExpansionTile separado al final
-                      if ((widget.insumos ?? []).isNotEmpty) _buildInsumosTile(),
+                      if ((widget.insumos ?? []).isNotEmpty)
+                        _buildInsumosTile(),
                     ],
                   ),
                 ),
@@ -1480,16 +1819,20 @@ class _ProductosSelectorState extends State<_ProductosSelector> {
     final Map<String, List<Map<String, String>>> groups = {};
     for (var p in widget.productos) {
       final nombre = (p['nombre'] ?? '').toString();
-      if (_query.isNotEmpty && !nombre.toLowerCase().contains(_query.toLowerCase())) continue;
+      if (_query.isNotEmpty &&
+          !nombre.toLowerCase().contains(_query.toLowerCase())) continue;
       final cat = (p['categoria'] ?? '').toString().trim();
       if (cat.toLowerCase().contains('shawarma')) {
-        groups.putIfAbsent(cat.isNotEmpty ? cat : 'Sin categoría', () => []).add(p);
+        groups
+            .putIfAbsent(cat.isNotEmpty ? cat : 'Sin categoría', () => [])
+            .add(p);
       }
     }
     // Añadir categorías de insumos (si existen) a los grupos para que se muestren también
     for (var ins in widget.insumos ?? []) {
       final nombre = (ins['nombre'] ?? '').toString();
-      if (_query.isNotEmpty && !nombre.toLowerCase().contains(_query.toLowerCase())) continue;
+      if (_query.isNotEmpty &&
+          !nombre.toLowerCase().contains(_query.toLowerCase())) continue;
       final cat = (ins['categoria'] ?? '').toString().trim();
       if (cat.isNotEmpty) {
         // Representar insumo en el mismo formato que producto para mostrar checkbox
@@ -1502,7 +1845,7 @@ class _ProductosSelectorState extends State<_ProductosSelector> {
       }
     }
 
-  // Orden consistente: categorías alfabéticas, pero poner 'Sin categoría' al final
+    // Orden consistente: categorías alfabéticas, pero poner 'Sin categoría' al final
     final keys = groups.keys.toList()
       ..sort((a, b) {
         if (a == 'Sin categoría') return 1;
@@ -1516,7 +1859,9 @@ class _ProductosSelectorState extends State<_ProductosSelector> {
         initiallyExpanded: false,
         tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         childrenPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-        title: Text(cat, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+        title: Text(cat,
+            style: const TextStyle(
+                fontWeight: FontWeight.w600, color: Color(0xFF475569))),
         children: items.map((p) {
           final id = p['id'] ?? '';
           final nombre = p['nombre'] ?? id;
@@ -1527,10 +1872,15 @@ class _ProductosSelectorState extends State<_ProductosSelector> {
                 secondary: const CircleAvatar(
                   radius: 10,
                   backgroundColor: Color(0xFFE5E7EB),
-                  child: Icon(Icons.category, size: 12, color: Color(0xFF6B7280)),
+                  child:
+                      Icon(Icons.category, size: 12, color: Color(0xFF6B7280)),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                title: RichText(text: _highlight(nombre), maxLines: 1, overflow: TextOverflow.ellipsis),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                title: RichText(
+                    text: _highlight(nombre),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
                 value: _selected.contains(id),
                 activeColor: const Color(0xFF6366F1),
                 onChanged: (v) => _toggle(id),
@@ -1547,13 +1897,16 @@ class _ProductosSelectorState extends State<_ProductosSelector> {
     // Insumos sin categoría propia
     final items = (widget.insumos ?? [])
         .where((m) => ((m['categoria'] ?? '').toString().trim().isEmpty))
-        .where((m) => (_query.isEmpty || (m['nombre'] ?? '').toLowerCase().contains(_query.toLowerCase())))
+        .where((m) => (_query.isEmpty ||
+            (m['nombre'] ?? '').toLowerCase().contains(_query.toLowerCase())))
         .toList();
     return ExpansionTile(
       initiallyExpanded: false,
       tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       childrenPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-      title: const Text('Insumos (Almacén)', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+      title: const Text('Insumos (Almacén)',
+          style:
+              TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF475569))),
       children: items.map((m) {
         final id = m['id'] ?? '';
         final nombre = m['nombre'] ?? id;
@@ -1562,12 +1915,16 @@ class _ProductosSelectorState extends State<_ProductosSelector> {
             CheckboxListTile(
               dense: true,
               secondary: const CircleAvatar(
-                  radius: 10,
-                  backgroundColor: Color(0xFFE5E7EB),
-                  child: Icon(Icons.category, size: 12, color: Color(0xFF6B7280)),
-                ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              title: RichText(text: _highlight(nombre), maxLines: 1, overflow: TextOverflow.ellipsis),
+                radius: 10,
+                backgroundColor: Color(0xFFE5E7EB),
+                child: Icon(Icons.category, size: 12, color: Color(0xFF6B7280)),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              title: RichText(
+                  text: _highlight(nombre),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
               value: _selected.contains(id),
               activeColor: const Color(0xFF6366F1),
               onChanged: (_) => _toggle(id),

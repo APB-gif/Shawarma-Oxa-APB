@@ -1,4 +1,3 @@
-
 // lib/datos/servicios/servicio_lista_compras.dart
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -60,7 +59,8 @@ class CompraItem {
       categoriaId: map['categoriaId'] as String?,
       productoId: map['productoId'] as String?,
       comprado: (map['comprado'] as bool?) ?? false,
-      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 
@@ -81,7 +81,7 @@ class CompraItem {
 
 class ServicioListaCompras {
   static const _kStoreKey = 'lista_compras_hoy';
-  static const _kDateKey  = 'lista_compras_fecha';
+  static const _kDateKey = 'lista_compras_fecha';
 
   DateTime _today = _dateOnly(DateTime.now());
   List<CompraItem> _items = [];
@@ -97,7 +97,8 @@ class ServicioListaCompras {
     required String nombre,
   }) {
     // Preferimos productoId. Si no existe, usamos nombre normalizado.
-    if (productoId != null && productoId.trim().isNotEmpty) return 'p:$productoId';
+    if (productoId != null && productoId.trim().isNotEmpty)
+      return 'p:$productoId';
     return 'n:${_normText(nombre)}';
     // Nota: si quieres considerar categoría, concatenar ':c:$categoriaId'
   }
@@ -126,7 +127,8 @@ class ServicioListaCompras {
   List<CompraItem> obtenerListaHoy() => List.unmodifiable(_items);
 
   Future<void> _persist(SharedPreferences prefs) async {
-    await prefs.setStringList(_kStoreKey, _items.map((e) => jsonEncode(e.toMap())).toList());
+    await prefs.setStringList(
+        _kStoreKey, _items.map((e) => jsonEncode(e.toMap())).toList());
     await prefs.setString(_kDateKey, _fmtDate(_today));
   }
 
@@ -161,7 +163,8 @@ class ServicioListaCompras {
     await _ensureToday(prefs);
 
     final key = _keyFor(productoId: productoId, nombre: nombre);
-    final idx = _items.indexWhere((e) => _keyFor(productoId: e.productoId, nombre: e.nombre) == key);
+    final idx = _items.indexWhere(
+        (e) => _keyFor(productoId: e.productoId, nombre: e.nombre) == key);
 
     if (idx >= 0) {
       // ✅ Ya existe: fusionamos (evita duplicados)
@@ -214,11 +217,14 @@ class ServicioListaCompras {
     }
   }
 
-  Future<void> marcarCompradoPorIds(Iterable<String> ids, {bool comprado = true}) async {
+  Future<void> marcarCompradoPorIds(Iterable<String> ids,
+      {bool comprado = true}) async {
     final prefs = await SharedPreferences.getInstance();
     await _ensureToday(prefs);
     final setIds = ids.toSet();
-    _items = _items.map((e) => setIds.contains(e.id) ? e.copyWith(comprado: comprado) : e).toList();
+    _items = _items
+        .map((e) => setIds.contains(e.id) ? e.copyWith(comprado: comprado) : e)
+        .toList();
     await _persist(prefs);
   }
 }

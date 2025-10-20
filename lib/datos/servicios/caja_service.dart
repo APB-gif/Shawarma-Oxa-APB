@@ -1025,7 +1025,9 @@ class CajaService with ChangeNotifier {
 
       // Validar y aplicar gasto de insumos de apertura: debe existir en gastos locales
       final almacenService = AlmacenService();
-      final aperturaGastos = _gastosLocales.where((g) => (g.tipo ?? '') == 'insumos_apertura').toList();
+      final aperturaGastos = _gastosLocales
+          .where((g) => (g.tipo ?? '') == 'insumos_apertura')
+          .toList();
       if (aperturaGastos.isEmpty) {
         // No se puede cerrar si no existe el gasto de apertura
         throw Exception('Falta registrar el gasto de insumos por apertura.');
@@ -1058,45 +1060,65 @@ class CajaService with ChangeNotifier {
 
             // Intentar leer receta por id
             try {
-              final recetaDoc = await FirebaseFirestore.instance.collection('recetas').doc(id).get();
+              final recetaDoc = await FirebaseFirestore.instance
+                  .collection('recetas')
+                  .doc(id)
+                  .get();
               if (recetaDoc.exists) {
                 final data = recetaDoc.data()!;
                 final insumos = List<dynamic>.from(data['insumos'] ?? []);
-                  // Determinar si la receta tiene un rendimiento en 'potes' (p.ej. cuántos potes rinde la receta)
-                  final potesPorReceta = (data['potesPorReceta'] ?? data['rinde'] ?? data['porciones'] ?? data['rendimiento']) as num?;
-                  final double potesRinde = (potesPorReceta != null) ? potesPorReceta.toDouble() : 0.0;
+                // Determinar si la receta tiene un rendimiento en 'potes' (p.ej. cuántos potes rinde la receta)
+                final potesPorReceta = (data['potesPorReceta'] ??
+                    data['rinde'] ??
+                    data['porciones'] ??
+                    data['rendimiento']) as num?;
+                final double potesRinde =
+                    (potesPorReceta != null) ? potesPorReceta.toDouble() : 0.0;
 
-                  // Si la receta define un rendimiento en potes (>0), entonces interpretamos
-                  // que `it.cantidad` (la cantidad reportada en el gasto) está en potes y
-                  // descontamos solo recetas enteras: recetasAplicar = floor(totalPotesUsados / potesPorReceta).
-                  if (potesRinde > 0) {
-                    final totalPotesUsados = it.cantidad;
-                    final recetasAplicar = (totalPotesUsados / potesRinde).floor();
-                    if (recetasAplicar > 0) {
-                      for (final ins in insumos) {
-                        final nombre = (ins['nombre'] ?? '').toString();
-                        final cantidadPorUnidad = (ins['cantidad'] as num?)?.toDouble() ?? 0.0;
-                        final totalQty = (cantidadPorUnidad > 0) ? (cantidadPorUnidad * recetasAplicar) : 0.0;
-                        if (totalQty > 0) {
-                          expanded.add(GastoItem(id: nombre, nombre: nombre, precio: 0.0, cantidad: totalQty));
-                        }
-                      }
-                    } else {
-                      // No hay recetas completas para aplicar (queda en parcial), no descontamos ahora.
-                    }
-                  } else {
-                    // Comportamiento por defecto: aplicar la receta proporcionalmente a it.cantidad
+                // Si la receta define un rendimiento en potes (>0), entonces interpretamos
+                // que `it.cantidad` (la cantidad reportada en el gasto) está en potes y
+                // descontamos solo recetas enteras: recetasAplicar = floor(totalPotesUsados / potesPorReceta).
+                if (potesRinde > 0) {
+                  final totalPotesUsados = it.cantidad;
+                  final recetasAplicar =
+                      (totalPotesUsados / potesRinde).floor();
+                  if (recetasAplicar > 0) {
                     for (final ins in insumos) {
                       final nombre = (ins['nombre'] ?? '').toString();
-                      final cantidadPorUnidad = (ins['cantidad'] as num?)?.toDouble() ?? 0.0;
+                      final cantidadPorUnidad =
+                          (ins['cantidad'] as num?)?.toDouble() ?? 0.0;
                       final totalQty = (cantidadPorUnidad > 0)
-                          ? (cantidadPorUnidad * it.cantidad)
-                          : it.cantidad;
+                          ? (cantidadPorUnidad * recetasAplicar)
+                          : 0.0;
                       if (totalQty > 0) {
-                        expanded.add(GastoItem(id: nombre, nombre: nombre, precio: 0.0, cantidad: totalQty));
+                        expanded.add(GastoItem(
+                            id: nombre,
+                            nombre: nombre,
+                            precio: 0.0,
+                            cantidad: totalQty));
                       }
                     }
+                  } else {
+                    // No hay recetas completas para aplicar (queda en parcial), no descontamos ahora.
                   }
+                } else {
+                  // Comportamiento por defecto: aplicar la receta proporcionalmente a it.cantidad
+                  for (final ins in insumos) {
+                    final nombre = (ins['nombre'] ?? '').toString();
+                    final cantidadPorUnidad =
+                        (ins['cantidad'] as num?)?.toDouble() ?? 0.0;
+                    final totalQty = (cantidadPorUnidad > 0)
+                        ? (cantidadPorUnidad * it.cantidad)
+                        : it.cantidad;
+                    if (totalQty > 0) {
+                      expanded.add(GastoItem(
+                          id: nombre,
+                          nombre: nombre,
+                          precio: 0.0,
+                          cantidad: totalQty));
+                    }
+                  }
+                }
                 continue; // procesado
               }
             } catch (_) {}

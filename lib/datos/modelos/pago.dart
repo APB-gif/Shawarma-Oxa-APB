@@ -26,7 +26,7 @@ enum PaymentMethod {
 
   // Y un getter para obtener su ícono correspondiente
   IconData get icon {
-     switch (this) {
+    switch (this) {
       case PaymentMethod.cash:
         return Icons.payments_outlined;
       case PaymentMethod.izipayCard:

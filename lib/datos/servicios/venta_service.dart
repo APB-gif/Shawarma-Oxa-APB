@@ -7,7 +7,7 @@ import 'package:shawarma_pos_nuevo/datos/servicios/caja_service.dart';
 /// Servicio para CRUD de ventas. **Flujo de Ventas**:
 /// - Al pagar en Ventas: SOLO guarda **local** via CajaService (NO Firestore).
 /// - Al cerrar caja: CajaService sube todo a Firestore.
-/// 
+///
 /// Los métodos que escriben en Firestore quedan para usos puntuales
 /// (informes, reparaciones, migraciones, etc.), pero NO se usan en el flujo normal.
 class VentaService {
@@ -17,12 +17,11 @@ class VentaService {
       FirebaseFirestore.instance.collection('ventas');
 
   /// Versión tipada para lecturas / informes
-  CollectionReference<Venta> get _col => FirebaseFirestore.instance
-      .collection('ventas')
-      .withConverter<Venta>(
-        fromFirestore: (snap, _) => Venta.fromFirestore(snap),
-        toFirestore: (venta, _) => venta.toFirestore(),
-      );
+  CollectionReference<Venta> get _col =>
+      FirebaseFirestore.instance.collection('ventas').withConverter<Venta>(
+            fromFirestore: (snap, _) => Venta.fromFirestore(snap),
+            toFirestore: (venta, _) => venta.toFirestore(),
+          );
 
   // ---------------------------------------------------------------------------
   // ✔️ FLUJO NORMAL (NO Firestore aquí)
@@ -38,7 +37,8 @@ class VentaService {
   }
 
   /// Mueve una venta desde "pendientes" a "eliminadas" en la caja (local).
-  Future<void> marcarVentaEliminadaLocal(Venta venta, CajaService cajaService) async {
+  Future<void> marcarVentaEliminadaLocal(
+      Venta venta, CajaService cajaService) async {
     await cajaService.registrarVentaEliminada(venta);
     // Opcional: también quitarla de pendientes si aún estuviera
     await cajaService.eliminarVentaLocal(venta);
@@ -48,10 +48,12 @@ class VentaService {
   }
 
   /// Quita una venta del buffer local (pendientes) y ajusta totales.
-  Future<void> eliminarVentaDePendientesLocal(Venta venta, CajaService cajaService) async {
+  Future<void> eliminarVentaDePendientesLocal(
+      Venta venta, CajaService cajaService) async {
     await cajaService.eliminarVentaLocal(venta);
     if (kDebugMode) {
-      print('[VentaService] Venta ${venta.id} eliminada de pendientes (local).');
+      print(
+          '[VentaService] Venta ${venta.id} eliminada de pendientes (local).');
     }
   }
 
@@ -63,7 +65,8 @@ class VentaService {
   Future<void> registrarVenta(Venta venta) async {
     await _rawCol.doc(venta.id).set(venta.toFirestore());
     if (kDebugMode) {
-      print('[VentaService] Venta ${venta.id} registrada en Firestore (uso directo).');
+      print(
+          '[VentaService] Venta ${venta.id} registrada en Firestore (uso directo).');
     }
   }
 
@@ -84,7 +87,8 @@ class VentaService {
     }
     await batch.commit();
     if (kDebugMode) {
-      print('[VentaService] Ventas de la sesión $cajaId eliminadas de Firestore.');
+      print(
+          '[VentaService] Ventas de la sesión $cajaId eliminadas de Firestore.');
     }
   }
 

@@ -42,40 +42,39 @@ class AuthService {
 
   /// Ingreso con Google.
 // Asegúrate de que el widget de Firebase Auth esté correctamente configurado
-Future<UserCredential?> signInWithGoogle() async {
-  if (kIsWeb) {
-    final provider = GoogleAuthProvider()
-      ..setCustomParameters({'prompt': 'select_account'});
-    try {
-      final cred = await _firebaseAuth.signInWithPopup(provider);  // Usar Popup en lugar de Redirect
+  Future<UserCredential?> signInWithGoogle() async {
+    if (kIsWeb) {
+      final provider = GoogleAuthProvider()
+        ..setCustomParameters({'prompt': 'select_account'});
+      try {
+        final cred = await _firebaseAuth
+            .signInWithPopup(provider); // Usar Popup en lugar de Redirect
+        if (cred.user != null) {
+          await _ensureUserDoc(cred.user!);
+          disableOfflineMode();
+        }
+        return cred;
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'popup-closed-by-user' || e.code == 'popup-blocked') {
+          await _firebaseAuth.signInWithRedirect(provider);
+          return null; // El resultado llega por authStateChanges
+        }
+        rethrow;
+      }
+    } else {
+      final provider = GoogleAuthProvider()
+        ..addScope('email')
+        ..addScope('profile')
+        ..setCustomParameters({'prompt': 'select_account'});
+
+      final cred = await _firebaseAuth.signInWithProvider(provider);
       if (cred.user != null) {
         await _ensureUserDoc(cred.user!);
         disableOfflineMode();
       }
       return cred;
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'popup-closed-by-user' || e.code == 'popup-blocked') {
-        await _firebaseAuth.signInWithRedirect(provider);
-        return null; // El resultado llega por authStateChanges
-      }
-      rethrow;
     }
-  } else {
-    final provider = GoogleAuthProvider()
-      ..addScope('email')
-      ..addScope('profile')
-      ..setCustomParameters({'prompt': 'select_account'});
-
-    final cred = await _firebaseAuth.signInWithProvider(provider);
-    if (cred.user != null) {
-      await _ensureUserDoc(cred.user!);
-      disableOfflineMode();
-    }
-    return cred;
   }
-}
-
-
 
   /// Email/Password
   Future<UserCredential> signInWithEmailAndPassword(
@@ -107,7 +106,9 @@ Future<UserCredential?> signInWithGoogle() async {
       'uid': user.uid,
       'email': user.email,
       'nombre': (user.displayName ?? '').trim(),
-      'rol': debeSerAdmin ? 'administrador' : 'trabajador', // Inicialmente asigna 'trabajador'
+      'rol': debeSerAdmin
+          ? 'administrador'
+          : 'trabajador', // Inicialmente asigna 'trabajador'
       'fechaCreacion': Timestamp.now(),
     });
   }
@@ -119,7 +120,8 @@ Future<UserCredential?> signInWithGoogle() async {
 
   Future<void> updateUserRole(String uid, String newRole) async {
     // Validar que el nuevo rol sea uno de los roles permitidos
-    if (!['administrador', 'trabajador', 'espectador', 'fuera de servicio'].contains(newRole)) {
+    if (!['administrador', 'trabajador', 'espectador', 'fuera de servicio']
+        .contains(newRole)) {
       throw Exception('Rol no permitido.');
     }
     await _firestore.collection('users').doc(uid).update({'rol': newRole});
@@ -127,14 +129,17 @@ Future<UserCredential?> signInWithGoogle() async {
 
   Future<void> changeUserRoleSafe({
     required String targetUid,
-    required String newRole, // 'administrador' | 'trabajador' | 'espectador' | 'fuera de servicio'
+    required String
+        newRole, // 'administrador' | 'trabajador' | 'espectador' | 'fuera de servicio'
   }) async {
     final db = _firestore;
     final currentUid = _firebaseAuth.currentUser!.uid;
 
     await db.runTransaction((tx) async {
-      final adminsSnap =
-          await db.collection('users').where('rol', isEqualTo: 'administrador').get();
+      final adminsSnap = await db
+          .collection('users')
+          .where('rol', isEqualTo: 'administrador')
+          .get();
 
       final adminCount = adminsSnap.docs.length;
       final isTargetAdminNow = adminsSnap.docs.any((d) => d.id == targetUid);
@@ -147,7 +152,8 @@ Future<UserCredential?> signInWithGoogle() async {
 
       final isSelf = targetUid == currentUid;
       if (isSelf && isDemotion && adminCount == 1) {
-        throw Exception('No puedes quitarte tu propio rol si eres el único administrador.');
+        throw Exception(
+            'No puedes quitarte tu propio rol si eres el único administrador.');
       }
 
       // Actualiza el rol del usuario
@@ -193,8 +199,9 @@ Future<UserCredential?> signInWithGoogle() async {
     if (u == null) throw Exception('No hay usuario autenticado');
 
     final ts = DateTime.now().millisecondsSinceEpoch;
-    final safeName =
-        (filename?.trim().isNotEmpty == true) ? filename!.trim() : 'avatar_$ts.jpg';
+    final safeName = (filename?.trim().isNotEmpty == true)
+        ? filename!.trim()
+        : 'avatar_$ts.jpg';
 
     final ref = FirebaseStorage.instance.ref('user_photos/${u.uid}/$safeName');
     final meta = SettableMetadata(

@@ -49,11 +49,20 @@ class StorageImage extends StatelessWidget {
       builder: (context, snap) {
         if (!snap.hasData) {
           return placeholder ??
-              const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)));
+              const Center(
+                  child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2)));
         }
         final url = snap.data!;
         if (url.toLowerCase().endsWith('.svg')) {
-          return CachedSvgImage(url: url, width: width, height: height, imageUrl: '',);
+          return CachedSvgImage(
+            url: url,
+            width: width,
+            height: height,
+            imageUrl: '',
+          );
         }
         return Image.network(
           url,

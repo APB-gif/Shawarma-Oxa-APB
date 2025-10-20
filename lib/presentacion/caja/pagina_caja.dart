@@ -1503,8 +1503,9 @@ class _VistaCajaAbierta extends StatelessWidget {
                                     controller.text.replaceAll(',', '.'));
 
                                 // Antes de cerrar, verificar si existe gasto de apertura
-                                final tieneGastoApertura = cajaService.gastosLocales
-                                    .any((g) => (g.tipo ?? '') == 'insumos_apertura');
+                                final tieneGastoApertura =
+                                    cajaService.gastosLocales.any((g) =>
+                                        (g.tipo ?? '') == 'insumos_apertura');
 
                                 if (!tieneGastoApertura) {
                                   // Mostrar diálogo para registrar gasto de apertura
@@ -1513,18 +1514,26 @@ class _VistaCajaAbierta extends StatelessWidget {
                                     dialogCtx = mainScaffoldContext!;
                                   } else {
                                     try {
-                                      dialogCtx = Navigator.of(dialogContext, rootNavigator: true).context;
+                                      dialogCtx = Navigator.of(dialogContext,
+                                              rootNavigator: true)
+                                          .context;
                                     } catch (_) {
                                       dialogCtx = dialogContext;
                                     }
                                   }
 
-                                  final gasto = await showGastoInsumosAperturaDialog(dialogCtx, caja);
+                                  final gasto =
+                                      await showGastoInsumosAperturaDialog(
+                                          dialogCtx, caja);
 
                                   // Si usuario no registró, abortar
                                   if (gasto == null) {
                                     if (mainScaffoldContext != null) {
-                                      mostrarNotificacionElegante(mainScaffoldContext!, 'Cierre cancelado. Registra el gasto de apertura antes de cerrar la caja.', esError: true, messengerKey: principalMessengerKey);
+                                      mostrarNotificacionElegante(
+                                          mainScaffoldContext!,
+                                          'Cierre cancelado. Registra el gasto de apertura antes de cerrar la caja.',
+                                          esError: true,
+                                          messengerKey: principalMessengerKey);
                                     }
                                     return;
                                   }

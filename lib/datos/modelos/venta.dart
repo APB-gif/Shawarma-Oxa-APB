@@ -42,7 +42,9 @@ class VentaItem {
 
   factory VentaItem.fromMap(Map<String, dynamic> map) {
     final prodRaw = map['producto'];
-    final prodMap = (prodRaw is Map) ? Map<String, dynamic>.from(prodRaw) : <String, dynamic>{};
+    final prodMap = (prodRaw is Map)
+        ? Map<String, dynamic>.from(prodRaw)
+        : <String, dynamic>{};
     return VentaItem(
       producto: Producto.fromMap(prodMap),
       uniqueId: (map['uniqueId'] ?? '').toString(),

@@ -3,16 +3,18 @@ import 'package:shawarma_pos_nuevo/datos/modelos/producto.dart';
 import 'package:shawarma_pos_nuevo/datos/catalogo_gastos.dart' as local;
 
 class ProductoGastosService {
-  final CollectionReference<Producto> _productosRef =
-      FirebaseFirestore.instance.collection('productos').withConverter<Producto>(
-            fromFirestore: (snapshots, _) => Producto.fromFirestore(snapshots),
-            toFirestore: (producto, _) => producto.toFirestore(),
-          );
+  final CollectionReference<Producto> _productosRef = FirebaseFirestore.instance
+      .collection('productos')
+      .withConverter<Producto>(
+        fromFirestore: (snapshots, _) => Producto.fromFirestore(snapshots),
+        toFirestore: (producto, _) => producto.toFirestore(),
+      );
 
   /// Obtiene los productos de tipo 'gasto' una sola vez.
   Future<List<Producto>> getProductos() async {
     try {
-      final snapshot = await _productosRef.where('tipo', isEqualTo: 'gasto').get();
+      final snapshot =
+          await _productosRef.where('tipo', isEqualTo: 'gasto').get();
       return snapshot.docs.map((doc) => doc.data()).toList();
     } catch (_) {
       // Fallback duro local: aplanamos productsByCategory
@@ -45,7 +47,8 @@ class ProductoGastosService {
 
     if (productoSnapshot.exists) {
       // Asegúrate de convertir el snapshot a Producto
-      final producto = Producto.fromFirestore(productoSnapshot as DocumentSnapshot<Map<String, dynamic>>);
+      final producto = Producto.fromFirestore(
+          productoSnapshot as DocumentSnapshot<Map<String, dynamic>>);
       final stockActual = producto.stock;
 
       // Verificar que haya suficiente stock
@@ -56,10 +59,10 @@ class ProductoGastosService {
         // Alerta si el stock está por debajo del mínimo
         if (nuevoStock <= producto.stockMinimo) {
           // Lógica para alertar sobre el bajo stock (puedes registrar un log o enviar una notificación)
-          print('¡Alerta! Producto de gasto con ID: $productoId tiene stock bajo');
+          print(
+              '¡Alerta! Producto de gasto con ID: $productoId tiene stock bajo');
         }
       }
     }
   }
-
 }

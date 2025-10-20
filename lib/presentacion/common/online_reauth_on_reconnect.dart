@@ -13,7 +13,8 @@ class OnlineReauthOnReconnect extends StatefulWidget {
   const OnlineReauthOnReconnect({super.key, required this.child});
 
   @override
-  State<OnlineReauthOnReconnect> createState() => _OnlineReauthOnReconnectState();
+  State<OnlineReauthOnReconnect> createState() =>
+      _OnlineReauthOnReconnectState();
 }
 
 class _OnlineReauthOnReconnectState extends State<OnlineReauthOnReconnect> {
@@ -24,7 +25,8 @@ class _OnlineReauthOnReconnectState extends State<OnlineReauthOnReconnect> {
   void initState() {
     super.initState();
     _sub = Connectivity().onConnectivityChanged.listen((results) async {
-      final hasNet = results.isNotEmpty && !results.contains(ConnectivityResult.none);
+      final hasNet =
+          results.isNotEmpty && !results.contains(ConnectivityResult.none);
       if (!mounted || !hasNet) return;
 
       final user = FirebaseAuth.instance.currentUser;
@@ -50,9 +52,12 @@ class _OnlineReauthOnReconnectState extends State<OnlineReauthOnReconnect> {
       barrierDismissible: true,
       builder: (ctx) => AlertDialog(
         title: const Text('Conexión restablecida'),
-        content: const Text('¿Quieres iniciar sesión para volver a modo online y sincronizar tus datos?'),
+        content: const Text(
+            '¿Quieres iniciar sesión para volver a modo online y sincronizar tus datos?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Más tarde')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Más tarde')),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -73,14 +78,18 @@ class _OnlineReauthOnReconnectState extends State<OnlineReauthOnReconnect> {
                   final cajaSrv = context.read<CajaService>();
                   await cajaSrv.actualizarUsuarioSesion(
                     u.uid,
-                    (u.displayName?.trim().isNotEmpty ?? false) ? u.displayName!.trim() : 'Usuario',
+                    (u.displayName?.trim().isNotEmpty ?? false)
+                        ? u.displayName!.trim()
+                        : 'Usuario',
                   );
                   await cajaSrv.syncPendientes();
                 }
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Sesión iniciada y datos sincronizados.')),
+                    const SnackBar(
+                        content:
+                            Text('Sesión iniciada y datos sincronizados.')),
                   );
                 }
               } catch (e) {
@@ -88,7 +97,9 @@ class _OnlineReauthOnReconnectState extends State<OnlineReauthOnReconnect> {
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('No se pudo usar Google en este dispositivo. Usa Correo/Clave. ($e)')),
+                    SnackBar(
+                        content: Text(
+                            'No se pudo usar Google en este dispositivo. Usa Correo/Clave. ($e)')),
                   );
                   // abrimos inmediatamente la alternativa por correo
                   await _showEmailLoginDialog();
@@ -124,20 +135,26 @@ class _OnlineReauthOnReconnectState extends State<OnlineReauthOnReconnect> {
                   controller: emailCtl,
                   decoration: const InputDecoration(labelText: 'Correo'),
                   keyboardType: TextInputType.emailAddress,
-                  validator: (v) => (v == null || !v.contains('@')) ? 'Correo inválido' : null,
+                  validator: (v) => (v == null || !v.contains('@'))
+                      ? 'Correo inválido'
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: passCtl,
                   decoration: const InputDecoration(labelText: 'Contraseña'),
                   obscureText: true,
-                  validator: (v) => (v == null || v.length < 6) ? 'Mínimo 6 caracteres' : null,
+                  validator: (v) => (v == null || v.length < 6)
+                      ? 'Mínimo 6 caracteres'
+                      : null,
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: loading ? null : () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            TextButton(
+                onPressed: loading ? null : () => Navigator.pop(ctx),
+                child: const Text('Cancelar')),
             FilledButton(
               onPressed: loading
                   ? null
@@ -154,26 +171,34 @@ class _OnlineReauthOnReconnectState extends State<OnlineReauthOnReconnect> {
                         final cajaSrv = context.read<CajaService>();
                         await cajaSrv.actualizarUsuarioSesion(
                           u.uid,
-                          (u.displayName?.trim().isNotEmpty ?? false) ? u.displayName!.trim() : 'Usuario',
+                          (u.displayName?.trim().isNotEmpty ?? false)
+                              ? u.displayName!.trim()
+                              : 'Usuario',
                         );
                         await cajaSrv.syncPendientes();
                         if (ctx.mounted) Navigator.pop(ctx);
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Sesión iniciada y datos sincronizados.')),
+                            const SnackBar(
+                                content: Text(
+                                    'Sesión iniciada y datos sincronizados.')),
                           );
                         }
                       } catch (e) {
                         setS(() => loading = false);
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error de autenticación: $e')),
+                            SnackBar(
+                                content: Text('Error de autenticación: $e')),
                           );
                         }
                       }
                     },
               child: loading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2))
                   : const Text('Entrar'),
             ),
           ],

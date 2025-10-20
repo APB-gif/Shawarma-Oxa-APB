@@ -3,8 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 // Simula la inicialización de Firebase para las pruebas
 Future<T> setupFirebaseCoreMocks<T>(Future<T> Function() testRunner) async {
-  TestWidgetsFlutterBinding.ensureInitialized();  // Asegúrate de que las pruebas se inicialicen correctamente
-  await Firebase.initializeApp(  // Simula la inicialización de Firebase
+  TestWidgetsFlutterBinding
+      .ensureInitialized(); // Asegúrate de que las pruebas se inicialicen correctamente
+  await Firebase.initializeApp(
+    // Simula la inicialización de Firebase
     options: const FirebaseOptions(
       apiKey: 'mock-api-key',
       appId: 'mock-app-id',

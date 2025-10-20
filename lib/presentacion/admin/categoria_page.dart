@@ -224,7 +224,8 @@ class _CategoriaPageState extends State<CategoriaPage>
                                 width: 48,
                                 height: 48,
                                 color: Colors.grey[200],
-                                child: Icon(Icons.broken_image, size: 18, color: Colors.grey[500]),
+                                child: Icon(Icons.broken_image,
+                                    size: 18, color: Colors.grey[500]),
                               ),
                             ),
                           ),
@@ -305,387 +306,462 @@ class _CategoriaPageState extends State<CategoriaPage>
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                          Row(
-                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF3B82F6)
+                                          .withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      FontAwesomeIcons.plus,
+                                      color: Color(0xFF3B82F6),
+                                      size: 22,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Expanded(
+                                    child: Text(
+                                      'Nueva Categoría',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    onPressed: () =>
+                                        Navigator.of(dialogCtx).pop(),
+                                    icon: const Icon(Icons.close,
+                                        color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              _buildTextField(
+                                controller: nombreDocumentoController,
+                                label: 'Nombre para el documento',
+                                icon: Icons.text_fields,
+                              ),
+                              const SizedBox(height: 18),
+                              _buildTextField(
+                                controller: nombreController,
+                                label: 'Nombre de la categoría',
+                                icon: Icons.category,
+                              ),
+                              const SizedBox(height: 18),
+                              _buildTextField(
+                                controller: ordenController,
+                                label: 'Orden',
+                                icon: Icons.format_list_numbered,
+                                maxLines: 1,
+                              ),
+                              const SizedBox(height: 22),
+                              const Text(
+                                'Tipo de categoría',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF374151),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
                               Container(
-                                padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color:
-                                      const Color(0xFF3B82F6).withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  FontAwesomeIcons.plus,
-                                  color: Color(0xFF3B82F6),
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              const Expanded(
-                                child: Text(
-                                  'Nueva Categoría',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1E293B),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () => Navigator.of(dialogCtx).pop(),
-                                icon: const Icon(Icons.close,
-                                    color: Color(0xFF64748B)),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          _buildTextField(
-                            controller: nombreDocumentoController,
-                            label: 'Nombre para el documento',
-                            icon: Icons.text_fields,
-                          ),
-                          const SizedBox(height: 18),
-                          _buildTextField(
-                            controller: nombreController,
-                            label: 'Nombre de la categoría',
-                            icon: Icons.category,
-                          ),
-                          const SizedBox(height: 18),
-                          _buildTextField(
-                            controller: ordenController,
-                            label: 'Orden',
-                            icon: Icons.format_list_numbered,
-                            maxLines: 1,
-                          ),
-                          const SizedBox(height: 22),
-                          const Text(
-                            'Tipo de categoría',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF374151),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF9FAFB),
-                              borderRadius: BorderRadius.circular(14),
-                              border:
-                                  Border.all(color: const Color(0xFFE5E7EB)),
-                            ),
-                            child: Column(
-                              children: [
-                                RadioListTile<String>(
-                                  //  Venta
-                                  title: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(7),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF10B981)
-                                              .withOpacity(0.12),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: const Icon(
-                                          FontAwesomeIcons.shoppingCart,
-                                          color: Color(0xFF10B981),
-                                          size: 18,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 14),
-                                      const Text('Venta'),
-                                    ],
-                                  ),
-                                  subtitle: const Text(
-                                      'Para productos que se venden'),
-                                  value: 'venta',
-                                  groupValue: selectedTipo,
-                                  onChanged: (value) {
-                                    setDialogState(() {
-                                      selectedTipo = value!;
-                                    });
-                                  },
-                                ),
-                                const Divider(height: 1),
-                                RadioListTile<String>(
-                                  // Gasto
-                                  title: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(7),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFEF4444)
-                                              .withOpacity(0.12),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: const Icon(
-                                          FontAwesomeIcons.receipt,
-                                          color: Color(0xFFEF4444),
-                                          size: 18,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 14),
-                                      const Text('Gasto'),
-                                    ],
-                                  ),
-                                  subtitle: const Text('Para gastos y compras'),
-                                  value: 'gasto',
-                                  groupValue: selectedTipo,
-                                  onChanged: (value) {
-                                    setDialogState(() {
-                                      selectedTipo = value!;
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.image_outlined, size: 20),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF6366F1),
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size.fromHeight(44),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            onPressed: () async {
-                              final action = await _selectImageSource(
-                                  context, selectedTipo);
-                              if (action == 'device') {
-                                final local = await _pickLocalImage();
-                                if (local != null) {
-                                  setDialogState(() {
-                                    _pendingImage = local;
-                                    iconPath = '';
-                                  });
-                                }
-                              } else if (action is String && action.isNotEmpty) {
-                                setDialogState(() {
-                                  _pendingImage = null;
-                                  iconPath = action;
-                                });
-                              }
-                            },
-                            label: const Text('Seleccionar Imagen'),
-                          ),
-                          const SizedBox(height: 16),
-                          if (_pendingImage != null || (iconPath ?? '').isNotEmpty)
-                            Center(
-                              child: Container(
-                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF9FAFB),
                                   borderRadius: BorderRadius.circular(14),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.07),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
+                                  border: Border.all(
+                                      color: const Color(0xFFE5E7EB)),
+                                ),
+                                child: Column(
+                                  children: [
+                                    RadioListTile<String>(
+                                      //  Venta
+                                      title: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(7),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF10B981)
+                                                  .withOpacity(0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              FontAwesomeIcons.shoppingCart,
+                                              color: Color(0xFF10B981),
+                                              size: 18,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 14),
+                                          const Text('Venta'),
+                                        ],
+                                      ),
+                                      subtitle: const Text(
+                                          'Para productos que se venden'),
+                                      value: 'venta',
+                                      groupValue: selectedTipo,
+                                      onChanged: (value) {
+                                        setDialogState(() {
+                                          selectedTipo = value!;
+                                        });
+                                      },
+                                    ),
+                                    const Divider(height: 1),
+                                    RadioListTile<String>(
+                                      // Gasto
+                                      title: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(7),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFEF4444)
+                                                  .withOpacity(0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              FontAwesomeIcons.receipt,
+                                              color: Color(0xFFEF4444),
+                                              size: 18,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 14),
+                                          const Text('Gasto'),
+                                        ],
+                                      ),
+                                      subtitle:
+                                          const Text('Para gastos y compras'),
+                                      value: 'gasto',
+                                      groupValue: selectedTipo,
+                                      onChanged: (value) {
+                                        setDialogState(() {
+                                          selectedTipo = value!;
+                                        });
+                                      },
                                     ),
                                   ],
                                 ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: SizedBox(
-                                      height: 120,
-                                      child: Stack(
-                                        children: [
-                                          Builder(builder: (_) {
-                                            if (_pendingImage != null) {
-                                              if (kIsWeb && _pendingImage.bytes != null) {
-                                                return Image.memory(_pendingImage.bytes, fit: BoxFit.contain);
-                                              } else if (!kIsWeb && _pendingImage.path != null) {
-                                                return Image.file(File(_pendingImage.path), fit: BoxFit.contain);
+                              ),
+                              const SizedBox(height: 28),
+                              ElevatedButton.icon(
+                                icon:
+                                    const Icon(Icons.image_outlined, size: 20),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF6366F1),
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size.fromHeight(44),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  final action = await _selectImageSource(
+                                      context, selectedTipo);
+                                  if (action == 'device') {
+                                    final local = await _pickLocalImage();
+                                    if (local != null) {
+                                      setDialogState(() {
+                                        _pendingImage = local;
+                                        iconPath = '';
+                                      });
+                                    }
+                                  } else if (action is String &&
+                                      action.isNotEmpty) {
+                                    setDialogState(() {
+                                      _pendingImage = null;
+                                      iconPath = action;
+                                    });
+                                  }
+                                },
+                                label: const Text('Seleccionar Imagen'),
+                              ),
+                              const SizedBox(height: 16),
+                              if (_pendingImage != null ||
+                                  (iconPath ?? '').isNotEmpty)
+                                Center(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(14),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.07),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: SizedBox(
+                                        height: 120,
+                                        child: Stack(
+                                          children: [
+                                            Builder(builder: (_) {
+                                              if (_pendingImage != null) {
+                                                if (kIsWeb &&
+                                                    _pendingImage.bytes !=
+                                                        null) {
+                                                  return Image.memory(
+                                                      _pendingImage.bytes,
+                                                      fit: BoxFit.contain);
+                                                } else if (!kIsWeb &&
+                                                    _pendingImage.path !=
+                                                        null) {
+                                                  return Image.file(
+                                                      File(_pendingImage.path),
+                                                      fit: BoxFit.contain);
+                                                }
                                               }
-                                            }
-                                            if ((iconPath ?? '').isNotEmpty) {
-                                              return Image.network(
-                                                iconPath!,
-                                                fit: BoxFit.contain,
-                                                errorBuilder: (ctx, error, stack) => Container(
-                                                  color: Colors.grey[200],
-                                                  child: const Center(
-                                                    child: Icon(Icons.broken_image, size: 28, color: Colors.grey),
+                                              if ((iconPath ?? '').isNotEmpty) {
+                                                return Image.network(
+                                                  iconPath!,
+                                                  fit: BoxFit.contain,
+                                                  errorBuilder:
+                                                      (ctx, error, stack) =>
+                                                          Container(
+                                                    color: Colors.grey[200],
+                                                    child: const Center(
+                                                      child: Icon(
+                                                          Icons.broken_image,
+                                                          size: 28,
+                                                          color: Colors.grey),
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                              return Container(
+                                                  color: Colors.grey[200]);
+                                            }),
+                                            if (_pendingImage != null)
+                                              Positioned(
+                                                right: 4,
+                                                top: 4,
+                                                child: Material(
+                                                  color: Colors.black26,
+                                                  shape: const CircleBorder(),
+                                                  child: IconButton(
+                                                    padding: EdgeInsets.zero,
+                                                    constraints:
+                                                        const BoxConstraints(
+                                                            minWidth: 28,
+                                                            minHeight: 28),
+                                                    icon: const Icon(
+                                                        Icons.close,
+                                                        color: Colors.white,
+                                                        size: 16),
+                                                    onPressed: () {
+                                                      setDialogState(() {
+                                                        _pendingImage = null;
+                                                        iconPath = '';
+                                                      });
+                                                    },
                                                   ),
                                                 ),
-                                              );
-                                            }
-                                            return Container(color: Colors.grey[200]);
-                                          }),
-                                          if (_pendingImage != null)
-                                            Positioned(
-                                              right: 4,
-                                              top: 4,
-                                              child: Material(
-                                                color: Colors.black26,
-                                                shape: const CircleBorder(),
-                                                child: IconButton(
-                                                  padding: EdgeInsets.zero,
-                                                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                                  icon: const Icon(Icons.close, color: Colors.white, size: 16),
-                                                  onPressed: () {
-                                                    setDialogState(() {
-                                                      _pendingImage = null;
-                                                      iconPath = '';
-                                                    });
-                                                  },
-                                                ),
                                               ),
-                                            ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                              ),
-                            ),
-                          const SizedBox(height: 28),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(dialogCtx).pop(),
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
+                                ),
+                              const SizedBox(height: 28),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(dialogCtx).pop(),
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 14),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Cancelar',
+                                        style:
+                                            TextStyle(color: Color(0xFF6B7280)),
+                                      ),
                                     ),
                                   ),
-                                  child: const Text(
-                                    'Cancelar',
-                                    style: TextStyle(color: Color(0xFF6B7280)),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: ElevatedButton(
-                onPressed: _isLoading
-                    ? null
-                    : () async {
-                                          final nombre =
-                                              nombreController.text.trim();
-                                          final orden = int.tryParse(
-                                                  ordenController.text
-                                                      .trim()) ??
-                                              nextOrden;
-                                          final nombreDocumento =
-                                              nombreDocumentoController.text
-                                                  .trim();
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: _isLoading
+                                          ? null
+                                          : () async {
+                                              final nombre =
+                                                  nombreController.text.trim();
+                                              final orden = int.tryParse(
+                                                      ordenController.text
+                                                          .trim()) ??
+                                                  nextOrden;
+                                              final nombreDocumento =
+                                                  nombreDocumentoController.text
+                                                      .trim();
 
-                                          if (nombre.isEmpty ||
-                                              nombreDocumento.isEmpty) {
-                                            _showErrorSnackBar(
-                                                'El nombre es requerido');
-                                            return;
-                                          }
-
-                                          setState(() => _isLoading = true);
-                                          // usar estado local del dialogo
-                                          setDialogState(() => isSaving = true);
-                                          try {
-                                            String finalImageUrl = iconPath ?? '';
-                                            if (_pendingImage != null) {
-                                              try {
-                                                final fileExtension = kIsWeb ? (_pendingImage.extension ?? 'png') : _pendingImage.path.split('.').last.toLowerCase();
-                                                String folder = selectedTipo == 'venta'
-                                                    ? 'imagenes_ventas/Categorias'
-                                                    : 'imagenes_gastos/Categoria';
-                                                final storageRef = FirebaseStorage.instance.ref().child('$folder/${DateTime.now().millisecondsSinceEpoch}.$fileExtension');
-                                                currentUploadRef = storageRef;
-                                                final metadata = SettableMetadata(contentType: 'image/$fileExtension');
-                                                currentUploadTask = kIsWeb ? storageRef.putData(_pendingImage.bytes, metadata) : storageRef.putFile(File(_pendingImage.path), metadata);
-                                                currentUploadTask?.snapshotEvents.listen((snapshot) {
-                                                  try {
-                                                    final bytes = snapshot.bytesTransferred.toDouble();
-                                                    final total = snapshot.totalBytes.toDouble();
-                                                    final progress = total > 0 ? (bytes / total) : 0.0;
-                                                    setDialogState(() => uploadProgress = progress);
-                                                  } catch (_) {}
-                                                }, onError: (_) {
-                                                  uploadWasCancelled = true;
-                                                });
-                                                if (currentUploadTask != null) await currentUploadTask;
-                                                finalImageUrl = await storageRef.getDownloadURL();
-                                                currentUploadTask = null;
-                                                _pendingImage = null;
-                                                setDialogState(() => uploadProgress = 0.0);
-                                              } catch (e) {
-                                                uploadWasCancelled = true;
-                                                _showErrorSnackBar('Error al subir imagen: $e');
+                                              if (nombre.isEmpty ||
+                                                  nombreDocumento.isEmpty) {
+                                                _showErrorSnackBar(
+                                                    'El nombre es requerido');
                                                 return;
                                               }
-                                            }
 
-                                            if (uploadWasCancelled) {
-                                              return;
-                                            }
+                                              setState(() => _isLoading = true);
+                                              // usar estado local del dialogo
+                                              setDialogState(
+                                                  () => isSaving = true);
+                                              try {
+                                                String finalImageUrl =
+                                                    iconPath ?? '';
+                                                if (_pendingImage != null) {
+                                                  try {
+                                                    final fileExtension = kIsWeb
+                                                        ? (_pendingImage
+                                                                .extension ??
+                                                            'png')
+                                                        : _pendingImage.path
+                                                            .split('.')
+                                                            .last
+                                                            .toLowerCase();
+                                                    String folder = selectedTipo ==
+                                                            'venta'
+                                                        ? 'imagenes_ventas/Categorias'
+                                                        : 'imagenes_gastos/Categoria';
+                                                    final storageRef =
+                                                        FirebaseStorage.instance
+                                                            .ref()
+                                                            .child(
+                                                                '$folder/${DateTime.now().millisecondsSinceEpoch}.$fileExtension');
+                                                    currentUploadRef =
+                                                        storageRef;
+                                                    final metadata =
+                                                        SettableMetadata(
+                                                            contentType:
+                                                                'image/$fileExtension');
+                                                    currentUploadTask = kIsWeb
+                                                        ? storageRef.putData(
+                                                            _pendingImage.bytes,
+                                                            metadata)
+                                                        : storageRef.putFile(
+                                                            File(_pendingImage
+                                                                .path),
+                                                            metadata);
+                                                    currentUploadTask
+                                                        ?.snapshotEvents
+                                                        .listen((snapshot) {
+                                                      try {
+                                                        final bytes = snapshot
+                                                            .bytesTransferred
+                                                            .toDouble();
+                                                        final total = snapshot
+                                                            .totalBytes
+                                                            .toDouble();
+                                                        final progress = total >
+                                                                0
+                                                            ? (bytes / total)
+                                                            : 0.0;
+                                                        setDialogState(() =>
+                                                            uploadProgress =
+                                                                progress);
+                                                      } catch (_) {}
+                                                    }, onError: (_) {
+                                                      uploadWasCancelled = true;
+                                                    });
+                                                    if (currentUploadTask !=
+                                                        null)
+                                                      await currentUploadTask;
+                                                    finalImageUrl =
+                                                        await storageRef
+                                                            .getDownloadURL();
+                                                    currentUploadTask = null;
+                                                    _pendingImage = null;
+                                                    setDialogState(() =>
+                                                        uploadProgress = 0.0);
+                                                  } catch (e) {
+                                                    uploadWasCancelled = true;
+                                                    _showErrorSnackBar(
+                                                        'Error al subir imagen: $e');
+                                                    return;
+                                                  }
+                                                }
 
-                                            await FirebaseFirestore.instance
-                                                .collection('categorias')
-                                                .doc(nombreDocumento)
-                                                .set({
-                                              'nombre': nombre,
-                                              'tipo': selectedTipo,
-                                              'orden': orden,
-                                              'iconAssetPath': finalImageUrl,
-                                            });
+                                                if (uploadWasCancelled) {
+                                                  return;
+                                                }
 
-                                            if (mounted) {
-                                              Navigator.of(dialogCtx).pop();
-                                              _showSuccessSnackBar('Categoría creada exitosamente');
-                                            }
-                                          } catch (e) {
-                                            _showErrorSnackBar('Error al crear categoría: $e');
-                                          } finally {
-                                            if (mounted) {
-                                              setState(() => _isLoading = false);
-                                              setDialogState(() {
-                                                isSaving = false;
-                                                uploadProgress = 0.0;
-                                                currentUploadTask = null;
-                                                currentUploadRef = null;
-                                              });
-                                            }
-                                          }
-                                        },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF3B82F6),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
+                                                await FirebaseFirestore.instance
+                                                    .collection('categorias')
+                                                    .doc(nombreDocumento)
+                                                    .set({
+                                                  'nombre': nombre,
+                                                  'tipo': selectedTipo,
+                                                  'orden': orden,
+                                                  'iconAssetPath':
+                                                      finalImageUrl,
+                                                });
+
+                                                if (mounted) {
+                                                  Navigator.of(dialogCtx).pop();
+                                                  _showSuccessSnackBar(
+                                                      'Categoría creada exitosamente');
+                                                }
+                                              } catch (e) {
+                                                _showErrorSnackBar(
+                                                    'Error al crear categoría: $e');
+                                              } finally {
+                                                if (mounted) {
+                                                  setState(
+                                                      () => _isLoading = false);
+                                                  setDialogState(() {
+                                                    isSaving = false;
+                                                    uploadProgress = 0.0;
+                                                    currentUploadTask = null;
+                                                    currentUploadRef = null;
+                                                  });
+                                                }
+                                              }
+                                            },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFF3B82F6),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 14),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: _isLoading
+                                          ? const SizedBox(
+                                              width: 22,
+                                              height: 22,
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Text(
+                                              'Crear Categoría',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
                                     ),
                                   ),
-                                  child: _isLoading
-                                      ? const SizedBox(
-                                          width: 22,
-                                          height: 22,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : const Text(
-                                          'Crear Categoría',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
                       );
                     },
                   ),
@@ -713,36 +789,58 @@ class _CategoriaPageState extends State<CategoriaPage>
                                         height: 72,
                                         child: Builder(builder: (_) {
                                           if (_pendingImage != null) {
-                                            if (kIsWeb && _pendingImage.bytes != null) {
-                                              return Image.memory(_pendingImage.bytes, fit: BoxFit.cover);
-                                            } else if (!kIsWeb && _pendingImage.path != null) {
-                                              return Image.file(File(_pendingImage.path), fit: BoxFit.cover);
+                                            if (kIsWeb &&
+                                                _pendingImage.bytes != null) {
+                                              return Image.memory(
+                                                  _pendingImage.bytes,
+                                                  fit: BoxFit.cover);
+                                            } else if (!kIsWeb &&
+                                                _pendingImage.path != null) {
+                                              return Image.file(
+                                                  File(_pendingImage.path),
+                                                  fit: BoxFit.cover);
                                             }
                                           }
                                           if ((iconPath ?? '').isNotEmpty) {
-                                            return Image.network(iconPath!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.grey[200]));
+                                            return Image.network(iconPath!,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) =>
+                                                    Container(
+                                                        color:
+                                                            Colors.grey[200]));
                                           }
-                                          return Container(color: Colors.grey[200]);
+                                          return Container(
+                                              color: Colors.grey[200]);
                                         }),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           const SizedBox(
                                             height: 24,
                                             width: 24,
-                                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF3B82F6)),
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Color(0xFF3B82F6)),
                                           ),
                                           const SizedBox(height: 8),
-                                          if (uploadProgress > 0) LinearProgressIndicator(value: uploadProgress, minHeight: 6),
-                                          if (uploadProgress > 0) const SizedBox(height: 8),
+                                          if (uploadProgress > 0)
+                                            LinearProgressIndicator(
+                                                value: uploadProgress,
+                                                minHeight: 6),
+                                          if (uploadProgress > 0)
+                                            const SizedBox(height: 8),
                                           Text(
-                                            uploadProgress > 0 ? 'Subiendo imagen ${ (uploadProgress*100).toStringAsFixed(0) }%' : 'Creando categoría...',
-                                            style: const TextStyle(fontWeight: FontWeight.w600),
+                                            uploadProgress > 0
+                                                ? 'Subiendo imagen ${(uploadProgress * 100).toStringAsFixed(0)}%'
+                                                : 'Creando categoría...',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w600),
                                           ),
                                         ],
                                       ),
@@ -762,7 +860,8 @@ class _CategoriaPageState extends State<CategoriaPage>
                                         } catch (_) {}
                                         if (currentUploadRef != null) {
                                           currentUploadRef = null;
-                                          _showErrorSnackBar('Subida cancelada. Si el archivo se subió, se limpiará si lo implementas.');
+                                          _showErrorSnackBar(
+                                              'Subida cancelada. Si el archivo se subió, se limpiará si lo implementas.');
                                         }
                                         currentUploadTask = null;
                                         setDialogState(() {
@@ -1448,11 +1547,13 @@ class _CategoriaPageState extends State<CategoriaPage>
                                     iconPath!,
                                     fit: BoxFit.contain,
                                     height: 120,
-                                    errorBuilder: (ctx, error, stack) => Container(
+                                    errorBuilder: (ctx, error, stack) =>
+                                        Container(
                                       height: 120,
                                       color: Colors.grey[200],
                                       child: const Center(
-                                        child: Icon(Icons.broken_image, size: 36, color: Colors.grey),
+                                        child: Icon(Icons.broken_image,
+                                            size: 36, color: Colors.grey),
                                       ),
                                     ),
                                   ),

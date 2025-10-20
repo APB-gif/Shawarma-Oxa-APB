@@ -18,13 +18,14 @@ class WelcomeDashboard extends StatefulWidget {
   State<WelcomeDashboard> createState() => _WelcomeDashboardState();
 }
 
-class _WelcomeDashboardState extends State<WelcomeDashboard> with SingleTickerProviderStateMixin {
+class _WelcomeDashboardState extends State<WelcomeDashboard>
+    with SingleTickerProviderStateMixin {
   Timer? _timer;
   bool _forceAskName = false;
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
-  
-  String? _userName; 
+
+  String? _userName;
   bool _isLoading = true;
 
   @override
@@ -34,7 +35,8 @@ class _WelcomeDashboardState extends State<WelcomeDashboard> with SingleTickerPr
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _fadeAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
+    _fadeAnimation =
+        CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
     _loadForceFlag();
   }
 
@@ -51,7 +53,7 @@ class _WelcomeDashboardState extends State<WelcomeDashboard> with SingleTickerPr
     _animationController.dispose();
     super.dispose();
   }
-  
+
   bool _needsName(String? nombre) =>
       _forceAskName ||
       (nombre == null) ||
@@ -59,19 +61,18 @@ class _WelcomeDashboardState extends State<WelcomeDashboard> with SingleTickerPr
       nombre.trim().toLowerCase() == 'sin nombre';
 
   void _handleNavigation() {
-     _timer ??= Timer(widget.delay, () {
-        if (!mounted) return;
-        final stillLogged = FirebaseAuth.instance.currentUser != null;
-        if (!stillLogged) return;
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
+    _timer ??= Timer(widget.delay, () {
+      if (!mounted) return;
+      final stillLogged = FirebaseAuth.instance.currentUser != null;
+      if (!stillLogged) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
             pageBuilder: (_, __, ___) => const PaginaPrincipal(),
             transitionsBuilder: (_, animation, __, child) =>
                 FadeTransition(opacity: animation, child: child),
-            transitionDuration: const Duration(milliseconds: 500)
-          ),
-        );
-      });
+            transitionDuration: const Duration(milliseconds: 500)),
+      );
+    });
   }
 
   @override
@@ -80,8 +81,9 @@ class _WelcomeDashboardState extends State<WelcomeDashboard> with SingleTickerPr
     if (currentUser == null) {
       return const _LoadingScaffold();
     }
-    
-    final docRef = FirebaseFirestore.instance.collection('users').doc(currentUser.uid);
+
+    final docRef =
+        FirebaseFirestore.instance.collection('users').doc(currentUser.uid);
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: docRef.snapshots(),
@@ -98,28 +100,28 @@ class _WelcomeDashboardState extends State<WelcomeDashboard> with SingleTickerPr
         if (_needsName(nombre)) {
           return _OnboardingForm(isAdmin: isAdmin);
         }
-        
+
         if (_isLoading || _userName != nombre) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             setState(() {
               _userName = nombre;
               _isLoading = false;
             });
-             _animationController.forward();
+            _animationController.forward();
             _handleNavigation();
           });
         }
-       
+
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 400),
-          child: _isLoading 
-            ? const _LoadingScaffold()
-            : _WelcomeView(
-                key: const ValueKey('welcome_view'),
-                animation: _fadeAnimation,
-                nombre: nombre,
-                isAdmin: isAdmin,
-              ),
+          child: _isLoading
+              ? const _LoadingScaffold()
+              : _WelcomeView(
+                  key: const ValueKey('welcome_view'),
+                  animation: _fadeAnimation,
+                  nombre: nombre,
+                  isAdmin: isAdmin,
+                ),
         );
       },
     );
@@ -143,7 +145,7 @@ class _WelcomeView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -187,7 +189,7 @@ class _WelcomeView extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // Contenido principal
             Center(
               child: Padding(
@@ -204,13 +206,15 @@ class _WelcomeView extends StatelessWidget {
                           end: Offset.zero,
                         ).animate(CurvedAnimation(
                           parent: animation,
-                          curve: const Interval(0.0, 0.6, curve: Curves.elasticOut),
+                          curve: const Interval(0.0, 0.6,
+                              curve: Curves.elasticOut),
                         )),
                         child: ScaleTransition(
                           scale: Tween<double>(begin: 0.8, end: 1.0).animate(
                             CurvedAnimation(
                               parent: animation,
-                              curve: const Interval(0.0, 0.6, curve: Curves.elasticOut),
+                              curve: const Interval(0.0, 0.6,
+                                  curve: Curves.elasticOut),
                             ),
                           ),
                           child: Container(
@@ -230,16 +234,14 @@ class _WelcomeView extends StatelessWidget {
                               'assets/icons/catPollo.svg',
                               height: 120,
                               colorFilter: ColorFilter.mode(
-                                colorScheme.onPrimary, 
-                                BlendMode.srcIn
-                              ),
+                                  colorScheme.onPrimary, BlendMode.srcIn),
                             ),
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 40),
-                      
+
                       // Saludo principal
                       SlideTransition(
                         position: Tween<Offset>(
@@ -247,10 +249,12 @@ class _WelcomeView extends StatelessWidget {
                           end: Offset.zero,
                         ).animate(CurvedAnimation(
                           parent: animation,
-                          curve: const Interval(0.2, 0.8, curve: Curves.easeOutBack),
+                          curve: const Interval(0.2, 0.8,
+                              curve: Curves.easeOutBack),
                         )),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 16),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(20),
                             color: Colors.white.withOpacity(0.1),
@@ -284,9 +288,9 @@ class _WelcomeView extends StatelessWidget {
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Badge de rol
                       SlideTransition(
                         position: Tween<Offset>(
@@ -294,19 +298,21 @@ class _WelcomeView extends StatelessWidget {
                           end: Offset.zero,
                         ).animate(CurvedAnimation(
                           parent: animation,
-                          curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
+                          curve:
+                              const Interval(0.4, 1.0, curve: Curves.easeOut),
                         )),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 8),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(25),
-                            color: isAdmin 
-                              ? Colors.amber.withOpacity(0.2)
-                              : Colors.blue.withOpacity(0.2),
+                            color: isAdmin
+                                ? Colors.amber.withOpacity(0.2)
+                                : Colors.blue.withOpacity(0.2),
                             border: Border.all(
-                              color: isAdmin 
-                                ? Colors.amber.withOpacity(0.5)
-                                : Colors.blue.withOpacity(0.5),
+                              color: isAdmin
+                                  ? Colors.amber.withOpacity(0.5)
+                                  : Colors.blue.withOpacity(0.5),
                               width: 1,
                             ),
                           ),
@@ -314,7 +320,9 @@ class _WelcomeView extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                isAdmin ? Icons.admin_panel_settings : Icons.group,
+                                isAdmin
+                                    ? Icons.admin_panel_settings
+                                    : Icons.group,
                                 color: colorScheme.onPrimary,
                                 size: 18,
                               ),
@@ -330,9 +338,9 @@ class _WelcomeView extends StatelessWidget {
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 60),
-                      
+
                       // Indicador de carga moderno
                       SlideTransition(
                         position: Tween<Offset>(
@@ -340,7 +348,8 @@ class _WelcomeView extends StatelessWidget {
                           end: Offset.zero,
                         ).animate(CurvedAnimation(
                           parent: animation,
-                          curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
+                          curve:
+                              const Interval(0.6, 1.0, curve: Curves.easeOut),
                         )),
                         child: Column(
                           children: [
@@ -355,7 +364,8 @@ class _WelcomeView extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(3),
                                 child: const LinearProgressIndicator(
                                   backgroundColor: Colors.transparent,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                   minHeight: 6,
                                 ),
                               ),
@@ -376,7 +386,8 @@ class _WelcomeView extends StatelessWidget {
                                 Text(
                                   'Iniciando tu sesión...',
                                   style: theme.textTheme.bodyLarge?.copyWith(
-                                    color: colorScheme.onPrimary.withOpacity(0.9),
+                                    color:
+                                        colorScheme.onPrimary.withOpacity(0.9),
                                     fontWeight: FontWeight.w500,
                                     letterSpacing: 0.3,
                                   ),
@@ -407,7 +418,8 @@ class _OnboardingForm extends StatefulWidget {
   State<_OnboardingForm> createState() => _OnboardingFormState();
 }
 
-class _OnboardingFormState extends State<_OnboardingForm> with TickerProviderStateMixin {
+class _OnboardingFormState extends State<_OnboardingForm>
+    with TickerProviderStateMixin {
   final _nameCtrl = TextEditingController();
   bool _saving = false;
   late AnimationController _formAnimationController;
@@ -426,26 +438,27 @@ class _OnboardingFormState extends State<_OnboardingForm> with TickerProviderSta
       vsync: this,
       duration: const Duration(milliseconds: 150),
     );
-    
+
     _formAnimation = CurvedAnimation(
       parent: _formAnimationController,
       curve: Curves.easeOutBack,
     );
     _buttonScaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _buttonAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+          parent: _buttonAnimationController, curve: Curves.easeInOut),
     );
-    
+
     _formAnimationController.forward();
   }
 
   Future<void> _saveName(BuildContext context) async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
-    
+
     _buttonAnimationController.forward().then((_) {
       _buttonAnimationController.reverse();
     });
-    
+
     setState(() => _saving = true);
     try {
       await context.read<AuthService>().setUserDisplayName(name);
@@ -465,14 +478,15 @@ class _OnboardingFormState extends State<_OnboardingForm> with TickerProviderSta
           content: Text('Error al guardar: $e'),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
-  
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -485,7 +499,7 @@ class _OnboardingFormState extends State<_OnboardingForm> with TickerProviderSta
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Container(
@@ -543,14 +557,13 @@ class _OnboardingFormState extends State<_OnboardingForm> with TickerProviderSta
                               'assets/images/logo.svg',
                               height: 64,
                               colorFilter: ColorFilter.mode(
-                                colorScheme.onPrimaryContainer, 
-                                BlendMode.srcIn
-                              ),
+                                  colorScheme.onPrimaryContainer,
+                                  BlendMode.srcIn),
                             ),
                           ),
-                          
+
                           const SizedBox(height: 32),
-                          
+
                           // Títulos
                           Text(
                             'Antes de empezar...',
@@ -568,9 +581,9 @@ class _OnboardingFormState extends State<_OnboardingForm> with TickerProviderSta
                               height: 1.4,
                             ),
                           ),
-                          
+
                           const SizedBox(height: 32),
-                          
+
                           // Campo de texto mejorado
                           Container(
                             decoration: BoxDecoration(
@@ -622,7 +635,8 @@ class _OnboardingFormState extends State<_OnboardingForm> with TickerProviderSta
                                   ),
                                 ),
                                 filled: true,
-                                fillColor: colorScheme.surfaceVariant.withOpacity(0.5),
+                                fillColor:
+                                    colorScheme.surfaceVariant.withOpacity(0.5),
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 20,
                                   vertical: 20,
@@ -631,9 +645,9 @@ class _OnboardingFormState extends State<_OnboardingForm> with TickerProviderSta
                               onSubmitted: (_) => _saveName(context),
                             ),
                           ),
-                          
+
                           const SizedBox(height: 32),
-                          
+
                           // Botón mejorado
                           ScaleTransition(
                             scale: _buttonScaleAnimation,
@@ -664,10 +678,12 @@ class _OnboardingFormState extends State<_OnboardingForm> with TickerProviderSta
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                 ),
-                                onPressed: _saving ? null : () => _saveName(context),
+                                onPressed:
+                                    _saving ? null : () => _saveName(context),
                                 child: _saving
                                     ? Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           SizedBox(
                                             width: 20,
@@ -689,7 +705,8 @@ class _OnboardingFormState extends State<_OnboardingForm> with TickerProviderSta
                                         ],
                                       )
                                     : Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Text(
                                             'Continuar',
@@ -726,12 +743,13 @@ class _OnboardingFormState extends State<_OnboardingForm> with TickerProviderSta
 // ===== WIDGET DE CARGA MEJORADO =====
 class _LoadingScaffold extends StatefulWidget {
   const _LoadingScaffold();
-  
+
   @override
   State<_LoadingScaffold> createState() => _LoadingScaffoldState();
 }
 
-class _LoadingScaffoldState extends State<_LoadingScaffold> with SingleTickerProviderStateMixin {
+class _LoadingScaffoldState extends State<_LoadingScaffold>
+    with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -753,11 +771,11 @@ class _LoadingScaffoldState extends State<_LoadingScaffold> with SingleTickerPro
     _pulseController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: Center(
@@ -789,9 +807,9 @@ class _LoadingScaffoldState extends State<_LoadingScaffold> with SingleTickerPro
             Text(
               'Cargando...',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-              ),
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
             ),
           ],
         ),

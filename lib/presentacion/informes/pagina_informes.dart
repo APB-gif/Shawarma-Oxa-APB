@@ -431,8 +431,9 @@ class _TabResumen extends StatelessWidget {
     final metodosVentas = informeService.resumenTotalMetodosDePago;
     final ventas = informeService.ventasDelPeriodo;
 
-  final totalGastos = informeService.resumenTotalGastos;
-  final metodosGastos = _mergeMetodoMap(informeService.resumenMetodosDePagoGastos);
+    final totalGastos = informeService.resumenTotalGastos;
+    final metodosGastos =
+        _mergeMetodoMap(informeService.resumenMetodosDePagoGastos);
 
     final neto = informeService.netoTotal;
     final netoMetodos = informeService.netoPorMetodo;
@@ -986,7 +987,8 @@ void _showEditGastoDialog(BuildContext context, GastoResumen gasto) {
   final formKey = GlobalKey<FormState>();
   final informe = context.read<InformeService>();
   // Método actual: si hay varios, toma la primera clave
-  String metodo = gasto.pagos.keys.isNotEmpty ? gasto.pagos.keys.first : 'Otros';
+  String metodo =
+      gasto.pagos.keys.isNotEmpty ? gasto.pagos.keys.first : 'Otros';
   double monto = gasto.total;
   bool saving = false;
 
@@ -996,7 +998,12 @@ void _showEditGastoDialog(BuildContext context, GastoResumen gasto) {
     'Aharhel',
     'Yape',
     'Otros',
-    ...gasto.pagos.keys.map((k) => _displayMethodForGastos(k)).where((k) => k != 'Efectivo' && k != 'Ruben' && k != 'Aharhel' && k != 'Yape' && k != 'Otros'),
+    ...gasto.pagos.keys.map((k) => _displayMethodForGastos(k)).where((k) =>
+        k != 'Efectivo' &&
+        k != 'Ruben' &&
+        k != 'Aharhel' &&
+        k != 'Yape' &&
+        k != 'Otros'),
   ].toSet().toList();
 
   showDialog(
@@ -1023,7 +1030,8 @@ void _showEditGastoDialog(BuildContext context, GastoResumen gasto) {
             const SizedBox(height: 12),
             TextFormField(
               initialValue: monto.toStringAsFixed(2),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
                 labelText: 'Monto',
                 border: OutlineInputBorder(),
@@ -1052,7 +1060,8 @@ void _showEditGastoDialog(BuildContext context, GastoResumen gasto) {
             Future<void> submit() async {
               if (!(formKey.currentState?.validate() ?? false)) return;
               setLocal(() => saving = true);
-              final err = await informe.updateGasto(gasto.id, metodo: metodo, monto: monto);
+              final err = await informe.updateGasto(gasto.id,
+                  metodo: metodo, monto: monto);
               setLocal(() => saving = false);
               if (ctx2.mounted) {
                 if (err == null) {
@@ -1076,13 +1085,15 @@ void _showEditGastoDialog(BuildContext context, GastoResumen gasto) {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.save_outlined),
               label: const Text('Guardar'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _ThemeColors.primaryGradientEnd,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
             );
           },
@@ -1578,8 +1589,10 @@ class _CierreGlassCardState extends State<_CierreGlassCard> {
 IconData _getPaymentMethodIcon(String key) {
   final lowerKey = key.toLowerCase();
   if (lowerKey.contains('efectivo')) return Icons.money_rounded;
-  if (lowerKey.contains('tarjeta') || lowerKey.contains('ruben')) return Icons.credit_card_rounded;
-  if (lowerKey.contains('yape') || lowerKey.contains('aharhel')) return Icons.qr_code_2_rounded;
+  if (lowerKey.contains('tarjeta') || lowerKey.contains('ruben'))
+    return Icons.credit_card_rounded;
+  if (lowerKey.contains('yape') || lowerKey.contains('aharhel'))
+    return Icons.qr_code_2_rounded;
   return Icons.payment_rounded;
 }
 

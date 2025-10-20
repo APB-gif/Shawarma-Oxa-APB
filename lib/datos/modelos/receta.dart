@@ -35,7 +35,8 @@ class Receta {
 }
 
 class InsumoReceta {
-  final String? id; // id del documento en la colección 'insumos' (opcional, backward-compatible)
+  final String?
+      id; // id del documento en la colección 'insumos' (opcional, backward-compatible)
   final String nombre;
   final double cantidad;
   InsumoReceta({this.id, required this.nombre, required this.cantidad});
@@ -43,8 +44,8 @@ class InsumoReceta {
   Map<String, dynamic> toMap() => {
         if (id != null) 'id': id,
         'nombre': nombre,
-    // Guardar cantidad con 2 decimales para consistencia en Firestore
-    'cantidad': double.parse(cantidad.toStringAsFixed(2)),
+        // Guardar cantidad con 2 decimales para consistencia en Firestore
+        'cantidad': double.parse(cantidad.toStringAsFixed(2)),
       };
 
   factory InsumoReceta.fromMap(Map<String, dynamic> map) => InsumoReceta(

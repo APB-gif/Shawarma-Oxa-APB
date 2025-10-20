@@ -80,7 +80,8 @@ class LiveVentaPreview {
         fecha: _asDate(m['fecha']) ?? DateTime.now(),
         lineas: (m['lineas'] is List)
             ? (m['lineas'] as List)
-                .map((e) => LiveLineaPreview.fromMap(Map<String, dynamic>.from(e as Map)))
+                .map((e) => LiveLineaPreview.fromMap(
+                    Map<String, dynamic>.from(e as Map)))
                 .toList()
             : const [],
       );
@@ -128,7 +129,8 @@ class LiveCajaSnapshot {
         'ventasEliminadasPendientes': ventasEliminadasPendientes,
         'lastUpdate': lastUpdate,
         'recientes': recientes.map((e) => e.toMap()).toList(),
-        'eliminadasRecientes': eliminadasRecientes.map((e) => e.toMap()).toList(),
+        'eliminadasRecientes':
+            eliminadasRecientes.map((e) => e.toMap()).toList(),
         'estado': 'abierta',
       };
 
@@ -140,20 +142,24 @@ class LiveCajaSnapshot {
         montoInicial: _asDouble(m['montoInicial']),
         totalVentas: _asDouble(m['totalVentas']),
         totalesPorMetodo: {
-          for (final e in Map<String, dynamic>.from(m['totalesPorMetodo'] ?? {}).entries)
+          for (final e
+              in Map<String, dynamic>.from(m['totalesPorMetodo'] ?? {}).entries)
             e.key: _asDouble(e.value),
         },
         ventasPendientes: (m['ventasPendientes'] as num?)?.toInt() ?? 0,
-        ventasEliminadasPendientes: (m['ventasEliminadasPendientes'] as num?)?.toInt() ?? 0,
+        ventasEliminadasPendientes:
+            (m['ventasEliminadasPendientes'] as num?)?.toInt() ?? 0,
         lastUpdate: _asDate(m['lastUpdate']) ?? DateTime.now(),
         recientes: (m['recientes'] is List)
             ? (m['recientes'] as List)
-                .map((e) => LiveVentaPreview.fromMap(Map<String, dynamic>.from(e as Map)))
+                .map((e) => LiveVentaPreview.fromMap(
+                    Map<String, dynamic>.from(e as Map)))
                 .toList()
             : const [],
         eliminadasRecientes: (m['eliminadasRecientes'] is List)
             ? (m['eliminadasRecientes'] as List)
-                .map((e) => LiveVentaPreview.fromMap(Map<String, dynamic>.from(e as Map)))
+                .map((e) => LiveVentaPreview.fromMap(
+                    Map<String, dynamic>.from(e as Map)))
                 .toList()
             : const [],
       );

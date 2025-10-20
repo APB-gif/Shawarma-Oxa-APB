@@ -122,7 +122,7 @@ class _PaginaAdminState extends State<PaginaAdmin>
           ),
         ),
       ),
-    // No leading/back button to avoid layout overflow on small devices
+      // No leading/back button to avoid layout overflow on small devices
       actions: [
         if (isDesktop) ...[
           _buildQuickAction(FontAwesomeIcons.bell, () {}),
@@ -205,7 +205,8 @@ class _PaginaAdminState extends State<PaginaAdmin>
     );
   }
 
-  Widget _buildResponsiveHeroSection(AuthService auth, bool isTablet, bool isDesktop) {
+  Widget _buildResponsiveHeroSection(
+      AuthService auth, bool isTablet, bool isDesktop) {
     return Container(
       width: double.infinity,
       // Reduce padding on smaller devices to avoid overflowing the screen

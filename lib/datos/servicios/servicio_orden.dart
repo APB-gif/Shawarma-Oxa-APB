@@ -13,7 +13,7 @@ class ServicioOrden {
 
       // 1. Cargar la lista de ventas que ya existía
       final List<String> ventasGuardadasJson = prefs.getStringList(_key) ?? [];
-      
+
       // 2. Convertir la nueva orden a texto JSON y añadirla a la lista
       ventasGuardadasJson.add(jsonEncode(orden.toJson()));
 
@@ -21,7 +21,6 @@ class ServicioOrden {
       await prefs.setStringList(_key, ventasGuardadasJson);
 
       print('Orden #${orden.id} guardada exitosamente en SharedPreferences.');
-
     } catch (e) {
       print('Error al guardar la orden: $e');
       // Aquí podrías manejar el error, quizás mostrar una notificación al usuario.

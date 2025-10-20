@@ -36,14 +36,16 @@ class AlmacenService extends ChangeNotifier {
   double _round2(double v) => double.parse(v.toStringAsFixed(2));
 
   /// Descontar insumos según lista de GastoItem. Devuelve un reporte detallado.
-  Future<List<Map<String, dynamic>>> descontarInsumosPorGastoConReporte(List<GastoItem> items) async {
+  Future<List<Map<String, dynamic>>> descontarInsumosPorGastoConReporte(
+      List<GastoItem> items) async {
     final report = <Map<String, dynamic>>[];
     if (items.isEmpty) return report;
 
     // --- Preload insumos
     final insumosSnap = await _db.collection('insumos').get();
     final Map<String, QueryDocumentSnapshot<Map<String, dynamic>>> byId = {};
-    final Map<String, QueryDocumentSnapshot<Map<String, dynamic>>> byNormName = {};
+    final Map<String, QueryDocumentSnapshot<Map<String, dynamic>>> byNormName =
+        {};
     for (final d in insumosSnap.docs) {
       final data = d.data();
       final nombre = (data['nombre'] ?? '').toString();
@@ -90,7 +92,8 @@ class AlmacenService extends ChangeNotifier {
             } catch (_) {
               insId = rawId?.toString() ?? nombre;
             }
-            expanded.add(GastoItem(id: insId, nombre: nombre, precio: 0.0, cantidad: cant));
+            expanded.add(GastoItem(
+                id: insId, nombre: nombre, precio: 0.0, cantidad: cant));
           }
           expandedThis = true;
         }
@@ -103,7 +106,8 @@ class AlmacenService extends ChangeNotifier {
       final normTarget = _normalizeForMatch(source);
       if (normTarget.isNotEmpty) {
         final matches = recetas.where((r) {
-          final nombreRec = (r.data() as Map<String, dynamic>?)?['nombre']?.toString() ?? '';
+          final nombreRec =
+              (r.data() as Map<String, dynamic>?)?['nombre']?.toString() ?? '';
           return _normalizeForMatch(nombreRec) == normTarget;
         }).toList();
         if (matches.isNotEmpty) {
@@ -131,7 +135,8 @@ class AlmacenService extends ChangeNotifier {
             } catch (_) {
               insId = rawId?.toString() ?? nombre;
             }
-            expanded.add(GastoItem(id: insId, nombre: nombre, precio: 0.0, cantidad: cant));
+            expanded.add(GastoItem(
+                id: insId, nombre: nombre, precio: 0.0, cantidad: cant));
           }
           expandedThis = true;
         }
@@ -145,10 +150,12 @@ class AlmacenService extends ChangeNotifier {
       try {
         final id = it.id.trim();
         final normName = _normalizeForMatch(it.nombre);
-        final isMultiToken = normName.split(' ').where((t) => t.isNotEmpty).length > 1;
+        final isMultiToken =
+            normName.split(' ').where((t) => t.isNotEmpty).length > 1;
 
         try {
-          print('AlmacenService: procesando item id=${it.id} nombre=${it.nombre} cantidad=${it.cantidad} (norm="$normName")');
+          print(
+              'AlmacenService: procesando item id=${it.id} nombre=${it.nombre} cantidad=${it.cantidad} (norm="$normName")');
         } catch (_) {}
 
         QueryDocumentSnapshot<Map<String, dynamic>>? targetDoc;
@@ -161,7 +168,9 @@ class AlmacenService extends ChangeNotifier {
         }
 
         // nombre normalizado exacto
-        if (targetDoc == null && normName.isNotEmpty && byNormName.containsKey(normName)) {
+        if (targetDoc == null &&
+            normName.isNotEmpty &&
+            byNormName.containsKey(normName)) {
           targetDoc = byNormName[normName];
           matchType = 'normalized_name';
         }
@@ -178,12 +187,15 @@ class AlmacenService extends ChangeNotifier {
           }
 
           if (targetDoc == null) {
-            final tokens = normName.split(' ').where((t) => t.isNotEmpty).toList();
+            final tokens =
+                normName.split(' ').where((t) => t.isNotEmpty).toList();
             if (tokens.length == 1) {
               for (final entry in byNormName.entries) {
                 final entryData = entry.value.data();
-                final entryNorm = _normalizeForMatch(entryData['nombre']?.toString() ?? '');
-                final entryTokens = entryNorm.split(' ').where((t) => t.isNotEmpty).toList();
+                final entryNorm =
+                    _normalizeForMatch(entryData['nombre']?.toString() ?? '');
+                final entryTokens =
+                    entryNorm.split(' ').where((t) => t.isNotEmpty).toList();
                 if (entryTokens.contains(tokens.first)) {
                   targetDoc = entry.value;
                   matchType = 'token_overlap';
@@ -197,9 +209,15 @@ class AlmacenService extends ChangeNotifier {
         if (targetDoc == null) {
           try {
             final sample = byNormName.keys.take(8).join(', ');
-            print('AlmacenService: NO se encontró match para "${it.nombre}" (norm="$normName"). Keys sample: $sample');
+            print(
+                'AlmacenService: NO se encontró match para "${it.nombre}" (norm="$normName"). Keys sample: $sample');
           } catch (_) {}
-          report.add({'id': it.id, 'nombre': it.nombre, 'found': false, 'match_attempt': normName});
+          report.add({
+            'id': it.id,
+            'nombre': it.nombre,
+            'found': false,
+            'match_attempt': normName
+          });
           continue;
         }
 
@@ -207,21 +225,32 @@ class AlmacenService extends ChangeNotifier {
         final txnResult = await _db.runTransaction((tx) async {
           final snap = await tx.get(targetRef);
           if (!snap.exists) return null;
-          final beforeStock = (snap.data()!['stockActual'] as num?)?.toDouble() ?? 0.0;
+          final beforeStock =
+              (snap.data()!['stockActual'] as num?)?.toDouble() ?? 0.0;
           final nuevo = _round2(beforeStock - it.cantidad);
           tx.update(targetRef, {'stockActual': nuevo});
-          return {'before': beforeStock, 'after': nuevo, 'nombre': snap.data()!['nombre'] ?? it.nombre};
+          return {
+            'before': beforeStock,
+            'after': nuevo,
+            'nombre': snap.data()!['nombre'] ?? it.nombre
+          };
         });
 
         if (txnResult == null) {
-          report.add({'id': targetRef.id, 'nombre': it.nombre, 'found': false, 'error': 'transaccion_null'});
+          report.add({
+            'id': targetRef.id,
+            'nombre': it.nombre,
+            'found': false,
+            'error': 'transaccion_null'
+          });
           continue;
         }
 
         try {
           final after = await targetRef.get();
           final afterStock = (after.data()!['stockActual'] as num?)?.toDouble();
-          print('AlmacenService: actualizado (confirm): ${targetRef.id} - stockActual en DB=$afterStock');
+          print(
+              'AlmacenService: actualizado (confirm): ${targetRef.id} - stockActual en DB=$afterStock');
           report.add({
             'id': targetRef.id,
             'nombre': txnResult['nombre'] ?? it.nombre,
@@ -245,7 +274,12 @@ class AlmacenService extends ChangeNotifier {
           });
         }
       } catch (e) {
-        report.add({'id': it.id, 'nombre': it.nombre, 'found': false, 'error': e.toString()});
+        report.add({
+          'id': it.id,
+          'nombre': it.nombre,
+          'found': false,
+          'error': e.toString()
+        });
       }
     }
 
@@ -260,10 +294,15 @@ class AlmacenService extends ChangeNotifier {
   /// Compatibilidad: descontar insumos por la receta asociada a un producto vendido.
   /// Busca la receta que contenga `productoId` en su array 'productos' y aplica los descuentos
   /// multiplicando las cantidades de la receta por `cantidadVendida`.
-  Future<void> descontarInsumosPorVenta(String productoId, int cantidadVendida) async {
+  Future<void> descontarInsumosPorVenta(
+      String productoId, int cantidadVendida) async {
     if (cantidadVendida <= 0) return;
     try {
-      final recetaSnap = await _db.collection('recetas').where('productos', arrayContains: productoId).limit(1).get();
+      final recetaSnap = await _db
+          .collection('recetas')
+          .where('productos', arrayContains: productoId)
+          .limit(1)
+          .get();
       if (recetaSnap.docs.isEmpty) return;
       final recetaData = recetaSnap.docs.first.data();
       final insumosRec = List<dynamic>.from(recetaData['insumos'] ?? []);
@@ -289,10 +328,10 @@ class AlmacenService extends ChangeNotifier {
         } catch (_) {
           insId = rawId?.toString() ?? nombre;
         }
-        items.add(GastoItem(id: insId, nombre: nombre, precio: 0.0, cantidad: total));
+        items.add(
+            GastoItem(id: insId, nombre: nombre, precio: 0.0, cantidad: total));
       }
       if (items.isNotEmpty) await descontarInsumosPorGasto(items);
     } catch (_) {}
   }
 }
- 

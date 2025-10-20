@@ -1,12 +1,14 @@
 // lib/core/net/connectivity_utils.dart
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // 👈 IMPORTANTE: Para detectar si es web
+import 'package:flutter/foundation.dart'
+    show kIsWeb; // 👈 IMPORTANTE: Para detectar si es web
 
 /// Chequea si hay conectividad y salida real a Internet.
 /// - En la web, solo se puede verificar la disponibilidad de la red.
 /// - En móvil/escritorio, se hace una prueba de conexión real.
-Future<bool> hasInternet({Duration timeout = const Duration(seconds: 2)}) async {
+Future<bool> hasInternet(
+    {Duration timeout = const Duration(seconds: 2)}) async {
   // =======================================================================
   //  CAMBIO CLAVE: Lógica diferente para la web
   // =======================================================================

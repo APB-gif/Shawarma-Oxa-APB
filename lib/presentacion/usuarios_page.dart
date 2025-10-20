@@ -12,11 +12,14 @@ class UsuariosPage extends StatelessWidget {
 
     Widget _buildLockedView() {
       return Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: const [
-          Icon(Icons.lock, size: 48, color: Color(0xFF64748B)),
-          SizedBox(height: 12),
-          Text('Inicia sesión para ver la lista de usuarios', style: TextStyle(fontSize: 16, color: Color(0xFF64748B))),
-        ]),
+        child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(Icons.lock, size: 48, color: Color(0xFF64748B)),
+              SizedBox(height: 12),
+              Text('Inicia sesión para ver la lista de usuarios',
+                  style: TextStyle(fontSize: 16, color: Color(0xFF64748B))),
+            ]),
       );
     }
 
@@ -36,9 +39,11 @@ class UsuariosPage extends StatelessWidget {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: stream,
           builder: (context, snap) {
-            if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+            if (!snap.hasData)
+              return const Center(child: CircularProgressIndicator());
             final docs = snap.data!.docs;
-            if (docs.isEmpty) return const Center(child: Text('Sin usuarios aún'));
+            if (docs.isEmpty)
+              return const Center(child: Text('Sin usuarios aún'));
 
             return ListView.separated(
               itemCount: docs.length,
@@ -51,14 +56,17 @@ class UsuariosPage extends StatelessWidget {
                 final rol = d['rol'] as String? ?? 'trabajador';
 
                 return ListTile(
-                  leading: CircleAvatar(child: Text(nombre.isNotEmpty ? nombre[0] : '?')),
+                  leading: CircleAvatar(
+                      child: Text(nombre.isNotEmpty ? nombre[0] : '?')),
                   title: Text(nombre),
                   subtitle: Text(email),
                   trailing: DropdownButton<String>(
                     value: rol,
                     items: const [
-                      DropdownMenuItem(value: 'administrador', child: Text('Administrador')),
-                      DropdownMenuItem(value: 'trabajador', child: Text('Trabajador')),
+                      DropdownMenuItem(
+                          value: 'administrador', child: Text('Administrador')),
+                      DropdownMenuItem(
+                          value: 'trabajador', child: Text('Trabajador')),
                     ],
                     onChanged: (v) async {
                       if (v == null) return;
@@ -72,7 +80,9 @@ class UsuariosPage extends StatelessWidget {
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('No se pudo actualizar: $e'), backgroundColor: Colors.red),
+                            SnackBar(
+                                content: Text('No se pudo actualizar: $e'),
+                                backgroundColor: Colors.red),
                           );
                         }
                       }

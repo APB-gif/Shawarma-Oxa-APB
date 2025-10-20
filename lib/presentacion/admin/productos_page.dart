@@ -102,8 +102,6 @@ class _ProductosPageState extends State<ProductosPage> {
     }
   }
 
-  
-
   Future<String?> _pickFromStorage(BuildContext context,
       {required String folder}) async {
     final ListResult result =
@@ -129,34 +127,34 @@ class _ProductosPageState extends State<ProductosPage> {
               constraints: const BoxConstraints(maxWidth: 400),
               child: SingleChildScrollView(
                 child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: files.map((fileRef) {
-                  return FutureBuilder<String>(
-                    future: fileRef.getDownloadURL(),
-                    builder: (ctx, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: LinearProgressIndicator(),
+                  mainAxisSize: MainAxisSize.min,
+                  children: files.map((fileRef) {
+                    return FutureBuilder<String>(
+                      future: fileRef.getDownloadURL(),
+                      builder: (ctx, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: LinearProgressIndicator(),
+                          );
+                        }
+                        final url = snapshot.data!;
+                        return ListTile(
+                          leading: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(url,
+                                width: 48, height: 48, fit: BoxFit.cover),
+                          ),
+                          title: Text(fileRef.name),
+                          onTap: () => Navigator.of(dialogCtx).pop(url),
                         );
-                      }
-                      final url = snapshot.data!;
-                      return ListTile(
-                        leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(url,
-                              width: 48, height: 48, fit: BoxFit.cover),
-                        ),
-                        title: Text(fileRef.name),
-                        onTap: () => Navigator.of(dialogCtx).pop(url),
-                      );
-                    },
-                  );
-                }).toList(),
+                      },
+                    );
+                  }).toList(),
+                ),
               ),
             ),
           ),
-        ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogCtx).pop(),
@@ -181,14 +179,15 @@ class _ProductosPageState extends State<ProductosPage> {
     showDialog(
       context: context,
       builder: (context) {
-  bool isSaving = false;
-  double uploadProgress = 0.0;
-  UploadTask? currentUploadTask;
-  Reference? currentUploadRef;
-  bool uploadWasCancelled = false;
+        bool isSaving = false;
+        double uploadProgress = 0.0;
+        UploadTask? currentUploadTask;
+        Reference? currentUploadRef;
+        bool uploadWasCancelled = false;
         return StatefulBuilder(builder: (dialogContext, setDialogState) {
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: Stack(
               children: [
                 Container(
@@ -218,14 +217,16 @@ class _ProductosPageState extends State<ProductosPage> {
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  prefixIcon: const Icon(Icons.inventory_2_outlined),
+                                  prefixIcon:
+                                      const Icon(Icons.inventory_2_outlined),
                                 ),
                               ),
                               const SizedBox(height: 16),
                               TextField(
                                 controller: nombreDocumentoController,
                                 decoration: InputDecoration(
-                                  labelText: 'Nombre del documento (ID en Firebase)',
+                                  labelText:
+                                      'Nombre del documento (ID en Firebase)',
                                   hintText: 'Ej: p-coca, gas-tocino, etc.',
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -257,7 +258,8 @@ class _ProductosPageState extends State<ProductosPage> {
                               ),
                               const SizedBox(height: 16),
                               ElevatedButton.icon(
-                                icon: const Icon(Icons.image_outlined, size: 20),
+                                icon:
+                                    const Icon(Icons.image_outlined, size: 20),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF6366F1),
                                   foregroundColor: Colors.white,
@@ -268,13 +270,16 @@ class _ProductosPageState extends State<ProductosPage> {
                                 ),
                                 onPressed: () async {
                                   // Primero obtenemos el tipo de la categoría
-                                  final categoriaDoc = await FirebaseFirestore.instance
+                                  final categoriaDoc = await FirebaseFirestore
+                                      .instance
                                       .collection('categorias')
                                       .doc(widget.categoriaId)
                                       .get();
-                                  final tipoCategoria = categoriaDoc.data()?['tipo'] ?? 'venta';
+                                  final tipoCategoria =
+                                      categoriaDoc.data()?['tipo'] ?? 'venta';
 
-                                  final action = await _selectProductImageSource(
+                                  final action =
+                                      await _selectProductImageSource(
                                     context,
                                     tipoCategoria,
                                   );
@@ -282,17 +287,21 @@ class _ProductosPageState extends State<ProductosPage> {
                                     final local = await _pickLocalImage();
                                     if (local != null) {
                                       _pendingImage = local;
-                                      (dialogContext as Element).markNeedsBuild();
+                                      (dialogContext as Element)
+                                          .markNeedsBuild();
                                       imagenUrlController.text = '';
                                     }
                                   } else if (action == 'storage') {
                                     final folder = tipoCategoria == 'venta'
                                         ? 'imagenes_ventas/Productos/'
                                         : 'imagenes_gastos/Productos/';
-                                    final picked = await _pickFromStorage(context, folder: folder);
+                                    final picked = await _pickFromStorage(
+                                        context,
+                                        folder: folder);
                                     if (picked != null) {
                                       _pendingImage = null;
-                                      (dialogContext as Element).markNeedsBuild();
+                                      (dialogContext as Element)
+                                          .markNeedsBuild();
                                       imagenUrlController.text = picked;
                                     }
                                   }
@@ -300,7 +309,8 @@ class _ProductosPageState extends State<ProductosPage> {
                                 label: const Text('Seleccionar Imagen'),
                               ),
                               const SizedBox(height: 16),
-                              if (_pendingImage != null || imagenUrlController.text.isNotEmpty)
+                              if (_pendingImage != null ||
+                                  imagenUrlController.text.isNotEmpty)
                                 SizedBox(
                                   height: 100,
                                   width: double.infinity,
@@ -309,27 +319,40 @@ class _ProductosPageState extends State<ProductosPage> {
                                       Container(
                                         width: double.infinity,
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: Colors.grey[300]!),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                              color: Colors.grey[300]!),
                                         ),
                                         child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                           child: Builder(builder: (ctx) {
                                             if (_pendingImage != null) {
-                                              if (kIsWeb && _pendingImage.bytes != null) {
-                                                return Image.memory(_pendingImage.bytes, fit: BoxFit.contain);
-                                              } else if (!kIsWeb && _pendingImage.path != null) {
-                                                return Image.file(File(_pendingImage.path), fit: BoxFit.contain);
+                                              if (kIsWeb &&
+                                                  _pendingImage.bytes != null) {
+                                                return Image.memory(
+                                                    _pendingImage.bytes,
+                                                    fit: BoxFit.contain);
+                                              } else if (!kIsWeb &&
+                                                  _pendingImage.path != null) {
+                                                return Image.file(
+                                                    File(_pendingImage.path),
+                                                    fit: BoxFit.contain);
                                               }
                                             }
                                             return Image.network(
                                               imagenUrlController.text,
                                               fit: BoxFit.contain,
-                                              errorBuilder: (context, error, stackTrace) {
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
                                                 return Container(
                                                   color: Colors.grey[200],
                                                   alignment: Alignment.center,
-                                                  child: const Icon(Icons.broken_image, color: Colors.grey, size: 36),
+                                                  child: const Icon(
+                                                      Icons.broken_image,
+                                                      color: Colors.grey,
+                                                      size: 36),
                                                 );
                                               },
                                             );
@@ -345,8 +368,11 @@ class _ProductosPageState extends State<ProductosPage> {
                                             shape: const CircleBorder(),
                                             child: IconButton(
                                               padding: EdgeInsets.zero,
-                                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                              icon: const Icon(Icons.close, color: Colors.white, size: 16),
+                                              constraints: const BoxConstraints(
+                                                  minWidth: 28, minHeight: 28),
+                                              icon: const Icon(Icons.close,
+                                                  color: Colors.white,
+                                                  size: 16),
                                               onPressed: () {
                                                 setDialogState(() {
                                                   _pendingImage = null;
@@ -381,24 +407,47 @@ class _ProductosPageState extends State<ProductosPage> {
                                 : () async {
                                     setDialogState(() => isSaving = true);
                                     try {
-                                      final nombre = nombreController.text.trim();
-                                      final precio = double.tryParse(precioController.text.trim()) ?? 0;
-                                      final nombreDocumento = nombreDocumentoController.text.trim();
-                                      final imagenUrl = imagenUrlController.text.trim();
+                                      final nombre =
+                                          nombreController.text.trim();
+                                      final precio = double.tryParse(
+                                              precioController.text.trim()) ??
+                                          0;
+                                      final nombreDocumento =
+                                          nombreDocumentoController.text.trim();
+                                      final imagenUrl =
+                                          imagenUrlController.text.trim();
 
-                                      final categoriaDoc = await FirebaseFirestore.instance.collection('categorias').doc(widget.categoriaId).get();
-                                      final tipo = categoriaDoc.data()?['tipo'] ?? 'venta';
+                                      final categoriaDoc =
+                                          await FirebaseFirestore.instance
+                                              .collection('categorias')
+                                              .doc(widget.categoriaId)
+                                              .get();
+                                      final tipo =
+                                          categoriaDoc.data()?['tipo'] ??
+                                              'venta';
 
                                       if (nombre.isEmpty) {
-                                        productosMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Por favor, ingresa el nombre del producto'), backgroundColor: Colors.red));
+                                        productosMessengerKey.currentState
+                                            ?.showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    'Por favor, ingresa el nombre del producto'),
+                                                backgroundColor: Colors.red));
                                         return;
                                       }
                                       if (nombreDocumento.isEmpty) {
-                                        productosMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Por favor, ingresa el nombre del documento'), backgroundColor: Colors.red));
+                                        productosMessengerKey.currentState
+                                            ?.showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    'Por favor, ingresa el nombre del documento'),
+                                                backgroundColor: Colors.red));
                                         return;
                                       }
                                       if (tipo == 'venta' && precio <= 0) {
-                                        productosMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Por favor, ingresa un precio válido para el producto de venta'), backgroundColor: Colors.red));
+                                        productosMessengerKey.currentState
+                                            ?.showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    'Por favor, ingresa un precio válido para el producto de venta'),
+                                                backgroundColor: Colors.red));
                                         return;
                                       }
 
@@ -408,28 +457,57 @@ class _ProductosPageState extends State<ProductosPage> {
                                         'tipo': tipo,
                                         'imagenUrl': imagenUrl,
                                         'categoriaId': widget.categoriaId,
-                                        'categoriaNombre': widget.categoriaNombre,
+                                        'categoriaNombre':
+                                            widget.categoriaNombre,
                                       };
 
                                       try {
                                         String finalImageUrl = imagenUrl;
                                         if (_pendingImage != null) {
                                           try {
-                                            final fileExtension = kIsWeb ? (_pendingImage.extension ?? 'png') : _pendingImage.path.split('.').last.toLowerCase();
-                                            String folder = tipo == 'venta' ? 'imagenes_ventas/Productos' : 'imagenes_gastos/Productos';
-                                            final storageRef = FirebaseStorage.instance.ref().child('$folder/${DateTime.now().millisecondsSinceEpoch}.$fileExtension');
+                                            final fileExtension = kIsWeb
+                                                ? (_pendingImage.extension ??
+                                                    'png')
+                                                : _pendingImage.path
+                                                    .split('.')
+                                                    .last
+                                                    .toLowerCase();
+                                            String folder = tipo == 'venta'
+                                                ? 'imagenes_ventas/Productos'
+                                                : 'imagenes_gastos/Productos';
+                                            final storageRef = FirebaseStorage
+                                                .instance
+                                                .ref()
+                                                .child(
+                                                    '$folder/${DateTime.now().millisecondsSinceEpoch}.$fileExtension');
                                             // Guardamos la referencia global para poder borrarla si el usuario cancela
                                             currentUploadRef = storageRef;
-                                            final metadata = SettableMetadata(contentType: 'image/$fileExtension');
-                                            UploadTask uploadTask = kIsWeb ? storageRef.putData(_pendingImage.bytes, metadata) : storageRef.putFile(File(_pendingImage.path), metadata);
+                                            final metadata = SettableMetadata(
+                                                contentType:
+                                                    'image/$fileExtension');
+                                            UploadTask uploadTask = kIsWeb
+                                                ? storageRef.putData(
+                                                    _pendingImage.bytes,
+                                                    metadata)
+                                                : storageRef.putFile(
+                                                    File(_pendingImage.path),
+                                                    metadata);
                                             // Exponer la tarea para permitir cancelación desde el botón
                                             currentUploadTask = uploadTask;
-                                            uploadTask.snapshotEvents.listen((snapshot) {
+                                            uploadTask.snapshotEvents.listen(
+                                                (snapshot) {
                                               try {
-                                                final bytes = snapshot.bytesTransferred.toDouble();
-                                                final total = snapshot.totalBytes.toDouble();
-                                                final progress = total > 0 ? (bytes / total) : 0.0;
-                                                setDialogState(() => uploadProgress = progress);
+                                                final bytes = snapshot
+                                                    .bytesTransferred
+                                                    .toDouble();
+                                                final total = snapshot
+                                                    .totalBytes
+                                                    .toDouble();
+                                                final progress = total > 0
+                                                    ? (bytes / total)
+                                                    : 0.0;
+                                                setDialogState(() =>
+                                                    uploadProgress = progress);
                                               } catch (_) {
                                                 // ignorar errores de snapshot parsing
                                               }
@@ -439,45 +517,76 @@ class _ProductosPageState extends State<ProductosPage> {
                                             });
                                             await uploadTask;
                                             // Si llegamos aquí la subida finalizó correctamente
-                                            finalImageUrl = await storageRef.getDownloadURL();
+                                            finalImageUrl = await storageRef
+                                                .getDownloadURL();
                                             // limpiar la tarea pero mantener la referencia del archivo en Storage
                                             // para permitir borrarlo si el usuario cancela antes del guardado
                                             currentUploadTask = null;
                                             _pendingImage = null;
-                                            setDialogState(() => uploadProgress = 0.0);
+                                            setDialogState(
+                                                () => uploadProgress = 0.0);
                                           } catch (e) {
                                             // Si hubo un error (incluida una cancelación), marcamos cancelada
                                             uploadWasCancelled = true;
-                                            productosMessengerKey.currentState?.showSnackBar(SnackBar(content: Text('Error al subir imagen: $e')));
+                                            productosMessengerKey.currentState
+                                                ?.showSnackBar(SnackBar(
+                                                    content: Text(
+                                                        'Error al subir imagen: $e')));
                                             return;
                                           }
                                         }
                                         // Si la subida fue cancelada por el usuario, no continuar con el guardado
                                         if (uploadWasCancelled) {
-                                          setDialogState(() => isSaving = false);
+                                          setDialogState(
+                                              () => isSaving = false);
                                           return;
                                         }
 
                                         data['imagenUrl'] = finalImageUrl;
 
                                         if (producto == null) {
-                                          final docExists = await FirebaseFirestore.instance.collection('productos').doc(nombreDocumento).get();
+                                          final docExists =
+                                              await FirebaseFirestore.instance
+                                                  .collection('productos')
+                                                  .doc(nombreDocumento)
+                                                  .get();
                                           if (docExists.exists) {
-                                            productosMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Ya existe un producto con ese nombre de documento'), backgroundColor: Colors.red));
+                                            productosMessengerKey.currentState
+                                                ?.showSnackBar(const SnackBar(
+                                                    content: Text(
+                                                        'Ya existe un producto con ese nombre de documento'),
+                                                    backgroundColor:
+                                                        Colors.red));
                                             return;
                                           }
-                                          await FirebaseFirestore.instance.collection('productos').doc(nombreDocumento).set(data);
+                                          await FirebaseFirestore.instance
+                                              .collection('productos')
+                                              .doc(nombreDocumento)
+                                              .set(data);
                                         } else {
                                           if (nombreDocumento != producto.id) {
-                                            final docExists = await FirebaseFirestore.instance.collection('productos').doc(nombreDocumento).get();
+                                            final docExists =
+                                                await FirebaseFirestore.instance
+                                                    .collection('productos')
+                                                    .doc(nombreDocumento)
+                                                    .get();
                                             if (docExists.exists) {
-                                              productosMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Ya existe un producto con ese nombre de documento'), backgroundColor: Colors.red));
+                                              productosMessengerKey.currentState
+                                                  ?.showSnackBar(const SnackBar(
+                                                      content: Text(
+                                                          'Ya existe un producto con ese nombre de documento'),
+                                                      backgroundColor:
+                                                          Colors.red));
                                               return;
                                             }
-                                            await FirebaseFirestore.instance.collection('productos').doc(nombreDocumento).set(data);
+                                            await FirebaseFirestore.instance
+                                                .collection('productos')
+                                                .doc(nombreDocumento)
+                                                .set(data);
                                             await producto.reference.delete();
                                           } else {
-                                            await producto.reference.update(data);
+                                            await producto.reference
+                                                .update(data);
                                           }
                                         }
                                         // Después de guardar en Firestore, ya no necesitamos la referencia en Storage
@@ -485,9 +594,18 @@ class _ProductosPageState extends State<ProductosPage> {
                                           currentUploadRef = null;
                                         }
                                         Navigator.of(context).pop();
-                                        productosMessengerKey.currentState?.showSnackBar(SnackBar(content: Text(producto == null ? 'Producto creado exitosamente' : 'Producto actualizado exitosamente'), backgroundColor: Colors.green));
+                                        productosMessengerKey.currentState
+                                            ?.showSnackBar(SnackBar(
+                                                content: Text(producto == null
+                                                    ? 'Producto creado exitosamente'
+                                                    : 'Producto actualizado exitosamente'),
+                                                backgroundColor: Colors.green));
                                       } catch (e) {
-                                        productosMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Error al guardar el producto'), backgroundColor: Colors.red));
+                                        productosMessengerKey.currentState
+                                            ?.showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    'Error al guardar el producto'),
+                                                backgroundColor: Colors.red));
                                       }
                                     } finally {
                                       setDialogState(() => isSaving = false);
@@ -540,37 +658,59 @@ class _ProductosPageState extends State<ProductosPage> {
                                       height: 72,
                                       child: Builder(builder: (_) {
                                         if (_pendingImage != null) {
-                                          if (kIsWeb && _pendingImage.bytes != null) {
-                                            return Image.memory(_pendingImage.bytes, fit: BoxFit.cover);
-                                          } else if (!kIsWeb && _pendingImage.path != null) {
-                                            return Image.file(File(_pendingImage.path), fit: BoxFit.cover);
+                                          if (kIsWeb &&
+                                              _pendingImage.bytes != null) {
+                                            return Image.memory(
+                                                _pendingImage.bytes,
+                                                fit: BoxFit.cover);
+                                          } else if (!kIsWeb &&
+                                              _pendingImage.path != null) {
+                                            return Image.file(
+                                                File(_pendingImage.path),
+                                                fit: BoxFit.cover);
                                           }
                                         }
-                                        if (imagenUrlController.text.isNotEmpty) {
-                                          return Image.network(imagenUrlController.text, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.grey[200]));
+                                        if (imagenUrlController
+                                            .text.isNotEmpty) {
+                                          return Image.network(
+                                              imagenUrlController.text,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) =>
+                                                  Container(
+                                                      color: Colors.grey[200]));
                                         }
-                                        return Container(color: Colors.grey[200]);
+                                        return Container(
+                                            color: Colors.grey[200]);
                                       }),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         const SizedBox(
                                           height: 24,
                                           width: 24,
-                                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF3B82F6)),
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Color(0xFF3B82F6)),
                                         ),
                                         const SizedBox(height: 8),
                                         if (uploadProgress > 0)
-                                          LinearProgressIndicator(value: uploadProgress, minHeight: 6),
-                                        if (uploadProgress > 0) const SizedBox(height: 8),
+                                          LinearProgressIndicator(
+                                              value: uploadProgress,
+                                              minHeight: 6),
+                                        if (uploadProgress > 0)
+                                          const SizedBox(height: 8),
                                         Text(
-                                          uploadProgress > 0 ? 'Subiendo imagen ${ (uploadProgress*100).toStringAsFixed(0) }%' : 'Guardando producto...',
-                                          style: const TextStyle(fontWeight: FontWeight.w600),
+                                          uploadProgress > 0
+                                              ? 'Subiendo imagen ${(uploadProgress * 100).toStringAsFixed(0)}%'
+                                              : 'Guardando producto...',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w600),
                                         ),
                                       ],
                                     ),
@@ -595,7 +735,12 @@ class _ProductosPageState extends State<ProductosPage> {
                                         // Limpiar la referencia local. Para evitar dejar archivos huérfanos
                                         // implementa una Cloud Function que borre archivos no referenciados.
                                         currentUploadRef = null;
-                                        productosMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Subida cancelada. Si el archivo se llegó a subir, se limpiará automáticamente.'), backgroundColor: Colors.orange));
+                                        productosMessengerKey.currentState
+                                            ?.showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    'Subida cancelada. Si el archivo se llegó a subir, se limpiará automáticamente.'),
+                                                backgroundColor:
+                                                    Colors.orange));
                                       }
                                       // reset flags
                                       uploadWasCancelled = true;
@@ -629,7 +774,8 @@ class _ProductosPageState extends State<ProductosPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           scrollable: true,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),

@@ -22,7 +22,8 @@ class CachedSvgImage extends StatefulWidget {
     this.height,
     this.width,
     this.fit = BoxFit.contain,
-    this.placeholder, required String url,
+    this.placeholder,
+    required String url,
   });
 
   @override
@@ -119,8 +120,7 @@ class _CachedSvgImageState extends State<CachedSvgImage> {
       future: _bytesFuture,
       builder: (context, snap) {
         // 1) Tenemos bytes
-        if (snap.connectionState == ConnectionState.done &&
-            snap.data != null) {
+        if (snap.connectionState == ConnectionState.done && snap.data != null) {
           return SvgPicture.memory(
             snap.data!,
             height: widget.height,

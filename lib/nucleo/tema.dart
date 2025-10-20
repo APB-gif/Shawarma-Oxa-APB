@@ -14,7 +14,8 @@ ThemeData appTheme = ThemeData(
 
   appBarTheme: const AppBarTheme(
     backgroundColor: Color.fromARGB(255, 9, 72, 114),
-    foregroundColor: Color.fromARGB(255, 255, 255, 255), // color de texto/iconos en el AppBar
+    foregroundColor: Color.fromARGB(
+        255, 255, 255, 255), // color de texto/iconos en el AppBar
     titleTextStyle: TextStyle(
       fontSize: 30,
       fontWeight: FontWeight.bold,

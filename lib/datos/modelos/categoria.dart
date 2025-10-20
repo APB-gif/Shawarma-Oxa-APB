@@ -3,9 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Categoria {
   final String id;
   final String nombre;
+
   /// 'venta' o 'gasto'
   final String tipo;
   final int orden;
+
   /// Puede ser URL https o un asset local. No nulo.
   final String iconAssetPath;
   final int stockMinimo; // Nuevo campo para controlar stock
@@ -17,7 +19,6 @@ class Categoria {
     this.orden = 99,
     this.iconAssetPath = 'assets/icons/default.svg',
     this.stockMinimo = 10, // valor por defecto para el mínimo de stock
-
   });
 
   /// Para clonar con cambios puntuales
@@ -47,7 +48,8 @@ class Categoria {
       nombre: (data['nombre'] ?? '') as String,
       tipo: (data['tipo'] ?? 'venta') as String,
       orden: _asInt(data['orden'], fallback: 99),
-      iconAssetPath: (data['iconAssetPath'] ?? 'assets/icons/default.svg') as String,
+      iconAssetPath:
+          (data['iconAssetPath'] ?? 'assets/icons/default.svg') as String,
     );
   }
 
@@ -65,7 +67,8 @@ class Categoria {
         nombre: (json['nombre'] ?? '') as String,
         tipo: (json['tipo'] ?? 'venta') as String,
         orden: _asInt(json['orden'], fallback: 99),
-        iconAssetPath: (json['iconAssetPath'] ?? 'assets/icons/default.svg') as String,
+        iconAssetPath:
+            (json['iconAssetPath'] ?? 'assets/icons/default.svg') as String,
       );
 
   get descripcion => null;

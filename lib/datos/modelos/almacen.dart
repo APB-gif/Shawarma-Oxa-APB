@@ -19,7 +19,8 @@ class Almacen {
   double calcularStockTotal() {
     double total = 0.0;
     for (var producto in productos) {
-      total += producto.precio;  // Aquí se debería ajustar con la cantidad real de cada producto.
+      total += producto
+          .precio; // Aquí se debería ajustar con la cantidad real de cada producto.
     }
     return total;
   }
@@ -34,7 +35,8 @@ class Almacen {
     return Almacen(
       id: (map['id'] ?? '').toString(),
       nombre: (map['nombre'] ?? '').toString(),
-      productos: (map['productos'] as List).map((e) => Producto.fromMap(e)).toList(),
+      productos:
+          (map['productos'] as List).map((e) => Producto.fromMap(e)).toList(),
       stockTotal: (map['stockTotal'] ?? 0.0).toDouble(),
       stockMinimo: (map['stockMinimo'] ?? 0.0).toDouble(),
     );

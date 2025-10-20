@@ -45,8 +45,8 @@ class _PaginaLoginState extends State<PaginaLogin>
   @override
   void initState() {
     super.initState();
-    _animationController =
-        AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
+    _animationController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200));
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -55,8 +55,8 @@ class _PaginaLoginState extends State<PaginaLogin>
       ),
     );
 
-    _slideAnimation = Tween<Offset>(begin: const Offset(0.0, 0.3), end: Offset.zero)
-        .animate(
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, 0.3), end: Offset.zero).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: const Interval(0.2, 1.0, curve: Curves.elasticOut),
@@ -67,7 +67,8 @@ class _PaginaLoginState extends State<PaginaLogin>
     // Inicializamos el estado y nos suscribimos a cambios de conectividad.
     _refreshConnectivity();
 
-    _connectivitySub = Connectivity().onConnectivityChanged.listen((dynamic _) async {
+    _connectivitySub =
+        Connectivity().onConnectivityChanged.listen((dynamic _) async {
       // Cada vez que cambia la conectividad, re-evaluamos si hay internet real.
       try {
         final online = await hasInternet();
@@ -79,7 +80,9 @@ class _PaginaLoginState extends State<PaginaLogin>
           final messenger = ScaffoldMessenger.of(context);
           if (newOffline) {
             messenger.showSnackBar(
-              _buildStyledSnackBar('Sin conexión. Algunas funciones no estarán disponibles.', Colors.orange),
+              _buildStyledSnackBar(
+                  'Sin conexión. Algunas funciones no estarán disponibles.',
+                  Colors.orange),
             );
           } else {
             messenger.showSnackBar(
@@ -127,53 +130,52 @@ class _PaginaLoginState extends State<PaginaLogin>
   //  MÉTODOS DE AUTENTICACIÓN
   // ===========================================================================
 
-Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
-  if (!mounted) return;
+  Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
+    if (!mounted) return;
 
-  // Iniciamos el estado de carga
-  setState(() => _loading = true);
-  final auth = context.read<AuthService>();
-  final messenger = ScaffoldMessenger.of(context);
+    // Iniciamos el estado de carga
+    setState(() => _loading = true);
+    final auth = context.read<AuthService>();
+    final messenger = ScaffoldMessenger.of(context);
 
-  try {
-    // Verificamos si hay conexión a Internet
-    final online = await hasInternet();
-    if (!online) {
+    try {
+      // Verificamos si hay conexión a Internet
+      final online = await hasInternet();
+      if (!online) {
+        messenger.showSnackBar(
+          _buildStyledSnackBar(
+            'Necesitas conexión a internet para usar Google.',
+            Colors.orange,
+          ),
+        );
+        return; // Si no hay conexión, regresamos sin hacer nada más
+      }
+
+      // Guardamos la preferencia de si se debe forzar la pantalla de onboarding
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('force_name_onboarding', forceOnboarding);
+
+      // Intentamos hacer el inicio de sesión con Google
+      await auth.signInWithGoogle();
+    } catch (e) {
+      // Si ocurre algún error durante el proceso de inicio de sesión, lo mostramos
+      if (!mounted) return; // Aseguramos que el widget aún esté montado
+
+      debugPrint(
+          'Error signing in with Google: $e'); // Imprime el error en la consola
       messenger.showSnackBar(
         _buildStyledSnackBar(
-          'Necesitas conexión a internet para usar Google.',
-          Colors.orange,
+          'No se pudo iniciar sesión: ${e.toString()}',
+          Colors.red, // Color rojo para el error
         ),
       );
-      return;  // Si no hay conexión, regresamos sin hacer nada más
-    }
-
-    // Guardamos la preferencia de si se debe forzar la pantalla de onboarding
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('force_name_onboarding', forceOnboarding);
-
-    // Intentamos hacer el inicio de sesión con Google
-    await auth.signInWithGoogle();
-
-  } catch (e) {
-    // Si ocurre algún error durante el proceso de inicio de sesión, lo mostramos
-    if (!mounted) return;  // Aseguramos que el widget aún esté montado
-
-    debugPrint('Error signing in with Google: $e');  // Imprime el error en la consola
-    messenger.showSnackBar(
-      _buildStyledSnackBar(
-        'No se pudo iniciar sesión: ${e.toString()}',
-        Colors.red,  // Color rojo para el error
-      ),
-    );
-  } finally {
-    // Terminamos el estado de carga
-    if (mounted) {
-      setState(() => _loading = false);
+    } finally {
+      // Terminamos el estado de carga
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
-}
-
 
   Future<void> _enterOfflineGuest() async {
     if (!mounted) return;
@@ -283,7 +285,8 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: _buildDialogTitle(
             hasPin ? 'Ingresar PIN de Admin local' : 'Crear PIN de Admin local',
           ),
@@ -472,15 +475,11 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
     // Nivel de compactación según alto ventana:
     // 0 => normal, 1 => compacto, 2 => ultra-compacto
     final int compactLevel = kIsWeb
-        ? (media.size.height < 720
-            ? 2
-            : (media.size.height < 820 ? 1 : 0))
+        ? (media.size.height < 720 ? 2 : (media.size.height < 820 ? 1 : 0))
         : 0;
 
     final double maxWidth = kIsWeb
-        ? (compactLevel == 2
-            ? 680
-            : (compactLevel == 1 ? 600 : 560))
+        ? (compactLevel == 2 ? 680 : (compactLevel == 1 ? 600 : 560))
         : 420;
 
     return Expanded(
@@ -576,7 +575,8 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
     final bool ultra = compactLevel > 1;
 
     final double outerPad = isMobile ? 24 : (ultra ? 18 : (compact ? 24 : 32));
-    final double headerGap = isMobile ? (compact ? 28 : 40) : (ultra ? 16 : (compact ? 24 : 48));
+    final double headerGap =
+        isMobile ? (compact ? 28 : 40) : (ultra ? 16 : (compact ? 24 : 48));
 
     return SlideTransition(
       position: _slideAnimation,
@@ -586,7 +586,8 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
           padding: EdgeInsets.all(outerPad),
           decoration: BoxDecoration(
             color: theme.cardColor,
-            borderRadius: BorderRadius.circular(isMobile ? 32 : (ultra ? 16 : (compact ? 20 : 24))),
+            borderRadius: BorderRadius.circular(
+                isMobile ? 32 : (ultra ? 16 : (compact ? 20 : 24))),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
@@ -605,7 +606,8 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
                 _buildMobileHeader(colorScheme),
                 SizedBox(height: headerGap),
               ] else ...[
-                _buildDesktopHeader(theme, colorScheme, compactLevel: compactLevel),
+                _buildDesktopHeader(theme, colorScheme,
+                    compactLevel: compactLevel),
                 SizedBox(height: headerGap),
               ],
 
@@ -618,11 +620,13 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
                     ? const SizedBox(
                         height: 24,
                         width: 24,
-                        child:
-                            CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2.5, color: Colors.white),
                       )
                     : SvgPicture.string(googleLogoSvg, height: 24),
-                label: _loading ? 'Iniciando sesión...' : 'Iniciar sesión con Google',
+                label: _loading
+                    ? 'Iniciando sesión...'
+                    : 'Iniciar sesión con Google',
                 isPrimary: true,
                 isMobile: isMobile,
                 denseLevel: compactLevel,
@@ -789,7 +793,6 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
           ),
         ),
         SizedBox(height: ultra ? 8 : (compact ? 12 : 20)),
-
         if (compact) ...[
           Row(
             children: [
@@ -842,7 +845,8 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
   }
 
   /// Info: en web compacto usa dos columnas y tipografías más pequeñas.
-  Widget _buildInfoSection(ThemeData theme, ColorScheme colorScheme, bool isMobile,
+  Widget _buildInfoSection(
+      ThemeData theme, ColorScheme colorScheme, bool isMobile,
       {int compactLevel = 0}) {
     final bool compact = compactLevel > 0;
     final bool ultra = compactLevel > 1;
@@ -858,7 +862,8 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
             colorScheme.primary.withOpacity(0.08),
           ],
         ),
-        borderRadius: BorderRadius.circular(isMobile ? 20 : (ultra ? 10 : (compact ? 12 : 12))),
+        borderRadius: BorderRadius.circular(
+            isMobile ? 20 : (ultra ? 10 : (compact ? 12 : 12))),
         border: Border.all(
           color: colorScheme.primary.withOpacity(0.15),
           width: 1,
@@ -998,14 +1003,10 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
     final bool compact = denseLevel > 0;
     final bool ultra = denseLevel > 1;
 
-    final double btnHeight =
-        isMobile ? 60 : (ultra ? 44 : (compact ? 48 : 56));
-    final double fontSize =
-        isMobile ? 17 : (ultra ? 14 : (compact ? 15 : 16));
-    final double iconSize =
-        isMobile ? 26 : (ultra ? 20 : (compact ? 22 : 24));
-    final double hPad =
-        isMobile ? 28 : (ultra ? 18 : (compact ? 20 : 24));
+    final double btnHeight = isMobile ? 60 : (ultra ? 44 : (compact ? 48 : 56));
+    final double fontSize = isMobile ? 17 : (ultra ? 14 : (compact ? 15 : 16));
+    final double iconSize = isMobile ? 26 : (ultra ? 20 : (compact ? 22 : 24));
+    final double hPad = isMobile ? 28 : (ultra ? 18 : (compact ? 20 : 24));
     final double radius =
         isMobile ? (compact ? 16 : 20) : (ultra ? 12 : (compact ? 14 : 16));
     final double gap = isMobile ? 16 : (ultra ? 10 : (compact ? 12 : 12));
@@ -1094,7 +1095,9 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
                 Icon(
                   (icon as Icon).icon,
                   color: onPressed != null
-                      ? (isOffline ? Colors.amber.shade700 : colorScheme.primary)
+                      ? (isOffline
+                          ? Colors.amber.shade700
+                          : colorScheme.primary)
                       : colorScheme.onSurface.withOpacity(0.5),
                   size: iconSize,
                 ),
@@ -1107,7 +1110,9 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
                       fontSize: fontSize,
                       fontWeight: FontWeight.w600,
                       color: onPressed != null
-                          ? (isOffline ? Colors.amber.shade800 : colorScheme.primary)
+                          ? (isOffline
+                              ? Colors.amber.shade800
+                              : colorScheme.primary)
                           : colorScheme.onSurface.withOpacity(0.5),
                     ),
                   ),
@@ -1136,8 +1141,8 @@ Future<void> _signInWithGoogle({required bool forceOnboarding}) async {
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
         ),
       ],
