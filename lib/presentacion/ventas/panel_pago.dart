@@ -231,19 +231,16 @@ class _PanelPagoState extends State<PanelPago> {
         ),
         child: Column(
           children: [
-            // Header con gradiente
+            // Header con gradiente azul moderno (consistente con panel_carrito)
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF059669),
-                    Color(0xFF047857),
-                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
+                  colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
                 ),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: SafeArea(
                 bottom: false,
@@ -252,53 +249,71 @@ class _PanelPagoState extends State<PanelPago> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(
                             Icons.payment_rounded,
                             color: Colors.white,
-                            size: 24,
+                            size: 20,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               const Text(
                                 'Procesar Pago',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 20,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${widget.items.length} ${widget.items.length == 1 ? 'producto' : 'productos'}',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.9),
-                                  fontSize: 14,
+                              if (widget.items.isNotEmpty)
+                                Text(
+                                  '${widget.items.length} producto${widget.items.length != 1 ? 's' : ''}',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.8),
+                                    fontSize: 12,
+                                  ),
                                 ),
-                              ),
                             ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            iconSize: 20,
+                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            padding: EdgeInsets.zero,
+                            onPressed: () => Navigator.of(context).pop(),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // Total en card blanco
+                    // Total en card blanco moderno
                     Container(
+                      margin: const EdgeInsets.all(12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withOpacity(0.05),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -314,18 +329,25 @@ class _PanelPagoState extends State<PanelPago> {
                                 'Total a Pagar',
                                 style: TextStyle(
                                   color: Colors.grey.shade600,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                               if (_method == MetodoDePago.izipayCard) ...[
                                 const SizedBox(height: 4),
-                                Text(
-                                  'Incluye 5% tarjeta',
-                                  style: TextStyle(
-                                    color: Colors.orange.shade700,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.shade100,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Incluye 5% tarjeta',
+                                    style: TextStyle(
+                                      color: Colors.orange.shade700,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -334,7 +356,7 @@ class _PanelPagoState extends State<PanelPago> {
                           Text(
                             'S/ ${_totalAPagar.toStringAsFixed(2)}',
                             style: const TextStyle(
-                              color: Color(0xFF059669),
+                              color: Color(0xFF1E40AF),
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                             ),
@@ -347,11 +369,13 @@ class _PanelPagoState extends State<PanelPago> {
               ),
             ),
             
-            // Contenido scrolleable
+            // Contenido scrolleable moderno
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
+              child: Container(
+                color: const Color(0xFFF1F5F9),
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
                   // Métodos de pago
                   _buildPaymentMethodsSection(),
                   
@@ -367,18 +391,23 @@ class _PanelPagoState extends State<PanelPago> {
                   
                   const SizedBox(height: 20),
                   
-                  // Botón de confirmar
-                  FilledButton.icon(
-                    onPressed: _confirm,
-                    icon: const Icon(Icons.check_circle_rounded, size: 20),
-                    label: const Text('Confirmar y Guardar'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: const Color(0xFF059669),
-                      foregroundColor: Colors.white,
-                      textStyle: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                  // Botón de confirmar moderno
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    child: FilledButton.icon(
+                      onPressed: _confirm,
+                      icon: const Icon(Icons.check_circle_rounded, size: 20),
+                      label: const Text('Confirmar y Guardar'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: const Color(0xFF1E40AF),
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        shadowColor: const Color(0xFF1E40AF).withOpacity(0.3),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -386,6 +415,7 @@ class _PanelPagoState extends State<PanelPago> {
                   SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 16),
                 ],
               ),
+            ),
             ),
           ],
         ),
@@ -417,7 +447,7 @@ class _PanelPagoState extends State<PanelPago> {
               const Icon(
                 Icons.event_available_rounded,
                 size: 20,
-                color: Color(0xFF059669),
+                color: Color(0xFF1E40AF),
               ),
               const SizedBox(width: 8),
               Text(
