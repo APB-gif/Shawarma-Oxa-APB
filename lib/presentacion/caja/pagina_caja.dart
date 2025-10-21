@@ -1522,23 +1522,14 @@ class _VistaCajaAbierta extends StatelessWidget {
                                     }
                                   }
 
-                                  final gasto =
-                                      await showGastoInsumosAperturaDialog(
-                                          dialogCtx, caja);
+                                  final gasto = await showGastoInsumosAperturaDialog(
+                                      dialogCtx, caja);
 
-                                  // Si usuario no registró, abortar
-                                  if (gasto == null) {
-                                    if (mainScaffoldContext != null) {
-                                      mostrarNotificacionElegante(
-                                          mainScaffoldContext!,
-                                          'Cierre cancelado. Registra el gasto de apertura antes de cerrar la caja.',
-                                          esError: true,
-                                          messengerKey: principalMessengerKey);
-                                    }
-                                    return;
+                                  // Si el usuario no registró nada (insumos 0), continuar sin gasto.
+                                  // Si registró y tiene ítems, guardarlo localmente.
+                                  if (gasto != null && (gasto.items.isNotEmpty)) {
+                                    await cajaService.agregarGastoLocal(gasto);
                                   }
-                                  // Agregar gasto local y luego continuar al cierre
-                                  await cajaService.agregarGastoLocal(gasto);
                                 }
 
                                 // Intentar cerrar ahora que existe el gasto de apertura

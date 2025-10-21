@@ -1023,15 +1023,11 @@ class CajaService with ChangeNotifier {
 
       await batch.commit();
 
-      // Validar y aplicar gasto de insumos de apertura: debe existir en gastos locales
+      // Aplicar (si existen) gastos de insumos de apertura, pero permitir cerrar aun si no existen.
       final almacenService = AlmacenService();
       final aperturaGastos = _gastosLocales
           .where((g) => (g.tipo ?? '') == 'insumos_apertura')
           .toList();
-      if (aperturaGastos.isEmpty) {
-        // No se puede cerrar si no existe el gasto de apertura
-        throw Exception('Falta registrar el gasto de insumos por apertura.');
-      }
 
       // Aplicar descuentos por ventas (recetas por producto)
       for (var venta in _ventasLocales) {
@@ -1045,8 +1041,8 @@ class CajaService with ChangeNotifier {
         }
       }
 
-      // Aplicar descuentos por los insumos registrados en el/los gastos de apertura
-      for (final g in aperturaGastos) {
+  // Aplicar descuentos por los insumos registrados en el/los gastos de apertura (si hay)
+  for (final g in aperturaGastos) {
         try {
           // Expandir items que sean recetas: si el item.id corresponde a un documento en 'recetas',
           // tomar sus insumos y multiplicar por item.cantidad

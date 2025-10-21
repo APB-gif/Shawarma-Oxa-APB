@@ -665,34 +665,8 @@ Future<Gasto?> showGastoInsumosAperturaDialog(
                               cantidad: qty));
                         }
 
-                        // Si el checkbox de 'Se preparó Salsa' está marcado, añadir un item de Salsa.
-                        // Si la receta define un rendimiento en potes, guardamos la cantidad en potes
-                        // (ej: potesPorReceta) para que la lógica de cierre aplique floor(totalPotes/potesPorReceta).
-                        if (sePreparoSalsa.value) {
-                          final salsaId =
-                              recetaSalsaFinal?.id ?? 'Salsa de ajo';
-                          double salsaCantidad = salsaRecetas.value.toDouble();
-                          try {
-                            final data = recetaSalsaFinal?.data()
-                                as Map<String, dynamic>?;
-                            if (data != null) {
-                              final potesPorReceta = (data['potesPorReceta'] ??
-                                  data['rinde'] ??
-                                  data['porciones'] ??
-                                  data['rendimiento']) as num?;
-                              if (potesPorReceta != null &&
-                                  potesPorReceta > 0) {
-                                salsaCantidad = salsaRecetas.value *
-                                    potesPorReceta.toDouble();
-                              }
-                            }
-                          } catch (_) {}
-                          items.add(GastoItem(
-                              id: salsaId,
-                              nombre: 'Salsa de ajo',
-                              precio: 0.0,
-                              cantidad: salsaCantidad));
-                        }
+                        // Ya NO agregamos 'Salsa de ajo' como item de gasto para no afectar informes.
+                        // La deducción de almacén se hace más abajo, pero no se registra como gasto.
 
                         // Si el usuario indicó que preparó Salsa, descontar inmediatamente del almacén
                         // según los insumos definidos en la receta 'Salsa de ajo' (multiplicados por salsaRecetas).
@@ -836,13 +810,9 @@ ${detalle}''',
                           }
                         }
 
+                        // Permitir continuar sin registrar gasto (insumos 0): cerrar diálogo con null
                         if (items.isEmpty) {
-                          if (mainScaffoldContext != null) {
-                            mostrarNotificacionElegante(mainScaffoldContext!,
-                                'Debe ingresar al menos un insumo con cantidad o marcar que se preparó salsa.',
-                                esError: true,
-                                messengerKey: principalMessengerKey);
-                          }
+                          Navigator.pop(ctx, null);
                           return;
                         }
 
