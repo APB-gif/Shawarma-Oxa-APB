@@ -7,6 +7,7 @@ import 'package:collection/collection.dart';
 import 'package:shawarma_pos_nuevo/datos/modelos/caja.dart';
 import 'package:shawarma_pos_nuevo/datos/modelos/venta.dart';
 import 'package:shawarma_pos_nuevo/datos/servicios/informe_service.dart';
+import 'package:shawarma_pos_nuevo/presentacion/informes/graficos_estadisticos.dart';
 
 // ===== NUEVA FUNCIÓN AUXILIAR PARA CAPITALIZAR =====
 String capitalize(String s) {
@@ -148,11 +149,11 @@ class _StyledTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Text(
         text,
         style: const TextStyle(
-          fontSize: 32,
+          fontSize: 26,
           fontWeight: FontWeight.w800,
           color: _ThemeColors.accentText,
           letterSpacing: -0.5,
@@ -178,7 +179,7 @@ class _StyledTabBar extends StatelessWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
       child: AnimatedBuilder(
         animation: controller,
         builder: (context, _) {
@@ -193,8 +194,8 @@ class _StyledTabBar extends StatelessWidget {
 
           return Wrap(
             alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 6,
+            runSpacing: 6,
             children: buttons,
           );
         },
@@ -229,11 +230,11 @@ class _StyledTabButton extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            constraints: const BoxConstraints(minHeight: 40, minWidth: 88),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+            constraints: const BoxConstraints(minHeight: 36, minWidth: 80),
             decoration: BoxDecoration(
               gradient: isSelected
                   ? const LinearGradient(
@@ -246,17 +247,18 @@ class _StyledTabButton extends StatelessWidget {
                     )
                   : null,
               color: isSelected ? null : _ThemeColors.cardBackground,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 16, color: contentColor),
-                const SizedBox(width: 6),
+                Icon(icon, size: 15, color: contentColor),
+                const SizedBox(width: 5),
                 Text(
                   text,
-                  softWrap: false, // no parte dentro del botón
+                  softWrap: false,
                   style: TextStyle(
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: contentColor,
                   ),
@@ -331,12 +333,12 @@ class _StyledFilters extends StatelessWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 0),
       child: Wrap(
         alignment: WrapAlignment.center,
         crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 8,
-        runSpacing: 8,
+        spacing: 6,
+        runSpacing: 6,
         children: [
           ToggleButtons(
             isSelected: isSelected,
@@ -350,30 +352,30 @@ class _StyledFilters extends StatelessWidget {
             color: _ThemeColors.inactive,
             selectedColor: _ThemeColors.primaryGradientEnd,
             fillColor: _ThemeColors.primaryGradientEnd.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderColor: Colors.grey.shade300,
             selectedBorderColor: Colors.grey.shade300,
-            constraints: const BoxConstraints(minHeight: 40.0),
+            constraints: const BoxConstraints(minHeight: 36.0, minWidth: 60),
             children: const [
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                padding: EdgeInsets.symmetric(horizontal: 12.0),
                 child:
-                    Text('Hoy', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Hoy', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               ),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                padding: EdgeInsets.symmetric(horizontal: 12.0),
                 child: Text('Semana',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               ),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                padding: EdgeInsets.symmetric(horizontal: 12.0),
                 child:
-                    Text('Mes', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Mes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               ),
             ],
           ),
           IconButton(
-            icon: const Icon(Icons.calendar_today_outlined),
+            icon: const Icon(Icons.calendar_today_outlined, size: 18),
             onPressed: () => _showCustomDateRangePicker(context),
             style: IconButton.styleFrom(
               foregroundColor:
@@ -382,7 +384,8 @@ class _StyledFilters extends StatelessWidget {
                       : _ThemeColors.inactive,
               backgroundColor: _ThemeColors.cardBackground,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.all(8),
             ),
           ),
         ],
@@ -487,7 +490,7 @@ class _TabResumen extends StatelessWidget {
           customStart: informeService.rangoInicio,
           customEnd: informeService.rangoFin),
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         children: [
           _NeonStatCard(
             titulo: 'Total de Ventas del Período',
@@ -498,7 +501,7 @@ class _TabResumen extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           _NeonStatCard(
             titulo: 'Total de Gastos del Período',
             monto: totalGastos,
@@ -508,14 +511,14 @@ class _TabResumen extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           _NeonStatCard(
             titulo: 'Total Actual (Ventas − Gastos)',
             monto: neto,
             serie: const [],
             chipRight: const Text('Balance'),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -525,7 +528,7 @@ class _TabResumen extends StatelessWidget {
                   icono: Icons.receipt_long_rounded,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: _MiniKpi(
                   etiqueta: 'Promedio Ticket',
@@ -537,16 +540,23 @@ class _TabResumen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 16),
+          GraficosEstadisticos(
+            ventas: ventas,
+            gastos: informeService.gastosDelPeriodo,
+            cierres: informeService.cajasCerradas,
+            filtroActual: informeService.filtroActual,
+          ),
+          const SizedBox(height: 16),
           Text(
             'Ingresos por Método de Pago',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.2,
                   color: _ThemeColors.accentText,
                 ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           if (metodosVentas.isEmpty)
             _GlassCard(
               child: Padding(
@@ -568,16 +578,16 @@ class _TabResumen extends StatelessWidget {
                 icon: _getPaymentMethodIcon(e.key),
               );
             }),
-          const SizedBox(height: 24),
+          const SizedBox(height: 14),
           Text(
             'Gastos por Método de Pago',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.2,
                   color: _ThemeColors.accentText,
                 ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           if (metodosGastos.isEmpty)
             _GlassCard(
               child: Padding(
@@ -599,16 +609,16 @@ class _TabResumen extends StatelessWidget {
                 icon: _getPaymentMethodIcon(e.key),
               );
             }),
-          const SizedBox(height: 24),
+          const SizedBox(height: 14),
           Text(
             'Balance por Método (Ventas − Gastos)',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.2,
                   color: _ThemeColors.accentText,
                 ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           if (netoMetodos.isEmpty)
             _GlassCard(
               child: Padding(
@@ -694,7 +704,7 @@ class _TabCierresDeCaja extends StatelessWidget {
           informeService.filtroActual,
           forceRefresh: true),
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         itemCount: cajasOrdenadas.length,
         itemBuilder: (context, index) =>
             _CierreGlassCard(caja: cajasOrdenadas[index]),
@@ -867,7 +877,7 @@ class _TabGastosState extends State<_TabGastos> {
           ),
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               itemCount: sortedDates.length,
               itemBuilder: (context, index) {
                 final date = sortedDates[index];
@@ -877,14 +887,15 @@ class _TabGastosState extends State<_TabGastos> {
                 final n = gastosDia.length;
 
                 final diaStr =
-                    capitalize(DateFormat('EEEE', 'es').format(date));
+                    capitalize(DateFormat('EEE', 'es').format(date));
                 final mesStr = capitalize(DateFormat('MMM', 'es').format(date));
                 final formattedDate =
-                    "$diaStr, ${DateFormat('d', 'es').format(date)} de $mesStr, ${DateFormat('y', 'es').format(date)}";
+                    "$diaStr ${DateFormat('d', 'es').format(date)} $mesStr ${DateFormat('yy', 'es').format(date)}";
 
                 return _GlassCard(
                   child: ExpansionTile(
                     initiallyExpanded: false,
+                    tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     title: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -893,15 +904,15 @@ class _TabGastosState extends State<_TabGastos> {
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: _ThemeColors.accentText,
-                            fontSize: 16,
+                            fontSize: 15,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           '$n gasto(s) • Total: S/ ${totalDia.toStringAsFixed(2)}',
                           style: const TextStyle(
                             color: _ThemeColors.inactive,
-                            fontSize: 13,
+                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -931,20 +942,23 @@ class _GastoTileLite extends StatelessWidget {
     final metodos = g.pagos.keys.join(', ');
 
     return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       leading: CircleAvatar(
+        radius: 18,
         backgroundColor: _ThemeColors.secondaryGradientEnd.withOpacity(0.1),
         child: const Icon(Icons.receipt_long_outlined,
-            color: _ThemeColors.secondaryGradientEnd),
+            color: _ThemeColors.secondaryGradientEnd, size: 18),
       ),
       title: Text(
         '${g.label ?? 'Gasto'}: S/ ${g.total.toStringAsFixed(2)}',
         style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800, color: _ThemeColors.accentText),
+            fontWeight: FontWeight.w800, fontSize: 14, color: _ThemeColors.accentText),
       ),
       subtitle: Text(
         metodos.isEmpty ? '—' : metodos,
         style: theme.textTheme.bodySmall?.copyWith(
           color: _ThemeColors.inactive,
+          fontSize: 12,
         ),
       ),
       trailing: Row(
@@ -953,20 +967,24 @@ class _GastoTileLite extends StatelessWidget {
           Text(
             DateFormat('hh:mm a', 'es').format(g.fecha),
             style: theme.textTheme.bodyMedium
-                ?.copyWith(color: _ThemeColors.inactive),
+                ?.copyWith(color: _ThemeColors.inactive, fontSize: 12),
           ),
           const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.edit_outlined,
-                color: _ThemeColors.primaryGradientEnd),
+                color: _ThemeColors.primaryGradientEnd, size: 18),
             tooltip: 'Editar gasto',
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(),
             onPressed: () {
               _showEditGastoDialog(context, g);
             },
           ),
           const SizedBox(width: 2),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: _ThemeColors.danger),
+            icon: const Icon(Icons.delete_outline, color: _ThemeColors.danger, size: 18),
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(),
             onPressed: () {
               _showDeleteConfirmationDialog(
                 context: context,
@@ -1120,14 +1138,15 @@ class _GrupoDeVentasDiario extends StatelessWidget {
       ..sort((a, b) => b.fecha.compareTo(a.fecha));
     final numeroDeVentas = ventasDelDia.length;
 
-    final diaStr = capitalize(DateFormat('EEEE', 'es').format(date));
+    final diaStr = capitalize(DateFormat('EEE', 'es').format(date));
     final mesStr = capitalize(DateFormat('MMM', 'es').format(date));
     final formattedDate =
-        "$diaStr, ${DateFormat('d', 'es').format(date)} de $mesStr, ${DateFormat('y', 'es').format(date)}";
+        "$diaStr ${DateFormat('d', 'es').format(date)} $mesStr ${DateFormat('yy', 'es').format(date)}";
 
     return _GlassCard(
       child: ExpansionTile(
         initiallyExpanded: false,
+        tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1136,15 +1155,15 @@ class _GrupoDeVentasDiario extends StatelessWidget {
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: _ThemeColors.accentText,
-                fontSize: 16,
+                fontSize: 15,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               '$numeroDeVentas ventas • Total: S/ ${totalVentasDia.toStringAsFixed(2)}',
               style: const TextStyle(
                 color: _ThemeColors.inactive,
-                fontSize: 13,
+                fontSize: 12,
               ),
             ),
           ],
@@ -1190,12 +1209,12 @@ class _VentaGlassCardState extends State<_VentaGlassCard> {
     return _GlassCard(
       child: ExpansionTile(
         initiallyExpanded: false,
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         title: Row(
           children: [
             Icon(_getPaymentMethodIcon(metodosDePago),
-                color: _ThemeColors.primaryGradientEnd, size: 28),
-            const SizedBox(width: 12),
+                color: _ThemeColors.primaryGradientEnd, size: 24),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1204,27 +1223,30 @@ class _VentaGlassCardState extends State<_VentaGlassCard> {
                     'Venta: S/ ${venta.total.toStringAsFixed(2)}',
                     style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
+                        fontSize: 15,
                         color: _ThemeColors.accentText),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${venta.items.length} item(s) • $metodosDePago',
                     style: theme.textTheme.bodySmall
-                        ?.copyWith(color: _ThemeColors.inactive),
+                        ?.copyWith(color: _ThemeColors.inactive, fontSize: 12),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Text(
               DateFormat('hh:mm a', 'es').format(venta.fecha),
               style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: _ThemeColors.inactive),
+                  ?.copyWith(color: _ThemeColors.inactive, fontSize: 12),
             ),
           ],
         ),
         trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: _ThemeColors.danger),
+          icon: const Icon(Icons.delete_outline, color: _ThemeColors.danger, size: 20),
+          padding: const EdgeInsets.all(8),
+          constraints: const BoxConstraints(),
           onPressed: () {
             _showDeleteConfirmationDialog(
               context: context,
@@ -1238,7 +1260,7 @@ class _VentaGlassCardState extends State<_VentaGlassCard> {
         children: [
           const Divider(height: 1, color: _ThemeColors.inactive),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Column(
               children: itemsAgrupados.entries.map((entry) {
                 final primerItem = entry.value.first;
@@ -1246,14 +1268,14 @@ class _VentaGlassCardState extends State<_VentaGlassCard> {
                 final cat = _catNombre(primerItem.producto);
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(vertical: 3.0),
                   child: Row(
                     children: [
                       Expanded(
                         child: Text(
                           ' • ${cantidad}x ${primerItem.producto.nombre}${cat.isNotEmpty ? '  ·  $cat' : ''}',
                           style: theme.textTheme.bodyMedium
-                              ?.copyWith(color: _ThemeColors.accentText),
+                              ?.copyWith(color: _ThemeColors.accentText, fontSize: 13),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1261,6 +1283,7 @@ class _VentaGlassCardState extends State<_VentaGlassCard> {
                         'S/ ${(primerItem.precioEditable * cantidad).toStringAsFixed(2)}',
                         style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
+                            fontSize: 13,
                             color: _ThemeColors.accentText),
                       ),
                     ],
@@ -1285,17 +1308,17 @@ class _InfoRowGlass extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      padding: const EdgeInsets.symmetric(vertical: 3.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: _ThemeColors.inactive)),
+          Text(label, style: const TextStyle(color: _ThemeColors.inactive, fontSize: 13)),
           Text(
             value,
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: valueColor ?? _ThemeColors.accentText,
-              fontSize: 15,
+              fontSize: 13,
             ),
           ),
         ],
@@ -1312,9 +1335,9 @@ class _GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = BorderRadius.circular(18);
+    final border = BorderRadius.circular(16);
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         borderRadius: border,
         gradient: gradient,
@@ -1323,9 +1346,9 @@ class _GlassCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.grey.shade200,
-            blurRadius: 10,
-            spreadRadius: 2,
-            offset: const Offset(0, 4),
+            blurRadius: 8,
+            spreadRadius: 1,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -1478,12 +1501,12 @@ class _CierreGlassCardState extends State<_CierreGlassCard> {
     return _GlassCard(
       child: ExpansionTile(
         initiallyExpanded: false,
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         title: Row(
           children: [
             const Icon(Icons.inventory_2_outlined,
-                color: _ThemeColors.secondaryGradientEnd, size: 28),
-            const SizedBox(width: 12),
+                color: _ThemeColors.secondaryGradientEnd, size: 24),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1492,21 +1515,22 @@ class _CierreGlassCardState extends State<_CierreGlassCard> {
                     'Total Contado: S/ ${totalReal.toStringAsFixed(2)}',
                     style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
+                        fontSize: 15,
                         color: _ThemeColors.accentText),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Abrió: ${DateFormat.yMMMd('es').add_jm().format(caja.fechaApertura)}',
+                    'Abrió: ${DateFormat('dd MMM, hh:mm a', 'es').format(caja.fechaApertura)}',
                     style: theme.textTheme.bodySmall
-                        ?.copyWith(color: _ThemeColors.inactive),
+                        ?.copyWith(color: _ThemeColors.inactive, fontSize: 12),
                   ),
                   if (caja.fechaCierre != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 2.0),
                       child: Text(
-                        'Cerró: ${DateFormat.yMMMd('es').add_jm().format(caja.fechaCierre!)}',
+                        'Cerró: ${DateFormat('dd MMM, hh:mm a', 'es').format(caja.fechaCierre!)}',
                         style: theme.textTheme.bodySmall
-                            ?.copyWith(color: _ThemeColors.inactive),
+                            ?.copyWith(color: _ThemeColors.inactive, fontSize: 12),
                       ),
                     ),
                 ],
@@ -1515,7 +1539,9 @@ class _CierreGlassCardState extends State<_CierreGlassCard> {
           ],
         ),
         trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: _ThemeColors.danger),
+          icon: const Icon(Icons.delete_outline, color: _ThemeColors.danger, size: 20),
+          padding: const EdgeInsets.all(8),
+          constraints: const BoxConstraints(),
           onPressed: () {
             _showDeleteConfirmationDialog(
               context: context,
@@ -1530,16 +1556,16 @@ class _CierreGlassCardState extends State<_CierreGlassCard> {
           const Divider(height: 1, color: _ThemeColors.inactive),
           Padding(
             padding:
-                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
             child: Column(
               children: [
                 _InfoRowGlass(
                     label: 'Usuario', value: caja.usuarioAperturaNombre),
                 _InfoRowGlass(label: 'Duración de Sesión', value: duracionStr),
                 const Divider(
-                    height: 20,
-                    indent: 20,
-                    endIndent: 20,
+                    height: 16,
+                    indent: 16,
+                    endIndent: 16,
                     color: _ThemeColors.inactive),
                 _InfoRowGlass(
                     label: 'Monto Inicial',
@@ -1553,26 +1579,28 @@ class _CierreGlassCardState extends State<_CierreGlassCard> {
                   valueColor: diferenciaColor,
                 ),
                 if (caja.totalesPorMetodo.isNotEmpty) ...[
-                  const Divider(height: 24, color: _ThemeColors.inactive),
+                  const Divider(height: 18, color: _ThemeColors.inactive),
                   Text('Ingresos por Método:',
                       style: theme.textTheme.labelLarge
-                          ?.copyWith(color: _ThemeColors.accentText)),
-                  const SizedBox(height: 12),
+                          ?.copyWith(color: _ThemeColors.accentText, fontSize: 13)),
+                  const SizedBox(height: 8),
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: 6,
+                    runSpacing: 6,
                     children: caja.totalesPorMetodo.entries.map((entry) {
                       return Chip(
                         avatar: Icon(_getPaymentMethodIcon(entry.key),
-                            size: 16, color: _ThemeColors.secondaryGradientEnd),
+                            size: 14, color: _ThemeColors.secondaryGradientEnd),
                         label: Text(
-                            '${entry.key}: S/ ${entry.value.toStringAsFixed(2)}'),
+                            '${entry.key}: S/ ${entry.value.toStringAsFixed(2)}',
+                            style: const TextStyle(fontSize: 12)),
                         backgroundColor:
                             _ThemeColors.secondaryGradientEnd.withOpacity(0.1),
                         side: BorderSide(
                           color: _ThemeColors.secondaryGradientEnd
                               .withOpacity(0.5),
                         ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       );
                     }).toList(),
                   ),
@@ -1629,7 +1657,7 @@ class _NeonStatCard extends StatelessWidget {
         end: Alignment.bottomRight,
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1641,6 +1669,7 @@ class _NeonStatCard extends StatelessWidget {
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: Colors.white.withOpacity(0.85),
                       fontWeight: FontWeight.w600,
+                      fontSize: 14,
                       letterSpacing: 0.2,
                     ),
                   ),
@@ -1648,20 +1677,20 @@ class _NeonStatCard extends StatelessWidget {
                 if (chipRight != null)
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(999),
                       border: Border.all(color: Colors.white24),
                     ),
                     child: DefaultTextStyle(
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
                       child: chipRight!,
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: monto),
               duration: const Duration(milliseconds: 700),
@@ -1672,14 +1701,15 @@ class _NeonStatCard extends StatelessWidget {
                   style: theme.textTheme.displaySmall?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
+                    fontSize: 32,
                     height: 1.0,
                     letterSpacing: -0.5,
                   ),
                 );
               },
             ),
-            const SizedBox(height: 14),
-            SizedBox(height: 56, child: _Sparkline(datos: const [])),
+            const SizedBox(height: 10),
+            SizedBox(height: 48, child: _Sparkline(datos: const [])),
           ],
         ),
       ),
@@ -1705,14 +1735,14 @@ class _MetodoPagoTile extends StatelessWidget {
     final theme = Theme.of(context);
     return _GlassCard(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 gradient: const LinearGradient(
                   colors: [
                     _ThemeColors.secondaryGradientStart,
@@ -1722,9 +1752,9 @@ class _MetodoPagoTile extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
               ),
-              child: Icon(icon, color: Colors.white),
+              child: Icon(icon, color: Colors.white, size: 18),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1736,6 +1766,7 @@ class _MetodoPagoTile extends StatelessWidget {
                           metodo,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
+                            fontSize: 13,
                             letterSpacing: 0.2,
                             color: _ThemeColors.accentText,
                           ),
@@ -1745,17 +1776,18 @@ class _MetodoPagoTile extends StatelessWidget {
                         'S/ ${total.toStringAsFixed(2)}',
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
+                          fontSize: 13,
                           color: _ThemeColors.accentText,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(999),
                     child: LinearProgressIndicator(
                       value: porcentaje,
-                      minHeight: 8,
+                      minHeight: 6,
                       backgroundColor: Colors.grey.shade300,
                       valueColor: const AlwaysStoppedAnimation<Color>(
                           _ThemeColors.primaryGradientEnd),
@@ -1787,23 +1819,24 @@ class _MiniKpi extends StatelessWidget {
     final theme = Theme.of(context);
     return _GlassCard(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            Icon(icono, color: _ThemeColors.primaryGradientEnd),
-            const SizedBox(width: 10),
+            Icon(icono, color: _ThemeColors.primaryGradientEnd, size: 20),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(etiqueta,
                       style: theme.textTheme.labelMedium
-                          ?.copyWith(color: _ThemeColors.inactive)),
-                  const SizedBox(height: 4),
+                          ?.copyWith(color: _ThemeColors.inactive, fontSize: 12)),
+                  const SizedBox(height: 2),
                   Text(
                     valor,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
+                      fontSize: 18,
                       letterSpacing: -0.2,
                       color: _ThemeColors.accentText,
                     ),
