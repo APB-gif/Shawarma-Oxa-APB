@@ -810,27 +810,51 @@ ${detalle}''',
                           }
                         }
 
-                        // Permitir continuar sin registrar gasto (insumos 0): cerrar diálogo con null
-                        if (items.isEmpty) {
-                          Navigator.pop(ctx, null);
-                          return;
+                        // Descontar de almacén los insumos base ingresados (lechuga, pepino, etc.)
+                        if (items.isNotEmpty) {
+                          try {
+                            final almacenService = AlmacenService();
+                            final reporte = await almacenService
+                                .descontarInsumosPorGastoConReporte(items);
+                            if (mainScaffoldContext != null) {
+                              final ok = reporte
+                                  .where((r) => r['found'] == true)
+                                  .toList();
+                              final nok = reporte
+                                  .where((r) => r['found'] != true)
+                                  .toList();
+                              final sb = StringBuffer();
+                              if (ok.isNotEmpty) {
+                                sb.writeln('Descontados:');
+                                for (final r in ok) {
+                                  sb.writeln(
+                                      '- ${r['nombre']}: ${r['descontado']} (antes ${r['antes']} → ${r['despues']})');
+                                }
+                              }
+                              if (nok.isNotEmpty) {
+                                sb.writeln('\nNo encontrados:');
+                                for (final r in nok) {
+                                  sb.writeln('- ${r['nombre']}');
+                                }
+                              }
+                              mostrarNotificacionElegante(
+                                  mainScaffoldContext!,
+                                  'Gasto de insumos aplicado al almacén.',
+                                  messengerKey: principalMessengerKey);
+                            }
+                          } catch (e) {
+                            if (mainScaffoldContext != null) {
+                              mostrarNotificacionElegante(
+                                  mainScaffoldContext!,
+                                  'Error al descontar insumos: $e',
+                                  esError: true,
+                                  messengerKey: principalMessengerKey);
+                            }
+                          }
                         }
 
-                        final gasto = Gasto(
-                          id: null,
-                          cajaId: cajaActiva.id,
-                          tipo: 'insumos_apertura',
-                          fecha: DateTime.now(),
-                          proveedor: 'Apertura',
-                          descripcion: 'Gasto de insumos por apertura de caja',
-                          items: items,
-                          pagos: {},
-                          total: 0.0,
-                          usuarioId: cajaActiva.usuarioAperturaId,
-                          usuarioNombre: cajaActiva.usuarioAperturaNombre,
-                        );
-
-                        Navigator.pop(ctx, gasto);
+                        // Permitir continuar sin registrar gasto (no lo registramos para no afectar informes)
+                        Navigator.pop(ctx, null);
                       },
                       icon: const Icon(Icons.check_circle_rounded, size: 18),
                       style: FilledButton.styleFrom(
