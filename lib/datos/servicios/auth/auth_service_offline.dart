@@ -17,14 +17,18 @@ import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service.dart';
 const _kOfflineMode = 'offline_mode'; // bool
 const _kOfflineUserName = 'offline_user_name'; // String
 const _kOfflineRole = 'offline_role'; // 'guest' | 'admin'
-const _kOfflineAdminPinHash = 'offline_admin_pin'; // String (sha256)
-const _kOfflineSalesPinHash = 'offline_sales_pin'; // String (sha256)
+const _kOfflineAdminPinHash = 'offline_admin_pin'; // String (sha256) LEGACY
+const _kOfflineSalesPinHash = 'offline_sales_pin'; // String (sha256) LEGACY
+const _kOfflineAdminPins = 'offline_admin_pins'; // List<String> (sha256)
+const _kOfflineSalesPins = 'offline_sales_pins'; // List<String> (sha256)
 
 // Firestore remote config path
 const String _kPinsCollection = 'config';
 const String _kPinsDoc = 'offline_pins';
-const String _kFieldAdminPin = 'adminPinHash';
-const String _kFieldSalesPin = 'salesPinHash';
+const String _kFieldAdminPin = 'adminPinHash'; // LEGACY single
+const String _kFieldSalesPin = 'salesPinHash'; // LEGACY single
+const String _kFieldAdminPins = 'adminPinHashes'; // List<String>
+const String _kFieldSalesPins = 'salesPinHashes'; // List<String>
 
 /// Estado interno (singleton) para exponer si la app está en modo offline.
 class _OfflineState {
@@ -60,6 +64,8 @@ extension AuthServiceOfflineX on AuthService {
   /// ¿Ya hay PIN configurado para admin local?
   Future<bool> hasOfflineAdminPin() async {
     final p = await SharedPreferences.getInstance();
+    final list = p.getStringList(_kOfflineAdminPins);
+    if (list != null && list.isNotEmpty) return true;
     return p.containsKey(_kOfflineAdminPinHash);
   }
 
@@ -67,21 +73,29 @@ extension AuthServiceOfflineX on AuthService {
   Future<void> setOfflineAdminPin(String pin) async {
     final p = await SharedPreferences.getInstance();
     final hash = sha256.convert(utf8.encode(pin)).toString();
-    await p.setString(_kOfflineAdminPinHash, hash);
+    // migrate to list storage
+    final list = p.getStringList(_kOfflineAdminPins) ?? <String>[];
+    if (!list.contains(hash)) list.add(hash);
+    await p.setStringList(_kOfflineAdminPins, list);
+    await p.remove(_kOfflineAdminPinHash);
   }
 
   /// Valida PIN de admin local contra el valor cacheado (previamente sincronizado desde Firestore).
   Future<bool> validateOfflineAdminPin(String pin) async {
     final p = await SharedPreferences.getInstance();
-    final saved = p.getString(_kOfflineAdminPinHash);
-    if (saved == null) return false;
     final hash = sha256.convert(utf8.encode(pin)).toString();
-    return saved == hash;
+    final list = p.getStringList(_kOfflineAdminPins);
+    if (list != null) return list.contains(hash);
+    final legacy = p.getString(_kOfflineAdminPinHash);
+    if (legacy != null) return legacy == hash;
+    return false;
   }
 
   /// ¿Ya hay PIN configurado para ventas (modo invitado offline)?
   Future<bool> hasOfflineSalesPin() async {
     final p = await SharedPreferences.getInstance();
+    final list = p.getStringList(_kOfflineSalesPins);
+    if (list != null && list.isNotEmpty) return true;
     return p.containsKey(_kOfflineSalesPinHash);
   }
 
@@ -89,28 +103,35 @@ extension AuthServiceOfflineX on AuthService {
   Future<void> setOfflineSalesPin(String pin) async {
     final p = await SharedPreferences.getInstance();
     final hash = sha256.convert(utf8.encode(pin)).toString();
-    await p.setString(_kOfflineSalesPinHash, hash);
+    final list = p.getStringList(_kOfflineSalesPins) ?? <String>[];
+    if (!list.contains(hash)) list.add(hash);
+    await p.setStringList(_kOfflineSalesPins, list);
+    await p.remove(_kOfflineSalesPinHash);
   }
 
   /// Valida PIN de ventas contra el valor cacheado (previamente sincronizado desde Firestore).
   Future<bool> validateOfflineSalesPin(String pin) async {
     final p = await SharedPreferences.getInstance();
-    final saved = p.getString(_kOfflineSalesPinHash);
-    if (saved == null) return false;
     final hash = sha256.convert(utf8.encode(pin)).toString();
-    return saved == hash;
+    final list = p.getStringList(_kOfflineSalesPins);
+    if (list != null) return list.contains(hash);
+    final legacy = p.getString(_kOfflineSalesPinHash);
+    if (legacy != null) return legacy == hash;
+    return false;
   }
 
   /// Borra el PIN de admin local (deja de estar configurado).
   Future<void> clearOfflineAdminPin() async {
     final p = await SharedPreferences.getInstance();
     await p.remove(_kOfflineAdminPinHash);
+    await p.remove(_kOfflineAdminPins);
   }
 
   /// Borra el PIN de ventas (vuelve a usar el PIN por defecto si no se configura otro).
   Future<void> clearOfflineSalesPin() async {
     final p = await SharedPreferences.getInstance();
     await p.remove(_kOfflineSalesPinHash);
+    await p.remove(_kOfflineSalesPins);
   }
 
   /// ----------------------------
@@ -126,33 +147,62 @@ extension AuthServiceOfflineX on AuthService {
     final p = await SharedPreferences.getInstance();
     if (doc.exists) {
       final data = doc.data();
-      final adminHash = data?[_kFieldAdminPin] as String?;
-      final salesHash = data?[_kFieldSalesPin] as String?;
-      if (adminHash != null && adminHash.isNotEmpty) {
-        await p.setString(_kOfflineAdminPinHash, adminHash);
-      } else {
-        await p.remove(_kOfflineAdminPinHash);
+      final adminList = (data?[_kFieldAdminPins] as List?)
+              ?.whereType<String>()
+              .toList() ??
+          [];
+      final salesList = (data?[_kFieldSalesPins] as List?)
+              ?.whereType<String>()
+              .toList() ??
+          [];
+
+      // Legacy single fields support
+      final legacyAdmin = data?[_kFieldAdminPin] as String?;
+      if (legacyAdmin != null && legacyAdmin.isNotEmpty &&
+          !adminList.contains(legacyAdmin)) {
+        adminList.add(legacyAdmin);
       }
-      if (salesHash != null && salesHash.isNotEmpty) {
-        await p.setString(_kOfflineSalesPinHash, salesHash);
+      final legacySales = data?[_kFieldSalesPin] as String?;
+      if (legacySales != null && legacySales.isNotEmpty &&
+          !salesList.contains(legacySales)) {
+        salesList.add(legacySales);
+      }
+
+      if (adminList.isNotEmpty) {
+        await p.setStringList(_kOfflineAdminPins, adminList);
       } else {
-        await p.remove(_kOfflineSalesPinHash);
+        await p.remove(_kOfflineAdminPins);
+      }
+      if (salesList.isNotEmpty) {
+        await p.setStringList(_kOfflineSalesPins, salesList);
+      } else {
+        await p.remove(_kOfflineSalesPins);
       }
     } else {
-      await p.remove(_kOfflineAdminPinHash);
-      await p.remove(_kOfflineSalesPinHash);
+      await p.remove(_kOfflineAdminPins);
+      await p.remove(_kOfflineSalesPins);
     }
   }
 
   /// Establece el PIN de admin en Firestore y actualiza el cache local.
   Future<void> setRemoteAdminPin(String pin) async {
+    // Backward-compatible: treat as ADD to the list
+    await addRemoteAdminPin(pin);
+  }
+
+  Future<void> addRemoteAdminPin(String pin) async {
     final hash = sha256.convert(utf8.encode(pin)).toString();
     final ref = FirebaseFirestore.instance
         .collection(_kPinsCollection)
         .doc(_kPinsDoc);
-    await ref.set({_kFieldAdminPin: hash, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+    await ref.set({
+      _kFieldAdminPins: FieldValue.arrayUnion([hash]),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
     final p = await SharedPreferences.getInstance();
-    await p.setString(_kOfflineAdminPinHash, hash);
+    final list = p.getStringList(_kOfflineAdminPins) ?? <String>[];
+    if (!list.contains(hash)) list.add(hash);
+    await p.setStringList(_kOfflineAdminPins, list);
   }
 
   /// Elimina el PIN de admin en Firestore y en cache local.
@@ -160,19 +210,51 @@ extension AuthServiceOfflineX on AuthService {
     final ref = FirebaseFirestore.instance
         .collection(_kPinsCollection)
         .doc(_kPinsDoc);
-    await ref.set({_kFieldAdminPin: FieldValue.delete(), 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+    await ref.set({
+      _kFieldAdminPins: FieldValue.delete(),
+      _kFieldAdminPin: FieldValue.delete(), // legacy cleanup
+      'updatedAt': FieldValue.serverTimestamp()
+    }, SetOptions(merge: true));
     await clearOfflineAdminPin();
   }
 
-  /// Establece el PIN de ventas en Firestore y actualiza el cache local.
-  Future<void> setRemoteSalesPin(String pin) async {
+  Future<void> removeRemoteAdminPin(String pin) async {
     final hash = sha256.convert(utf8.encode(pin)).toString();
     final ref = FirebaseFirestore.instance
         .collection(_kPinsCollection)
         .doc(_kPinsDoc);
-    await ref.set({_kFieldSalesPin: hash, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+    await ref.set({
+      _kFieldAdminPins: FieldValue.arrayRemove([hash]),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
     final p = await SharedPreferences.getInstance();
-    await p.setString(_kOfflineSalesPinHash, hash);
+    final list = p.getStringList(_kOfflineAdminPins) ?? <String>[];
+    list.remove(hash);
+    if (list.isEmpty) {
+      await p.remove(_kOfflineAdminPins);
+    } else {
+      await p.setStringList(_kOfflineAdminPins, list);
+    }
+  }
+
+  /// Establece el PIN de ventas en Firestore y actualiza el cache local.
+  Future<void> setRemoteSalesPin(String pin) async {
+    await addRemoteSalesPin(pin);
+  }
+
+  Future<void> addRemoteSalesPin(String pin) async {
+    final hash = sha256.convert(utf8.encode(pin)).toString();
+    final ref = FirebaseFirestore.instance
+        .collection(_kPinsCollection)
+        .doc(_kPinsDoc);
+    await ref.set({
+      _kFieldSalesPins: FieldValue.arrayUnion([hash]),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    final p = await SharedPreferences.getInstance();
+    final list = p.getStringList(_kOfflineSalesPins) ?? <String>[];
+    if (!list.contains(hash)) list.add(hash);
+    await p.setStringList(_kOfflineSalesPins, list);
   }
 
   /// Elimina el PIN de ventas en Firestore y en cache local.
@@ -180,8 +262,31 @@ extension AuthServiceOfflineX on AuthService {
     final ref = FirebaseFirestore.instance
         .collection(_kPinsCollection)
         .doc(_kPinsDoc);
-    await ref.set({_kFieldSalesPin: FieldValue.delete(), 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+    await ref.set({
+      _kFieldSalesPins: FieldValue.delete(),
+      _kFieldSalesPin: FieldValue.delete(), // legacy cleanup
+      'updatedAt': FieldValue.serverTimestamp()
+    }, SetOptions(merge: true));
     await clearOfflineSalesPin();
+  }
+
+  Future<void> removeRemoteSalesPin(String pin) async {
+    final hash = sha256.convert(utf8.encode(pin)).toString();
+    final ref = FirebaseFirestore.instance
+        .collection(_kPinsCollection)
+        .doc(_kPinsDoc);
+    await ref.set({
+      _kFieldSalesPins: FieldValue.arrayRemove([hash]),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    final p = await SharedPreferences.getInstance();
+    final list = p.getStringList(_kOfflineSalesPins) ?? <String>[];
+    list.remove(hash);
+    if (list.isEmpty) {
+      await p.remove(_kOfflineSalesPins);
+    } else {
+      await p.setStringList(_kOfflineSalesPins, list);
+    }
   }
 
   /// Obtiene estado remoto de existencia de PINs.
@@ -192,9 +297,29 @@ extension AuthServiceOfflineX on AuthService {
         .get();
     if (!doc.exists) return {'admin': false, 'sales': false};
     final data = doc.data();
-    final hasAdmin = (data?[_kFieldAdminPin] as String?)?.isNotEmpty == true;
-    final hasSales = (data?[_kFieldSalesPin] as String?)?.isNotEmpty == true;
+    final hasAdmin = ((data?[_kFieldAdminPins] as List?)?.isNotEmpty == true) ||
+        ((data?[_kFieldAdminPin] as String?)?.isNotEmpty == true);
+    final hasSales = ((data?[_kFieldSalesPins] as List?)?.isNotEmpty == true) ||
+        ((data?[_kFieldSalesPin] as String?)?.isNotEmpty == true);
     return {'admin': hasAdmin, 'sales': hasSales};
+  }
+
+  /// Devuelve listas de hashes de PIN remotos (para contadores).
+  Future<Map<String, List<String>>> getRemotePins() async {
+    final doc = await FirebaseFirestore.instance
+        .collection(_kPinsCollection)
+        .doc(_kPinsDoc)
+        .get();
+    if (!doc.exists) return {'admin': [], 'sales': []};
+    final data = doc.data();
+    final admin = (data?[_kFieldAdminPins] as List?)?.whereType<String>().toList() ?? [];
+    final sales = (data?[_kFieldSalesPins] as List?)?.whereType<String>().toList() ?? [];
+    // legacy single
+    final legacyAdmin = data?[_kFieldAdminPin] as String?;
+    if (legacyAdmin != null && legacyAdmin.isNotEmpty && !admin.contains(legacyAdmin)) admin.add(legacyAdmin);
+    final legacySales = data?[_kFieldSalesPin] as String?;
+    if (legacySales != null && legacySales.isNotEmpty && !sales.contains(legacySales)) sales.add(legacySales);
+    return {'admin': admin, 'sales': sales};
   }
 
   /// Inicia sesión local como **invitado**.

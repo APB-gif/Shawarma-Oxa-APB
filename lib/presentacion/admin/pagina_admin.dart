@@ -435,21 +435,30 @@ class _PaginaAdminState extends State<PaginaAdmin>
   }
 
   void _showManagePinsDialog(BuildContext context) async {
-    final adminPinController = TextEditingController();
-    final salesPinController = TextEditingController();
+    final adminPinAddController = TextEditingController();
+    final adminPinRemoveController = TextEditingController();
+    final salesPinAddController = TextEditingController();
+    final salesPinRemoveController = TextEditingController();
     final theme = Theme.of(context);
     final auth = context.read<AuthService>();
 
     // Obtener estado desde Firestore; si falla, usar cache local
     bool hasSales = false;
     bool hasAdmin = false;
+    int salesCount = 0;
+    int adminCount = 0;
     try {
-      final state = await auth.getRemotePinsState();
-      hasSales = state['sales'] ?? false;
-      hasAdmin = state['admin'] ?? false;
+      final lists = await auth.getRemotePins();
+      salesCount = lists['sales']?.length ?? 0;
+      adminCount = lists['admin']?.length ?? 0;
+      hasSales = salesCount > 0;
+      hasAdmin = adminCount > 0;
     } catch (_) {
       hasSales = await auth.hasOfflineSalesPin();
       hasAdmin = await auth.hasOfflineAdminPin();
+      // Contadores aproximados desde cache
+      salesCount = hasSales ? 1 : 0;
+      adminCount = hasAdmin ? 1 : 0;
     }
 
     showDialog(
@@ -486,14 +495,29 @@ class _PaginaAdminState extends State<PaginaAdmin>
             ),
             const SizedBox(height: 8),
             TextField(
-              controller: salesPinController,
+              controller: salesPinAddController,
               obscureText: true,
               keyboardType: TextInputType.number,
               maxLength: 8,
               decoration: InputDecoration(
-                labelText: 'Nuevo PIN de ventas',
-                helperText: 'Se requiere un PIN configurado para validar offline.',
+                labelText: 'Añadir PIN de ventas (8 dígitos)',
+                helperText: 'Para remover, escribe el PIN en el campo inferior.',
                 prefixIcon: const Icon(Icons.store_mall_directory_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                counterText: '',
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: salesPinRemoveController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 8,
+              decoration: InputDecoration(
+                labelText: 'Eliminar PIN de ventas',
+                prefixIcon: const Icon(Icons.remove_circle_outline),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -504,22 +528,28 @@ class _PaginaAdminState extends State<PaginaAdmin>
               children: [
                 Expanded(
                   child: Text(
-                    hasSales ? 'Estado: Configurado' : 'Estado: Sin configurar',
+                    hasSales
+                        ? 'Estado: $salesCount PIN(s) configurado(s)'
+                        : 'Estado: Sin configurar',
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
-                if (hasSales)
+                if (hasSales) ...[
                   TextButton.icon(
                     onPressed: () async {
                       await auth.clearRemoteSalesPin();
-                      setState(() => hasSales = false);
+                      setState(() {
+                        hasSales = false;
+                        salesCount = 0;
+                      });
                       ScaffoldMessenger.of(context).showSnackBar(
-                        _snack('PIN de ventas eliminado', Colors.green),
+                        _snack('Todos los PINs de ventas eliminados', Colors.green),
                       );
                     },
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Eliminar PIN'),
+                    icon: const Icon(Icons.delete_sweep_outlined),
+                    label: const Text('Eliminar todos'),
                   ),
+                ],
               ],
             ),
             const SizedBox(height: 16),
@@ -530,14 +560,29 @@ class _PaginaAdminState extends State<PaginaAdmin>
             ),
             const SizedBox(height: 8),
             TextField(
-              controller: adminPinController,
+              controller: adminPinAddController,
               obscureText: true,
               keyboardType: TextInputType.number,
               maxLength: 8,
               decoration: InputDecoration(
-                labelText: 'Nuevo PIN de admin',
-                helperText: 'Se recomienda cambiarlo periódicamente.',
+                labelText: 'Añadir PIN de admin (8 dígitos)',
+                helperText: 'Para remover, escribe el PIN en el campo inferior.',
                 prefixIcon: const Icon(Icons.admin_panel_settings_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                counterText: '',
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: adminPinRemoveController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 8,
+              decoration: InputDecoration(
+                labelText: 'Eliminar PIN de admin',
+                prefixIcon: const Icon(Icons.remove_circle_outline),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -548,22 +593,28 @@ class _PaginaAdminState extends State<PaginaAdmin>
               children: [
                 Expanded(
                   child: Text(
-                    hasAdmin ? 'Estado: Configurado' : 'Estado: Sin configurar',
+                    hasAdmin
+                        ? 'Estado: $adminCount PIN(s) configurado(s)'
+                        : 'Estado: Sin configurar',
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
-                if (hasAdmin)
+                if (hasAdmin) ...[
                   TextButton.icon(
                     onPressed: () async {
                       await auth.clearRemoteAdminPin();
-                      setState(() => hasAdmin = false);
+                      setState(() {
+                        hasAdmin = false;
+                        adminCount = 0;
+                      });
                       ScaffoldMessenger.of(context).showSnackBar(
-                        _snack('PIN de admin eliminado', Colors.green),
+                        _snack('Todos los PINs de admin eliminados', Colors.green),
                       );
                     },
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Eliminar PIN'),
+                    icon: const Icon(Icons.delete_sweep_outlined),
+                    label: const Text('Eliminar todos'),
                   ),
+                ],
               ],
             ),
           ],
@@ -579,8 +630,8 @@ class _PaginaAdminState extends State<PaginaAdmin>
             onPressed: () async {
               bool changed = false;
               try {
-                if (salesPinController.text.trim().isNotEmpty) {
-                  final pin = salesPinController.text.trim();
+                if (salesPinAddController.text.trim().isNotEmpty) {
+                  final pin = salesPinAddController.text.trim();
                   final valid = RegExp(r'^\d{8}$').hasMatch(pin);
                   if (!valid) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -589,12 +640,32 @@ class _PaginaAdminState extends State<PaginaAdmin>
                     );
                     return;
                   }
-                  await auth.setRemoteSalesPin(pin);
+                  await auth.addRemoteSalesPin(pin);
                   changed = true;
-                  setState(() => hasSales = true);
+                  setState(() {
+                    hasSales = true;
+                    salesCount += 1;
+                  });
                 }
-                if (adminPinController.text.trim().isNotEmpty) {
-                  final pin = adminPinController.text.trim();
+                if (salesPinRemoveController.text.trim().isNotEmpty) {
+                  final pin = salesPinRemoveController.text.trim();
+                  final valid = RegExp(r'^\d{8}$').hasMatch(pin);
+                  if (!valid) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      _snack('El PIN de ventas debe tener exactamente 8 dígitos numéricos',
+                          Colors.orange),
+                    );
+                    return;
+                  }
+                  await auth.removeRemoteSalesPin(pin);
+                  changed = true;
+                  setState(() {
+                    salesCount = (salesCount - 1).clamp(0, 9999);
+                    hasSales = salesCount > 0;
+                  });
+                }
+                if (adminPinAddController.text.trim().isNotEmpty) {
+                  final pin = adminPinAddController.text.trim();
                   final valid = RegExp(r'^\d{8}$').hasMatch(pin);
                   if (!valid) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -603,9 +674,29 @@ class _PaginaAdminState extends State<PaginaAdmin>
                     );
                     return;
                   }
-                  await auth.setRemoteAdminPin(pin);
+                  await auth.addRemoteAdminPin(pin);
                   changed = true;
-                  setState(() => hasAdmin = true);
+                  setState(() {
+                    hasAdmin = true;
+                    adminCount += 1;
+                  });
+                }
+                if (adminPinRemoveController.text.trim().isNotEmpty) {
+                  final pin = adminPinRemoveController.text.trim();
+                  final valid = RegExp(r'^\d{8}$').hasMatch(pin);
+                  if (!valid) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      _snack('El PIN de admin debe tener exactamente 8 dígitos numéricos',
+                          Colors.orange),
+                    );
+                    return;
+                  }
+                  await auth.removeRemoteAdminPin(pin);
+                  changed = true;
+                  setState(() {
+                    adminCount = (adminCount - 1).clamp(0, 9999);
+                    hasAdmin = adminCount > 0;
+                  });
                 }
                 if (changed) {
                   if (context.mounted) Navigator.pop(ctx);

@@ -191,6 +191,17 @@ class _PaginaLoginState extends State<PaginaLogin>
     try {
       final auth = context.read<AuthService>();
       final caja = context.read<CajaService>();
+      // En primer uso, exigir conexión para descargar PINs de seguridad
+      final hasPins = await auth.hasOfflineSalesPin();
+      if (!hasPins) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          _buildStyledSnackBar(
+            'Primera vez: necesitas internet para sincronizar los PINs de seguridad.',
+            Colors.orange,
+          ),
+        );
+        return;
+      }
       // Solicitar PIN de ventas (por defecto 123321 si no se configuró otro)
       final ok = await _showSalesPinDialog();
       if (ok != true) return;
@@ -232,8 +243,17 @@ class _PaginaLoginState extends State<PaginaLogin>
     try {
       final auth = context.read<AuthService>();
       final hasPin = await auth.hasOfflineAdminPin();
+      if (!hasPin) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          _buildStyledSnackBar(
+            'Primera vez: necesitas internet para sincronizar los PINs de seguridad (Admin).',
+            Colors.orange,
+          ),
+        );
+        return;
+      }
 
-      final result = await _showPinDialog(hasPin);
+      final result = await _showPinDialog(true);
       if (result == null) return;
 
       final success = result['success'] as bool;
@@ -336,26 +356,6 @@ class _PaginaLoginState extends State<PaginaLogin>
                 }
 
                 try {
-                  // Si no hay PIN configurado, intentamos primero con el PIN ingresado
-                  // (esto habilita el PIN maestro 21134457 sin necesidad de crear uno).
-                  if (!hasPin) {
-                    final okMaster = await auth.signInOfflineAdmin(
-                      displayName: 'Admin Local',
-                      pin: pin,
-                    );
-                    if (okMaster) {
-                      if (ctx.mounted) {
-                        Navigator.pop(ctx, {
-                          'pin': pin,
-                          'success': true,
-                        });
-                      }
-                      return;
-                    }
-                    // Si no fue válido (no era maestro), entonces lo creamos y reintentamos
-                    await auth.setOfflineAdminPin(pin);
-                  }
-
                   final ok = await auth.signInOfflineAdmin(
                     displayName: 'Admin Local',
                     pin: pin,
