@@ -1198,22 +1198,93 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                   onAccept: (incoming) async {
                                     
 
-                                    // Pedir confirmación antes de unir
+                                    // Pedir confirmación antes de unir con diálogo moderno
                                     final confirm = await showDialog<bool>(
                                       context: context,
+                                      barrierDismissible: false,
                                       builder: (ctx) => AlertDialog(
-                                        title: const Text('Unir órdenes'),
-                                        content: Text(
-                                            '¿Deseas unir "${incoming.nombre}" dentro de "${pedido.nombre}"?'),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        elevation: 16,
+                                        title: Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme.primary.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Icon(
+                                                Icons.merge_rounded,
+                                                color: theme.colorScheme.primary,
+                                                size: 24,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            const Text('Unir órdenes'),
+                                          ],
+                                        ),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '¿Deseas unir estas órdenes?',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.grey.shade700,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Colors.blue.shade50,
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: Colors.blue.shade200),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.arrow_forward_rounded, 
+                                                       color: Colors.blue.shade600, size: 16),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      '"${incoming.nombre}" → "${pedido.nombre}"',
+                                                      style: TextStyle(
+                                                        fontWeight: FontWeight.w600,
+                                                        color: Colors.blue.shade800,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Row(
+                                              children: [
+                                                Icon(Icons.receipt_long, size: 16, color: Colors.grey.shade600),
+                                                const SizedBox(width: 4),
+                                                Text('${incoming.items.length + pedido.items.length} productos total',
+                                                     style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                                                const Spacer(),
+                                                Text('S/ ${(incoming.subtotal + pedido.subtotal).toStringAsFixed(2)}',
+                                                     style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                         actions: [
                                           TextButton(
                                               onPressed: () =>
                                                   Navigator.pop(ctx, false),
-                                              child: const Text('No')),
-                                          FilledButton(
+                                              child: const Text('Cancelar')),
+                                          FilledButton.icon(
                                             onPressed: () =>
                                                 Navigator.pop(ctx, true),
-                                            child: const Text('Sí, unir'),
+                                            icon: const Icon(Icons.merge_rounded, size: 18),
+                                            label: const Text('Sí, unir'),
                                           ),
                                         ],
                                       ),
@@ -1238,7 +1309,10 @@ class _PaginaVentasState extends State<PaginaVentas> {
                   // Preparar variable para el nombre combinado (usada en el Snackbar)
                   String mergedName = '';
 
-                  modalSetState(() {
+                                    // Ejecutar merge con animación
+                                    await Future.delayed(const Duration(milliseconds: 200));
+                                    
+                                    modalSetState(() {
                                       final sourceIndex = _pedidosPendientes
                                           .indexWhere((p) => p == incoming);
                                       final targetIndex = index;
@@ -1250,9 +1324,9 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                       final target = _pedidosPendientes
                                           .elementAt(targetIndex);
 
-                    // Combinar nombres: "Destino + Origen"
-                    mergedName =
-                      '${target.nombre} + ${source.nombre}';
+                                      // Combinar nombres: "Destino + Origen"
+                                      mergedName =
+                                          '${target.nombre} + ${source.nombre}';
 
                                       final mergedItems = <ItemCarrito>[]
                                         ..addAll(target.items)
@@ -1276,8 +1350,9 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                     });
 
                                     setState(() {});
-
-                                    // Mostrar Snackbar con opción a deshacer (usar mergedName calculado)
+                                    
+                                    // Mostrar efecto visual de éxito
+                                    _showMergeSuccessEffect(mergedName);                                    // Mostrar Snackbar con opción a deshacer (usar mergedName calculado)
                                     if (mergedName.isNotEmpty) {
                                       final messengerContext =
                                           (mainScaffoldContext ?? context);
@@ -1359,9 +1434,10 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                           Opacity(opacity: 0.45, child: card),
                                       child: AnimatedContainer(
                                         duration:
-                                            const Duration(milliseconds: 180),
+                                            const Duration(milliseconds: 200),
+                                        curve: Curves.easeOutCubic,
                                         transform: isReceiving
-                                            ? (Matrix4.identity()..scale(1.01))
+                                            ? (Matrix4.identity()..scale(1.02))
                                             : Matrix4.identity(),
                                         decoration: isReceiving
                                             ? BoxDecoration(
@@ -1370,14 +1446,39 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                                 boxShadow: [
                                                   BoxShadow(
                                                     color: theme.colorScheme.primary
-                                                        .withOpacity(0.06),
-                                                    blurRadius: 12,
-                                                    offset: const Offset(0, 6),
+                                                        .withOpacity(0.15),
+                                                    blurRadius: 20,
+                                                    offset: const Offset(0, 8),
+                                                    spreadRadius: 2,
+                                                  ),
+                                                  BoxShadow(
+                                                    color: Colors.white.withOpacity(0.6),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, -1),
                                                   ),
                                                 ],
                                               )
                                             : null,
-                                        child: card,
+                                        child: Container(
+                                          decoration: isReceiving
+                                              ? BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: theme.colorScheme.primary.withOpacity(0.4),
+                                                    width: 2,
+                                                  ),
+                                                  gradient: LinearGradient(
+                                                    colors: [
+                                                      theme.colorScheme.primary.withOpacity(0.05),
+                                                      theme.colorScheme.primary.withOpacity(0.02),
+                                                    ],
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                  ),
+                                                )
+                                              : null,
+                                          child: card,
+                                        ),
                                       ),
                                     );
                                   },
@@ -1938,6 +2039,27 @@ class _PaginaVentasState extends State<PaginaVentas> {
         setState(() {}); // refrescar vista
       }
     }
+  }
+
+  // ===================== EFECTOS VISUALES PARA MERGE =====================
+  
+  void _showMergeSuccessEffect(String mergedName) {
+    final messengerContext = (mainScaffoldContext ?? context);
+    
+    // Mostrar efecto de partículas/confetti
+    showDialog(
+      context: messengerContext,
+      barrierDismissible: true,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => _MergeSuccessOverlay(mergedName: mergedName),
+    );
+    
+    // Auto-cerrar después de 2 segundos
+    Future.delayed(const Duration(milliseconds: 2000), () {
+      if (Navigator.canPop(messengerContext)) {
+        Navigator.pop(messengerContext);
+      }
+    });
   }
 
   // ===================== GASTO INSUMOS APERTURA =====================
@@ -2553,4 +2675,206 @@ class _QuickButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Overlay de éxito con animación para unión de pedidos
+class _MergeSuccessOverlay extends StatefulWidget {
+  final String mergedName;
+  
+  const _MergeSuccessOverlay({required this.mergedName});
+
+  @override
+  State<_MergeSuccessOverlay> createState() => _MergeSuccessOverlayState();
+}
+
+class _MergeSuccessOverlayState extends State<_MergeSuccessOverlay>
+    with TickerProviderStateMixin {
+  late AnimationController _controller;
+  late AnimationController _particleController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _particleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    
+    _particleController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.6)),
+    );
+    
+    _particleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _particleController, curve: Curves.easeOutQuart),
+    );
+
+    _controller.forward();
+    _particleController.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _particleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Partículas de fondo
+          AnimatedBuilder(
+            animation: _particleAnimation,
+            builder: (context, child) {
+              return CustomPaint(
+                painter: _ParticlePainter(_particleAnimation.value),
+                size: MediaQuery.of(context).size,
+              );
+            },
+          ),
+          
+          // Card de éxito centrado
+          Center(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _scaleAnimation.value,
+                  child: Opacity(
+                    opacity: _fadeAnimation.value,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 32),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 24,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.check_circle_rounded,
+                              size: 48,
+                              color: Colors.green.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '¡Órdenes unidas!',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.mergedName,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.merge_rounded,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Fusionado correctamente',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Painter para partículas animadas
+class _ParticlePainter extends CustomPainter {
+  final double progress;
+  
+  _ParticlePainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    
+    final particles = [
+      {'color': Colors.green.shade300, 'x': 0.2, 'y': 0.3, 'size': 6.0},
+      {'color': Colors.blue.shade300, 'x': 0.8, 'y': 0.2, 'size': 4.0},
+      {'color': Colors.orange.shade300, 'x': 0.1, 'y': 0.7, 'size': 5.0},
+      {'color': Colors.purple.shade300, 'x': 0.9, 'y': 0.8, 'size': 4.5},
+      {'color': Colors.pink.shade300, 'x': 0.3, 'y': 0.1, 'size': 5.5},
+      {'color': Colors.teal.shade300, 'x': 0.7, 'y': 0.9, 'size': 4.0},
+    ];
+    
+    for (final particle in particles) {
+      final x = (particle['x'] as double) * size.width;
+      final y = (particle['y'] as double) * size.height;
+      final particleSize = (particle['size'] as double) * progress;
+      
+      paint.color = (particle['color'] as Color).withOpacity(
+        (1.0 - progress).clamp(0.0, 1.0),
+      );
+      
+      final offsetY = y - (progress * 50); // Movimiento hacia arriba
+      canvas.drawCircle(Offset(x, offsetY), particleSize, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ParticlePainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
