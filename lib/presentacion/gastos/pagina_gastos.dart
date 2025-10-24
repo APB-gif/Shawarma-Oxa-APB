@@ -10,7 +10,6 @@ import 'package:provider/provider.dart';
 
 // Base
 import 'package:shawarma_pos_nuevo/datos/modelos/categoria.dart';
-import 'package:shawarma_pos_nuevo/datos/modelos/pago.dart';
 import 'package:shawarma_pos_nuevo/datos/modelos/producto.dart';
 import 'package:shawarma_pos_nuevo/datos/modelos/app_user.dart';
 import 'package:shawarma_pos_nuevo/datos/modelos/gasto.dart';
@@ -36,18 +35,6 @@ int _toCents(num v) => (v * 100).round();
 double _fromCents(int c) => c / 100.0;
 double _norm(double v) => _fromCents(_toCents(v));
 
-String _metodoKey(PaymentMethod m) {
-  switch (m) {
-    case PaymentMethod.cash:
-      return 'Efectivo';
-    case PaymentMethod.izipayCard:
-      return 'Ruben';
-    case PaymentMethod.yapePersonal:
-      return 'Aharhel';
-    default:
-      return m.displayName;
-  }
-}
 
 /// ===== Página principal =====
 class PaginaGastos extends StatefulWidget {
@@ -269,15 +256,15 @@ class _PaginaGastosState extends State<PaginaGastos> {
       builder: (ctx) => PanelPagoGastos(
         totalGasto: _norm(totalFromPanel),
         items: _gastosCart,
-        onConfirm: (method, date) async {
+        onConfirm: ({required pagos, required date}) async {
           Navigator.of(ctx).pop();
-          await _saveGasto(method, date);
+          await _saveGastoConPagos(pagos, date);
         },
       ),
     );
   }
 
-  Future<void> _saveGasto(PaymentMethod method, DateTime dateTime) async {
+  Future<void> _saveGastoConPagos(Map<String, double> pagos, DateTime dateTime) async {
     if (_gastosCart.isEmpty) return;
 
     try {
@@ -290,10 +277,6 @@ class _PaginaGastosState extends State<PaginaGastos> {
                 categoriaId: it.producto.categoriaId,
               ))
           .toList();
-
-      final total =
-          _gastosCart.fold<double>(0.0, (a, it) => a + it.precioEditable);
-      final pagos = <String, double>{_metodoKey(method): _norm(total)};
 
       final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
       String nombre = 'Usuario';
