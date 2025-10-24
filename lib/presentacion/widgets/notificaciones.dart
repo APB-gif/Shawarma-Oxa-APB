@@ -1,5 +1,6 @@
 // lib/presentacion/widgets/notificaciones.dart
 import 'package:flutter/material.dart';
+import 'package:shawarma_pos_nuevo/main.dart';
 
 // Esta función se podrá llamar desde cualquier parte de la app.
 /// Usa siempre el contexto de una pantalla principal con Scaffold.
@@ -8,32 +9,34 @@ void mostrarNotificacionElegante(
   BuildContext scaffoldContext,
   String mensaje, {
   bool esError = false,
-  required GlobalKey<ScaffoldMessengerState>
-      messengerKey, // Parámetro opcional para notificaciones de error
+  required GlobalKey<ScaffoldMessengerState> messengerKey,
 }) {
-  // Determinamos el color y el ícono según si es un mensaje de éxito o error.
-  final theme = Theme.of(scaffoldContext);
-  final Color colorFondo = esError
-      ? theme.colorScheme.errorContainer
-      : theme.colorScheme.primaryContainer; // Un color sutil del tema
-  final Color colorContenido = esError
-      ? theme.colorScheme.onErrorContainer
-      : theme.colorScheme.onPrimaryContainer;
-  final IconData icono =
-      esError ? Icons.error_outline : Icons.check_circle_outline;
+  // Preferimos derivar el tema desde un contexto SEGURO asociado al ScaffoldMessenger global.
+  // Evita mirar ancestros desde un BuildContext potencialmente desactivado.
+  final ctxForTheme = messengerKey.currentContext; // puede ser null si aún no montó
 
-  // Usar messengerKey si está disponible y tiene un ScaffoldMessenger activo
-  final messenger = messengerKey.currentState;
+  // Paleta por defecto si no hay contexto seguro disponible.
+  Color bgDefault(bool error) => error ? const Color(0xFFFFEAEA) : const Color(0xFFE7F0FF);
+  Color fgDefault(bool error) => error ? const Color(0xFF8B0000) : const Color(0xFF003366);
+
+  late final Color colorFondo;
+  late final Color colorContenido;
+  final IconData icono = esError ? Icons.error_outline : Icons.check_circle_outline;
+
+  if (ctxForTheme != null) {
+    final theme = Theme.of(ctxForTheme);
+    colorFondo = esError ? theme.colorScheme.errorContainer : theme.colorScheme.primaryContainer;
+    colorContenido = esError ? theme.colorScheme.onErrorContainer : theme.colorScheme.onPrimaryContainer;
+  } else {
+    // Sin tema disponible, usar colores neutros y legibles.
+    colorFondo = bgDefault(esError);
+    colorContenido = fgDefault(esError);
+  }
+
   final snackBar = SnackBar(
     backgroundColor: colorFondo,
-    // Usar comportamiento fijo por defecto para evitar que el SnackBar
-    // se muestre fuera de la pantalla cuando hay widgets en el fondo
-    // (bottomNavigationBar, persistentFooterButtons, etc.). Si se
-    // desea el estilo flotante, explícitamente pasar behavior al invocar.
     behavior: SnackBarBehavior.fixed,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(4.0),
-    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4.0)),
     dismissDirection: DismissDirection.down,
     elevation: 4.0,
     content: Row(
@@ -54,14 +57,17 @@ void mostrarNotificacionElegante(
     ),
   );
 
+  // Intentar con el messenger provisto; si no existe, usar el messenger global de la app.
+  final messenger = messengerKey.currentState ?? scaffoldMessengerKey.currentState;
   if (messenger != null) {
-    messenger.hideCurrentSnackBar();
+    try {
+      messenger.hideCurrentSnackBar();
+    } catch (_) {}
     messenger.showSnackBar(snackBar);
     return;
   }
-  // Fallback: usar el contexto si no hay messengerKey
-  if (ScaffoldMessenger.maybeOf(scaffoldContext) != null) {
-    ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
-    ScaffoldMessenger.of(scaffoldContext).showSnackBar(snackBar);
-  }
+
+  // Si no hay ningún messenger disponible aún (muy temprano en el ciclo de vida),
+  // evita hacer lookup de ancestros con el contexto recibido. Mejor no mostrar que crashear.
+  // Opcional: podríamos reintentar en el próximo frame.
 }

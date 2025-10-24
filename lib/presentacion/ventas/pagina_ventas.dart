@@ -692,6 +692,46 @@ class _PaginaVentasState extends State<PaginaVentas> {
     }
   }
 
+  /// Permite recargar manualmente categorías y productos (pull-to-refresh)
+  Future<void> _recargarCatalogoVentas() async {
+    final categoriaActualId = _selectedCategory?.id;
+    try {
+      final results = await Future.wait([
+        _categoriaService.getCategorias(),
+        _productoService.getProductos(),
+      ]);
+
+      final categoriasTodas = (results[0] as List<Categoria>);
+      final productosTodos = (results[1] as List<Producto>);
+
+      final categoriasVenta = categoriasTodas
+          .where((c) => (c.tipo).toLowerCase() == 'venta')
+          .toList()
+        ..sort((a, b) => a.orden.compareTo(b.orden));
+
+      final productosVenta = productosTodos
+          .where((p) => (p.tipo).toLowerCase() == 'venta')
+          .toList();
+
+      if (!mounted) return;
+      setState(() {
+        _todasLasCategorias = categoriasVenta;
+        _todosLosProductos = productosVenta;
+        // Mantener selección si existe, si no, seleccionar la primera
+        _selectedCategory = _todasLasCategorias.firstWhereOrNull(
+                (c) => c.id == categoriaActualId) ??
+            (_todasLasCategorias.isNotEmpty ? _todasLasCategorias.first : null);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      if (mainScaffoldContext != null) {
+        mostrarNotificacionElegante(
+            mainScaffoldContext!, "Error al recargar catálogo: $e",
+            esError: true, messengerKey: principalMessengerKey);
+      }
+    }
+  }
+
   // ===================== CARRITO / PENDIENTES =====================
 
   double get _cartTotal =>
@@ -2684,7 +2724,7 @@ class _PaginaVentasState extends State<PaginaVentas> {
     final fallbackImage =
         _selectedCategory?.iconAssetPath ?? 'assets/icons/default.svg';
 
-    return LayoutBuilder(
+    final grid = LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
         int cols = 4;
@@ -2726,6 +2766,12 @@ class _PaginaVentasState extends State<PaginaVentas> {
           },
         );
       },
+    );
+
+    // Envolver el grid en RefreshIndicator para permitir deslizar y recargar
+    return RefreshIndicator(
+      onRefresh: _recargarCatalogoVentas,
+      child: grid,
     );
   }
 

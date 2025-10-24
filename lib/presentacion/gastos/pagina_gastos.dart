@@ -73,6 +73,8 @@ class _PaginaGastosState extends State<PaginaGastos> {
     // Puedes mostrar loading aquí si quieres, pero también lo haré al final:
     // setState(() => _isLoading = true);
 
+    final categoriaActualId = _selectedCategory?.id;
+
     Map<String, List<Producto>> mapa = <String, List<Producto>>{};
     List<Categoria> cats = <Categoria>[];
 
@@ -122,7 +124,14 @@ class _PaginaGastosState extends State<PaginaGastos> {
     setState(() {
       _productosPorCategoria = mapa;
       _categoriasDeGastos = cats;
-      _selectedCategory = cats.isNotEmpty ? cats.first : null;
+      if (cats.isEmpty) {
+        _selectedCategory = null;
+      } else {
+        _selectedCategory = cats.firstWhere(
+          (c) => c.id == categoriaActualId,
+          orElse: () => cats.first,
+        );
+      }
       _isLoading = false;
     });
   }
@@ -410,11 +419,15 @@ class _PaginaGastosState extends State<PaginaGastos> {
                 SizedBox(width: 104, child: _buildCategoryRail()),
                 const VerticalDivider(width: 1),
                 Expanded(
-                  child: _buildGastosGrid(
-                    productos: productosDeCategoria,
-                    qtyById: qtyById,
-                    categoryFallbackIcon: _selectedCategory?.iconAssetPath ??
-                        'assets/icons/default.svg',
+                  child: RefreshIndicator(
+                    onRefresh: _cargarDatosDeGastos,
+                    child: _buildGastosGrid(
+                      productos: productosDeCategoria,
+                      qtyById: qtyById,
+                      categoryFallbackIcon:
+                          _selectedCategory?.iconAssetPath ??
+                              'assets/icons/default.svg',
+                    ),
                   ),
                 ),
               ],

@@ -30,9 +30,13 @@ class _PinsPageState extends State<PinsPage>
   List<String> salesHashes = <String>[];
   List<String> adminHashes = <String>[];
 
-  // Toggles to show/hide the hashes in the UI
-  bool showSalesHashes = false;
-  bool showAdminHashes = false;
+  // Plaintext PINs (admin-only doc or caché local)
+  List<String> salesPlain = <String>[];
+  List<String> adminPlain = <String>[];
+
+  // Toggles para mostrar en claro
+  bool showSalesPlain = false;
+  bool showAdminPlain = false;
 
   @override
   void initState() {
@@ -84,6 +88,26 @@ class _PinsPageState extends State<PinsPage>
         hasAdminPin = adminCount > 0;
         isLoading = false;
       });
+      // Intentar cargar PINs en claro desde remoto (si permisos) y/o caché local
+      try {
+        final plain = await auth.getRemotePlainPins();
+        setState(() {
+          salesPlain = (plain['sales'] as List?)?.whereType<String>().toList() ?? <String>[];
+          adminPlain = (plain['admin'] as List?)?.whereType<String>().toList() ?? <String>[];
+        });
+      } catch (_) {
+        // Ignorar si no hay permisos o método
+      }
+      // Fallback a caché local si está vacío
+      if (salesPlain.isEmpty && adminPlain.isEmpty) {
+        try {
+          final localPlain = await auth.getLocalPlainPinsCache();
+          setState(() {
+            salesPlain = (localPlain['sales'] as List?)?.whereType<String>().toList() ?? <String>[];
+            adminPlain = (localPlain['admin'] as List?)?.whereType<String>().toList() ?? <String>[];
+          });
+        } catch (_) {}
+      }
     } catch (_) {
       final hasSales = await auth.hasOfflineSalesPin();
       final hasAdmin = await auth.hasOfflineAdminPin();
@@ -97,6 +121,14 @@ class _PinsPageState extends State<PinsPage>
         adminCount = hasAdmin ? 1 : 0;
         isLoading = false;
       });
+      // Fallback: intentar caché local de PINs en claro
+      try {
+        final localPlain = await auth.getLocalPlainPinsCache();
+        setState(() {
+          salesPlain = (localPlain['sales'] as List?)?.whereType<String>().toList() ?? <String>[];
+          adminPlain = (localPlain['admin'] as List?)?.whereType<String>().toList() ?? <String>[];
+        });
+      } catch (_) {}
     }
   }
 
@@ -110,7 +142,7 @@ class _PinsPageState extends State<PinsPage>
       backgroundColor: const Color(0xFFF8FAFC),
       body: CustomScrollView(
         slivers: [
-          _buildSliverAppBar(context, isDesktop),
+          _buildSliverAppBar(context, isDesktop, isTablet),
           SliverToBoxAdapter(
             child: FadeTransition(
               opacity: _fadeAnimation,
@@ -125,31 +157,75 @@ class _PinsPageState extends State<PinsPage>
     );
   }
 
-  Widget _buildSliverAppBar(BuildContext context, bool isDesktop) {
+  Widget _buildSliverAppBar(BuildContext context, bool isDesktop, bool isTablet) {
     return SliverAppBar(
       automaticallyImplyLeading: true,
-      toolbarHeight: isDesktop ? 80 : 64,
-      expandedHeight: isDesktop ? 140 : 100,
+      toolbarHeight: 56,
+      // Reducimos el expandedHeight para evitar gran espacio superior
+      expandedHeight: 56,
       floating: false,
       pinned: true,
       backgroundColor: Colors.white,
       foregroundColor: const Color(0xFF1E293B),
       elevation: 0,
       shadowColor: Colors.black12,
-      flexibleSpace: FlexibleSpaceBar(
-        centerTitle: true,
-        titlePadding: EdgeInsetsDirectional.only(
-          start: isDesktop ? 24 : 16,
-          bottom: isDesktop ? 16 : 12,
-        ),
-        title: Text(
-          'Gestión de PINs Offline',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: isDesktop ? 24 : 18,
-            color: const Color(0xFF1E293B),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Gestión de PINs Offline',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: isDesktop ? 20 : 16,
+                color: const Color(0xFF1E293B),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
+          if (isDesktop || isTablet)
+            Container(
+              margin: const EdgeInsets.only(left: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF06B6D4).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF06B6D4).withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    FontAwesomeIcons.shield,
+                    size: 10,
+                    color: Color(0xFF06B6D4),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Seguridad',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF06B6D4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+      actions: [
+        IconButton(
+          onPressed: _loadPinsState,
+          icon: const Icon(Icons.refresh_rounded),
+          tooltip: 'Actualizar estado',
+          iconSize: 20,
         ),
+        const SizedBox(width: 4),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -161,53 +237,8 @@ class _PinsPageState extends State<PinsPage>
               ],
             ),
           ),
-          child: Stack(
-            children: [
-              Positioned(
-                top: 20,
-                right: 20,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF06B6D4).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFF06B6D4).withOpacity(0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        FontAwesomeIcons.shield,
-                        size: 14,
-                        color: Color(0xFF06B6D4),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Seguridad',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF06B6D4),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
-      actions: [
-        IconButton(
-          onPressed: _loadPinsState,
-          icon: const Icon(Icons.refresh_rounded),
-          tooltip: 'Actualizar estado',
-        ),
-        const SizedBox(width: 8),
-      ],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Container(
@@ -237,12 +268,12 @@ class _PinsPageState extends State<PinsPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
           
           // Header informativo
           _buildInfoHeader(context, isDesktop),
           
-          SizedBox(height: isDesktop ? 48 : 32),
+          SizedBox(height: isDesktop ? 24 : 16),
           
           if (isLoading)
             const Center(
@@ -254,8 +285,9 @@ class _PinsPageState extends State<PinsPage>
           else ...[
             // Sección PINs de Ventas
             _buildPinSection(
+              type: 'sales',
               context: context,
-              title: 'PINs de Ventas (Modo Invitado)',
+              title: 'PINs de Ventas',
               subtitle: 'Controlan el acceso a ventas offline',
               icon: FontAwesomeIcons.store,
               gradient: const LinearGradient(
@@ -264,9 +296,10 @@ class _PinsPageState extends State<PinsPage>
               count: salesCount,
               hasPin: hasSalesPin,
               hashes: salesHashes,
-              showHashes: showSalesHashes,
-              onToggleShowHashes: () {
-                setState(() => showSalesHashes = !showSalesHashes);
+              plainPins: salesPlain,
+              showPlain: showSalesPlain,
+              onToggleShowPlain: () {
+                setState(() => showSalesPlain = !showSalesPlain);
               },
               onAdd: () => _showAddPinDialog('sales'),
               onRemove: () => _showRemovePinDialog('sales'),
@@ -278,8 +311,9 @@ class _PinsPageState extends State<PinsPage>
             
             // Sección PINs de Admin
             _buildPinSection(
+              type: 'admin',
               context: context,
-              title: 'PINs de Admin Local',
+              title: 'PINs de Admin',
               subtitle: 'Controlan el acceso administrativo offline',
               icon: FontAwesomeIcons.userShield,
               gradient: const LinearGradient(
@@ -288,9 +322,10 @@ class _PinsPageState extends State<PinsPage>
               count: adminCount,
               hasPin: hasAdminPin,
               hashes: adminHashes,
-              showHashes: showAdminHashes,
-              onToggleShowHashes: () {
-                setState(() => showAdminHashes = !showAdminHashes);
+              plainPins: adminPlain,
+              showPlain: showAdminPlain,
+              onToggleShowPlain: () {
+                setState(() => showAdminPlain = !showAdminPlain);
               },
               onAdd: () => _showAddPinDialog('admin'),
               onRemove: () => _showRemovePinDialog('admin'),
@@ -374,6 +409,7 @@ class _PinsPageState extends State<PinsPage>
   }
 
   Widget _buildPinSection({
+    required String type,
     required BuildContext context,
     required String title,
     required String subtitle,
@@ -382,8 +418,9 @@ class _PinsPageState extends State<PinsPage>
     required int count,
     required bool hasPin,
     required List<String> hashes,
-    required bool showHashes,
-    required VoidCallback onToggleShowHashes,
+    List<String>? plainPins,
+    required bool showPlain,
+    required VoidCallback onToggleShowPlain,
     required VoidCallback onAdd,
     required VoidCallback onRemove,
     required VoidCallback onClearAll,
@@ -526,61 +563,159 @@ class _PinsPageState extends State<PinsPage>
           ),
           const SizedBox(height: 16),
 
-          // Mostrar/ocultar hashes
-          Row(
-            children: [
-              TextButton.icon(
-                onPressed: onToggleShowHashes,
-                icon: Icon(showHashes ? Icons.visibility_off : Icons.visibility, size: 18),
-                label: Text(showHashes ? 'Ocultar PINs' : 'Mostrar PINs'),
-              ),
-              const SizedBox(width: 12),
-              if (hashes.isNotEmpty)
-                Text('(${hashes.length})', style: TextStyle(color: const Color(0xFF64748B))),
-            ],
+          // Botón único para ver/ocultar PINs en claro
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: onToggleShowPlain,
+              icon: Icon(showPlain ? Icons.visibility_off : Icons.remove_red_eye, size: 18),
+              label: Text(showPlain ? 'Ocultar PINs en claro' : 'Mostrar PINs en claro'),
+            ),
           ),
 
-          if (showHashes && hashes.isNotEmpty) ...[
+          // Sección de PINs en claro
+          if (showPlain) ...[
             const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+            if ((plainPins ?? <String>[])
+                .where((s) => s.length == 8 && int.tryParse(s) != null)
+                .isEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEFBF0),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFF1F2F4)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline, color: Color(0xFFF59E0B)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No hay PINs en claro disponibles. Puede que no haya permisos para leer el documento secreto en Firestore o que aún no se hayan añadido en claro. Añade un PIN nuevo para guardarlo en claro.',
+                        style: TextStyle(color: Colors.orange.shade900, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: hashes.map((h) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: SelectableText(
-                            h,
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              color: Colors.grey.shade800,
+            ] else ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: (plainPins ?? <String>[])
+                      .where((s) => s.length == 8 && int.tryParse(s) != null)
+                      .map((p) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: SelectableText(
+                              p,
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                color: Colors.grey.shade900,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                        IconButton(
-                          onPressed: () async {
-                            await Clipboard.setData(ClipboardData(text: h));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              _buildSnackBar('Hash copiado al portapapeles', Colors.green),
-                            );
-                          },
-                          icon: const Icon(Icons.copy, size: 18),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                          IconButton(
+                            onPressed: () async {
+                              await Clipboard.setData(ClipboardData(text: p));
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                _buildSnackBar('PIN copiado al portapapeles', Colors.green),
+                              );
+                            },
+                            icon: const Icon(Icons.copy, size: 18),
+                            tooltip: 'Copiar PIN',
+                          ),
+                          IconButton(
+                            onPressed: () async {
+                              final controller = TextEditingController(text: p);
+                              final newPin = await showDialog<String?>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  title: const Text('Editar PIN'),
+                                  content: TextField(
+                                    controller: controller,
+                                    autofocus: true,
+                                    obscureText: true,
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 8,
+                                    decoration: InputDecoration(
+                                      labelText: 'Nuevo PIN (8 dígitos)',
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      counterText: '',
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+                                    FilledButton(
+                                      onPressed: () {
+                                        final val = controller.text.trim();
+                                        if (RegExp(r'^\d{8}$').hasMatch(val)) {
+                                          Navigator.pop(ctx, val);
+                                        } else {
+                                          ScaffoldMessenger.of(ctx).showSnackBar(
+                                            _buildSnackBar('El PIN debe tener exactamente 8 dígitos', Colors.orange),
+                                          );
+                                        }
+                                      },
+                                      child: const Text('Guardar'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (newPin != null && newPin != p) {
+                                await _editPin(type, p, newPin);
+                              }
+                            },
+                            icon: const Icon(Icons.edit, size: 18),
+                            tooltip: 'Editar PIN',
+                          ),
+                          IconButton(
+                            onPressed: () async {
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Eliminar PIN'),
+                                  content: const Text('¿Eliminar este PIN en claro?'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                                    FilledButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                                      child: const Text('Eliminar'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirmed == true) {
+                                await _removePin(type, p);
+                              }
+                            },
+                            icon: const Icon(Icons.delete_outline, size: 18),
+                            tooltip: 'Eliminar PIN',
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
-            ),
+            ],
           ],
         ],
       ),
@@ -961,11 +1096,19 @@ class _PinsPageState extends State<PinsPage>
       final auth = context.read<AuthService>();
       if (type == 'sales') {
         await auth.addRemoteSalesPin(pin);
-        // refresh remote lists
         await _loadPinsState();
+        // Garantiza visibilidad inmediata en UI
+        setState(() {
+          if (!salesPlain.contains(pin)) salesPlain.add(pin);
+          showSalesPlain = true;
+        });
       } else {
         await auth.addRemoteAdminPin(pin);
         await _loadPinsState();
+        setState(() {
+          if (!adminPlain.contains(pin)) adminPlain.add(pin);
+          showAdminPlain = true;
+        });
       }
       ScaffoldMessenger.of(context).showSnackBar(
         _buildSnackBar('PIN añadido correctamente', Colors.green),
@@ -983,9 +1126,15 @@ class _PinsPageState extends State<PinsPage>
       if (type == 'sales') {
         await auth.removeRemoteSalesPin(pin);
         await _loadPinsState();
+        setState(() {
+          salesPlain.remove(pin);
+        });
       } else {
         await auth.removeRemoteAdminPin(pin);
         await _loadPinsState();
+        setState(() {
+          adminPlain.remove(pin);
+        });
       }
       ScaffoldMessenger.of(context).showSnackBar(
         _buildSnackBar('PIN eliminado correctamente', Colors.green),
@@ -1013,6 +1162,28 @@ class _PinsPageState extends State<PinsPage>
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         _buildSnackBar('Error al eliminar PINs: $e', Colors.red),
+      );
+    }
+  }
+
+  /// Edita un PIN existente: elimina el PIN antiguo y añade el nuevo.
+  Future<void> _editPin(String type, String oldPin, String newPin) async {
+    try {
+      final auth = context.read<AuthService>();
+      if (type == 'sales') {
+        await auth.removeRemoteSalesPin(oldPin);
+        await auth.addRemoteSalesPin(newPin);
+      } else {
+        await auth.removeRemoteAdminPin(oldPin);
+        await auth.addRemoteAdminPin(newPin);
+      }
+      await _loadPinsState();
+      ScaffoldMessenger.of(context).showSnackBar(
+        _buildSnackBar('PIN actualizado correctamente', Colors.green),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        _buildSnackBar('Error al actualizar PIN: $e', Colors.red),
       );
     }
   }

@@ -7,9 +7,13 @@ import 'package:shawarma_pos_nuevo/presentacion/pagina_principal.dart';
 import 'package:shawarma_pos_nuevo/datos/servicios/almacen_service.dart';
 
 /// Muestra el diálogo para registrar el gasto de insumos de apertura.
-/// Devuelve un objeto Gasto si el usuario registró correctamente, o null si canceló.
-Future<Gasto?> showGastoInsumosAperturaDialog(
-    BuildContext context, Caja cajaActiva) async {
+/// Retorna true si el usuario presionó "Registrar" (y se aplicaron los descuentos),
+/// o false si canceló/cerró el diálogo sin registrar.
+/// [useRootNavigator]: si es true, mostrará el diálogo con el root navigator.
+/// Por defecto es false para permitir anidar el diálogo sobre otro diálogo.
+Future<bool> showGastoInsumosAperturaDialog(
+  BuildContext context, Caja cajaActiva,
+  {bool useRootNavigator = false}) async {
   final formKey = GlobalKey<FormState>();
 
   // Campos por defecto (insumos individuales)
@@ -130,9 +134,9 @@ Future<Gasto?> showGastoInsumosAperturaDialog(
   // Cuántas recetas de Salsa se prepararon (visible solo si sePreparoSalsa == true)
   final ValueNotifier<int> salsaRecetas = ValueNotifier<int>(1);
 
-  final result = await showDialog<Gasto>(
+  final result = await showDialog<bool>(
     context: context,
-    useRootNavigator: true,
+    useRootNavigator: useRootNavigator,
     barrierDismissible: false,
     builder: (ctx) => Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -620,7 +624,7 @@ Future<Gasto?> showGastoInsumosAperturaDialog(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () => Navigator.pop(ctx),
+                      onPressed: () => Navigator.pop(ctx, false),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 10),
@@ -853,8 +857,8 @@ ${detalle}''',
                           }
                         }
 
-                        // Permitir continuar sin registrar gasto (no lo registramos para no afectar informes)
-                        Navigator.pop(ctx, null);
+                        // Indicar que se registró y ya se aplicaron descuentos
+                        Navigator.pop(ctx, true);
                       },
                       icon: const Icon(Icons.check_circle_rounded, size: 18),
                       style: FilledButton.styleFrom(
@@ -881,5 +885,5 @@ ${detalle}''',
     ),
   );
 
-  return result;
+  return result == true;
 }

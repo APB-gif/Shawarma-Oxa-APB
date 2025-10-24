@@ -14,6 +14,7 @@ import 'package:shawarma_pos_nuevo/presentacion/pagina_principal.dart';
 import 'package:shawarma_pos_nuevo/presentacion/caja/gasto_apertura_dialog.dart';
 import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service.dart';
 import 'package:shawarma_pos_nuevo/presentacion/auth/auth_gate.dart';
+import 'package:shawarma_pos_nuevo/main.dart';
 
 // --------- Helpers ---------
 String _catNombre(dynamic p) {
@@ -61,6 +62,9 @@ Future<void> _mostrarDialogoAbrirCajaGenerico(BuildContext context) async {
   ) async {
     final user = FirebaseAuth.instance.currentUser;
     final isGuest = user == null;
+    // Capturar referencia al servicio antes de cualquier await que pueda disparar
+    // reconstrucciones que reciclen el context.
+    final authSvc = Provider.of<AuthService>(context, listen: false);
 
     try {
       await cajaService.abrirCaja(
@@ -70,8 +74,27 @@ Future<void> _mostrarDialogoAbrirCajaGenerico(BuildContext context) async {
         fechaSeleccionada: fecha,
       );
 
-      if (dialogContext.mounted && Navigator.of(dialogContext).canPop()) {
-        Navigator.of(dialogContext).pop();
+      // Al abrir caja: si el usuario no es admin, poner rol "trabajador"
+      try {
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid != null) {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .get();
+          final rol = (userDoc.data()?['rol'] ?? '').toString().toLowerCase();
+          if (rol != 'administrador') {
+            // Cambiar rol a trabajador durante la sesión de caja (sin usar context luego)
+            await authSvc.updateUserRole(uid, 'trabajador');
+          }
+        }
+      } catch (_) {}
+
+      // Cerrar el diálogo usando el navigator global para evitar lookup de ancestros
+      // desde un BuildContext que pudo quedar en un árbol desactivado.
+      final nav = navigatorKey.currentState;
+      if (nav != null && nav.canPop()) {
+        nav.pop();
       }
       if (mainScaffoldContext != null) {
         mostrarNotificacionElegante(
@@ -409,6 +432,7 @@ class PaginaCaja extends StatelessWidget {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
                           onTap: () async {
+                            final auth = Provider.of<AuthService>(context, listen: false);
                             final shouldLogout = await showDialog<bool>(
                               context: context,
                               builder: (context) => AlertDialog(
@@ -448,7 +472,8 @@ class PaginaCaja extends StatelessWidget {
                               rootNav.popUntil((route) => route.isFirst);
                             }
 
-                            await context.read<AuthService>().signOut();
+                            // Usar instancia capturada para evitar mirar el árbol tras posibles pops
+                            await auth.signOut();
                             if (!context.mounted) return;
                             Navigator.of(context).pushAndRemoveUntil(
                               MaterialPageRoute(
@@ -512,10 +537,13 @@ class PaginaCaja extends StatelessWidget {
                   FirebaseAuth.instance.currentUser?.email ??
                   'Usuario';
               WidgetsBinding.instance.addPostFrameCallback((_) async {
-                await context
-                    .read<CajaService>()
-                    .actualizarUsuarioSesion(uidNow, nombreNow);
-                await context.read<CajaService>().pushLiveNow();
+                // Usar la instancia capturada de cajaService en lugar de context.read
+                try {
+                  await cajaService.actualizarUsuarioSesion(uidNow, nombreNow);
+                  await cajaService.pushLiveNow();
+                } catch (_) {
+                  // Ignorar fallos silenciosamente: la sincronización es opcional aquí.
+                }
               });
             }
 
@@ -1576,6 +1604,8 @@ class _VistaCajaAbierta extends StatelessWidget {
         builder: (dialogContext) {
           return StatefulBuilder(
             builder: (context, setDialogState) {
+              // Capturar servicio antes de operaciones async que pueden desmontar este build context
+              final authSvc = Provider.of<AuthService>(context, listen: false);
               return AlertDialog(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -1629,15 +1659,29 @@ class _VistaCajaAbierta extends StatelessWidget {
                   TextButton(
                     onPressed: isCerrando
                         ? null
-                        : () => Navigator.of(dialogContext).pop(),
+                        : () {
+                            final nav = (mainScaffoldContext != null)
+                                ? Navigator.of(mainScaffoldContext!,
+                                    rootNavigator: true)
+                                : Navigator.of(dialogContext,
+                                    rootNavigator: true);
+                            if (nav.mounted && nav.canPop()) nav.pop();
+                          },
                     child: const Text('Cancelar'),
                   ),
                   ElevatedButton(
-                    onPressed: isCerrando
+          onPressed: isCerrando
                         ? null
-                        : () async {
+                        :  () async {
                             if (formKey.currentState?.validate() ?? false) {
                               setDialogState(() => isCerrando = true);
+                // Cerrar teclado para evitar re-composiciones durante el cierre
+                FocusManager.instance.primaryFocus?.unfocus();
+                final navigator = (mainScaffoldContext != null)
+                  ? Navigator.of(mainScaffoldContext!,
+                    rootNavigator: true)
+                  : Navigator.of(dialogContext,
+                    rootNavigator: true);
                               try {
                                 final monto = double.parse(
                                     controller.text.replaceAll(',', '.'));
@@ -1648,27 +1692,23 @@ class _VistaCajaAbierta extends StatelessWidget {
                                         (g.tipo ?? '') == 'insumos_apertura');
 
                                 if (!tieneGastoApertura) {
-                                  // Mostrar diálogo para registrar gasto de apertura
-                                  BuildContext dialogCtx;
-                                  if (mainScaffoldContext != null) {
-                                    dialogCtx = mainScaffoldContext!;
-                                  } else {
-                                    try {
-                                      dialogCtx = Navigator.of(dialogContext,
-                                              rootNavigator: true)
-                                          .context;
-                                    } catch (_) {
-                                      dialogCtx = dialogContext;
+                                  // Mostrar diálogo para registrar gasto de apertura y ESPERAR confirmación
+
+                                  // Mostrar el diálogo de insumos encima DEL diálogo actual
+                                  // para evitar que se desmonte el diálogo padre al cerrar/confirmar.
+                                  final registrado = await showGastoInsumosAperturaDialog(
+                                      dialogContext, caja,
+                                      useRootNavigator: false);
+
+                                  // Si NO se presionó Registrar, abortar el cierre
+                                  if (registrado != true) {
+                                    if (dialogContext.mounted) {
+                                      setDialogState(() => isCerrando = false);
                                     }
-                                  }
-
-                                  final gasto = await showGastoInsumosAperturaDialog(
-                                      dialogCtx, caja);
-
-                                  // Si el usuario no registró nada (insumos 0), continuar sin gasto.
-                                  // Si registró y tiene ítems, guardarlo localmente.
-                                  if (gasto != null && (gasto.items.isNotEmpty)) {
-                                    await cajaService.agregarGastoLocal(gasto);
+                                    if (navigator.mounted) {
+                                      // Si el usuario canceló y la caja aún está abierta, nada más.
+                                    }
+                                    return;
                                   }
                                 }
 
@@ -1678,8 +1718,26 @@ class _VistaCajaAbierta extends StatelessWidget {
                                   fechaCierreSeleccionada: fechaSeleccionada,
                                 );
 
-                                if (dialogContext.mounted) {
-                                  Navigator.of(dialogContext).pop();
+                                // Al cerrar caja: si el usuario no es admin, poner rol "fuera de servicio"
+                                try {
+                                  final uid = FirebaseAuth.instance.currentUser?.uid;
+                                  if (uid != null) {
+                                    final userSnap = await FirebaseFirestore.instance
+                                        .collection('users')
+                                        .doc(uid)
+                                        .get();
+                                    final rol =
+                                        (userSnap.data()?['rol'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
+                                    if (rol != 'administrador') {
+                                      await authSvc.updateUserRole(uid, 'fuera de servicio');
+                                    }
+                                  }
+                                } catch (_) {}
+
+                                if (navigator.mounted && navigator.canPop()) {
+                                  navigator.pop();
                                 }
                                 if (mainScaffoldContext != null) {
                                   mostrarNotificacionElegante(

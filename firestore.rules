@@ -27,11 +27,31 @@ service cloud.firestore {
       allow read:   if isSignedIn();
       allow update: if (
                        isSelf(uid)
-                       && request.resource.data.diff(resource.data).changedKeys()
-                            .hasOnly(['nombre','photoUrl'])
-                       && request.resource.data.rol   == resource.data.rol
                        && request.resource.data.uid   == resource.data.uid
                        && request.resource.data.email == resource.data.email
+                       && (
+                            // 1) Edición de perfil propia (solo nombre/foto) manteniendo rol
+                            (
+                              request.resource.data.diff(resource.data).changedKeys()
+                                .hasOnly(['nombre','photoUrl'])
+                              && request.resource.data.rol == resource.data.rol
+                            )
+                            ||
+                            // 2) Transiciones de rol AUTORIZADAS por el propio usuario
+                            //    Permitimos SOLO:
+                            //      - espectador|fuera de servicio -> trabajador (al abrir caja)
+                            //      - trabajador -> fuera de servicio (al cerrar caja)
+                            (
+                              request.resource.data.diff(resource.data).changedKeys().hasOnly(['rol'])
+                              && (
+                                   ((resource.data.rol in ['espectador','fuera de servicio'])
+                                     && request.resource.data.rol == 'trabajador')
+                                   ||
+                                   (resource.data.rol == 'trabajador'
+                                     && request.resource.data.rol == 'fuera de servicio')
+                                 )
+                            )
+                          )
                      ) || isAdmin();
       allow delete: if isAdmin();
     }
