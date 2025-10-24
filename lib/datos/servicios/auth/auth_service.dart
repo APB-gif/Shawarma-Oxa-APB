@@ -106,9 +106,10 @@ class AuthService {
       'uid': user.uid,
       'email': user.email,
       'nombre': (user.displayName ?? '').trim(),
-      'rol': debeSerAdmin
-          ? 'administrador'
-          : 'trabajador', // Inicialmente asigna 'trabajador'
+      // Rol por defecto:
+      //  - Si no hay administradores aún, o el correo está en la whitelist, será 'administrador'.
+      //  - En cualquier otro caso, ahora se crea como 'espectador' (solo lectura hasta que un admin cambie el rol).
+      'rol': debeSerAdmin ? 'administrador' : 'espectador',
       'fechaCreacion': Timestamp.now(),
     });
   }

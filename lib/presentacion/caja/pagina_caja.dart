@@ -385,8 +385,40 @@ class PaginaCaja extends StatelessWidget {
         return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
           stream: userDoc,
           builder: (ctx, snap) {
-            final isAdmin =
-                (snap.data?.data()?['rol'] ?? 'trabajador') == 'administrador';
+            final rol = ((snap.data?.data()?['rol'] ?? 'trabajador')
+                    .toString()
+                    .trim())
+                .toLowerCase();
+            final isAdmin = rol == 'administrador';
+            final isViewer = rol == 'espectador';
+            final isOff = rol == 'fuera de servicio';
+
+            if (isOff) {
+              return Scaffold(
+                appBar: AppBar(title: const Text('Caja')),
+                body: const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.lock_person_rounded,
+                            size: 64, color: Colors.redAccent),
+                        SizedBox(height: 12),
+                        Text('Acceso restringido',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 8),
+                        Text(
+                          'Tu rol actual no permite operar en Caja.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
 
             // Adoptar caja local al usuario autenticado (si cambió de sesión)
             final cajaActiva = cajaService.cajaActiva;
@@ -433,12 +465,16 @@ class PaginaCaja extends StatelessWidget {
                 duration: const Duration(milliseconds: 400),
                 transitionBuilder: (child, animation) =>
                     FadeTransition(opacity: animation, child: child),
-                child: cajaActiva != null
-                    ? _VistaCajaAbierta(
-                        key: ValueKey(cajaActiva.id), caja: cajaActiva)
-                    : (!isAdmin
-                        ? const _VistaCajaCerrada(key: ValueKey('caja-cerrada'))
-                        : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        child: cajaActiva != null
+          ? _VistaCajaAbierta(
+            key: ValueKey(cajaActiva.id), caja: cajaActiva)
+          : (!isAdmin
+            ? _VistaCajaCerrada(
+              key: const ValueKey('caja-cerrada'),
+              allowOpen: !isViewer,
+              isViewer: isViewer,
+              )
+            : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                             stream: FirebaseFirestore.instance
                                 .collection('cajas_live')
                                 .limit(1)
@@ -449,8 +485,11 @@ class PaginaCaja extends StatelessWidget {
                               return hasLive
                                   ? const _VistaCajasActivasAdmin(
                                       key: ValueKey('admin-live'))
-                                  : const _VistaCajaCerrada(
-                                      key: ValueKey('caja-cerrada'));
+                  : _VistaCajaCerrada(
+                    key: const ValueKey('caja-cerrada'),
+                    allowOpen: true,
+                    isViewer: false,
+                  );
                             },
                           )),
               ),
@@ -464,7 +503,9 @@ class PaginaCaja extends StatelessWidget {
 
 // -------- VISTA CAJA CERRADA (trabajador) --------
 class _VistaCajaCerrada extends StatelessWidget {
-  const _VistaCajaCerrada({super.key});
+  final bool allowOpen;
+  final bool isViewer;
+  const _VistaCajaCerrada({super.key, required this.allowOpen, required this.isViewer});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -507,30 +548,48 @@ class _VistaCajaCerrada extends StatelessWidget {
                       ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Inicia una nueva sesión para comenzar a registrar ventas.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: _ThemeColors.inactive,
-                      ),
-                ),
+                if (!isViewer)
+                  Text(
+                    'Inicia una nueva sesión para comenzar a registrar ventas.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: _ThemeColors.inactive,
+                        ),
+                  )
+                else
+                  Text(
+                    'Modo espectador: no puedes abrir caja ni registrar acciones.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: _ThemeColors.inactive,
+                        ),
+                  ),
                 const SizedBox(height: 40),
                 InkWell(
-                  onTap: () => _mostrarDialogoAbrirCajaGenerico(context),
+                  onTap: allowOpen ? () => _mostrarDialogoAbrirCajaGenerico(context) : null,
                   borderRadius: BorderRadius.circular(16),
                   child: Ink(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      gradient: const LinearGradient(
-                        colors: [
-                          _ThemeColors.primaryGradientStart,
-                          _ThemeColors.primaryGradientEnd
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      gradient: allowOpen
+                          ? const LinearGradient(
+                              colors: [
+                                _ThemeColors.primaryGradientStart,
+                                _ThemeColors.primaryGradientEnd
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : LinearGradient(
+                              colors: [
+                                Colors.grey.shade400,
+                                Colors.grey.shade500,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
                     ),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1578,8 +1637,12 @@ class _VistaCajaAbierta extends StatelessWidget {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: userDoc,
       builder: (context, snap) {
-        final isAdmin =
-            (snap.data?.data()?['rol'] ?? 'trabajador') == 'administrador';
+        final rol = ((snap.data?.data()?['rol'] ?? 'trabajador')
+                .toString()
+                .trim())
+            .toLowerCase();
+        final isAdmin = rol == 'administrador';
+        final isViewer = rol == 'espectador';
 
         return Scaffold(
           backgroundColor: _ThemeColors.background,
@@ -1649,7 +1712,9 @@ class _VistaCajaAbierta extends StatelessWidget {
             ],
           ),
           // FABs según rol/adopción
-          floatingActionButton: isAdmin
+      floatingActionButton: isViewer
+        ? null
+        : isAdmin
               ? (adoptada
                   // Admin + ADOPTADA: mostrar Devolver + Cerrar
                   ? Column(

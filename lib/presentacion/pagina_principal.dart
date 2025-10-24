@@ -26,6 +26,8 @@ final GlobalKey<ScaffoldMessengerState> principalMessengerKey =
 
 const kRolAdmin = 'administrador';
 const kRolTrab = 'trabajador';
+const kRolEsp = 'espectador';
+const kRolOff = 'fuera de servicio';
 
 class PaginaPrincipal extends StatefulWidget {
   const PaginaPrincipal({super.key});
@@ -114,11 +116,44 @@ class _PaginaPrincipalState extends State<PaginaPrincipal> {
         }
 
         final data = snap.data!.data() ?? {};
-        final rol = (data['rol'] as String?)?.trim() ?? kRolTrab;
+        final rol = (data['rol'] as String?)?.trim() ?? kRolEsp;
         final nombre = (data['nombre'] as String?)?.trim() ?? '';
         final isAdmin = rol == kRolAdmin;
+        final isViewer = rol == kRolEsp;
+        final isOff = rol == kRolOff;
 
-        // Define items por rol
+        // Si está fuera de servicio, bloquear toda la app hasta que un admin cambie su rol
+        if (isOff) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Acceso restringido')),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.lock_person_rounded,
+                        size: 64, color: colorScheme.error),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Tu cuenta está fuera de servicio',
+                      textAlign: TextAlign.center,
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Un administrador debe asignarte un rol activo para continuar.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        // Define items por rol (viewer ve Ventas y Caja igual que trabajador)
         final paginas = isAdmin
             ? <Widget>[
                 const PaginaVentas(),
@@ -132,7 +167,7 @@ class _PaginaPrincipalState extends State<PaginaPrincipal> {
                 const PaginaCaja(),
               ];
 
-        final items = isAdmin
+    final items = isAdmin
             ? <BottomNavigationBarItem>[
                 BottomNavigationBarItem(
                   icon: Container(
@@ -270,6 +305,18 @@ class _PaginaPrincipalState extends State<PaginaPrincipal> {
         }
 
         final photoUrl = FirebaseAuth.instance.currentUser?.photoURL;
+        String roleBadge;
+        Color roleBadgeColor;
+        if (isAdmin) {
+          roleBadge = 'ADMIN';
+          roleBadgeColor = Colors.amber;
+        } else if (isViewer) {
+          roleBadge = 'VIEW';
+          roleBadgeColor = Colors.blueGrey;
+        } else {
+          roleBadge = 'STAFF';
+          roleBadgeColor = Colors.green;
+        }
 
         return ScaffoldMessenger(
           key: principalMessengerKey,
@@ -340,13 +387,11 @@ class _PaginaPrincipalState extends State<PaginaPrincipal> {
                                   vertical: 1,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: isAdmin
-                                      ? Colors.amber.withOpacity(0.8)
-                                      : Colors.green.withOpacity(0.8),
+                                  color: roleBadgeColor.withOpacity(0.8),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  isAdmin ? 'ADMIN' : 'STAFF',
+                                  roleBadge,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 8,

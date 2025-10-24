@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:shawarma_pos_nuevo/datos/modelos/caja.dart';
 import 'package:shawarma_pos_nuevo/datos/modelos/categoria.dart';
@@ -2328,111 +2329,169 @@ class _PaginaVentasState extends State<PaginaVentas> {
 
   @override
   Widget build(BuildContext context) {
-    final cajaActiva = context.watch<CajaService>().cajaActiva;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final userDoc = (uid != null)
+        ? FirebaseFirestore.instance.collection('users').doc(uid).snapshots()
+        : const Stream<DocumentSnapshot<Map<String, dynamic>>>.empty();
 
-    if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: userDoc,
+      builder: (ctx, snap) {
+        final rol = ((snap.data?.data()?['rol'] ?? 'trabajador')
+                .toString()
+                .trim())
+            .toLowerCase();
+        final isViewer = rol == 'espectador';
+        final isOff = rol == 'fuera de servicio';
 
-    // Cantidades en el carrito (para pintar badges)
-    final qtyById = <String, int>{};
-    for (final item in _cart) {
-      qtyById.update(item.producto.id, (v) => v + 1, ifAbsent: () => 1);
-    }
+        final cajaActiva = context.watch<CajaService>().cajaActiva;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Ventas',
-            style: GoogleFonts.cinzelDecorative(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        actions: [
-          // 🔒 Ir a la pantalla de Caja
-          IconButton(
-            icon: const Icon(Icons.lock_outline_rounded),
-            tooltip: 'Caja',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const PaginaCaja()),
-              );
-            },
-          ),
-          // (Botón de Gasto de Insumos removido del AppBar)
-          // 🧴 Estado salsa de ajo (mostramos en color si hay potes disponibles)
-          IconButton(
-            icon: Icon(Icons.invert_colors,
-                color: _salsaPotes
-                        .any((p) => (p['fraccion'] as num).toDouble() > 0)
-                    ? Colors.orange
-                    : Colors.grey),
-            tooltip: 'Estado Salsa de ajo',
-            onPressed: _showSalsaDialog,
-          ),
-          // 🗑️ Descartar caja local (solo si hay una abierta)
-          if (cajaActiva != null)
-            IconButton(
-              icon: const Icon(Icons.delete_forever_outlined),
-              tooltip: 'Descartar caja local',
-              onPressed: _confirmDiscardCajaLocal,
-            ),
-          if (_pedidosPendientes.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Badge(
-                label: Text(_pedidosPendientes.length.toString()),
-                child: IconButton(
-                  icon: const Icon(Icons.inventory_2_outlined),
-                  tooltip: 'Pedidos Pendientes',
-                  onPressed: _showPendingOrders,
+        if (_isLoading) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+
+        if (isOff) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Ventas')),
+            body: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.lock_person_rounded,
+                        size: 64, color: Colors.redAccent),
+                    SizedBox(height: 12),
+                    Text('Acceso restringido',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
+                    Text(
+                      'Tu rol actual no permite operar en Ventas.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             ),
-        ],
-      ),
-      body: Column(
-        children: [
-          const NetStatusStrip(
-            syncCaja:
-                false, // 🔄 sincroniza caja/ventas pendientes al reconectar/loguear
-            syncGastos: false, // en Ventas no hace falta sincronizar gastos
-          ),
-          Expanded(
-            child: (context.watch<CajaService>().cajaActiva == null)
-                ? _buildCajaCerradaView()
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildCategoryRail(),
-                      Expanded(
-                        child: _buildProductosGrid(qtyById: qtyById),
-                      ),
-                    ],
+          );
+        }
+
+        // Cantidades en el carrito (para pintar badges)
+        final qtyById = <String, int>{};
+        for (final item in _cart) {
+          qtyById.update(item.producto.id, (v) => v + 1, ifAbsent: () => 1);
+        }
+
+        void showReadOnlyMsg() {
+          if (mainScaffoldContext != null) {
+            mostrarNotificacionElegante(
+              mainScaffoldContext!,
+              'Modo espectador: acción no permitida',
+              esError: true,
+              messengerKey: principalMessengerKey,
+            );
+          }
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('Ventas',
+                style:
+                    GoogleFonts.cinzelDecorative(fontWeight: FontWeight.bold)),
+            centerTitle: true,
+            actions: [
+              // 🔒 Ir a la pantalla de Caja
+              IconButton(
+                icon: const Icon(Icons.lock_outline_rounded),
+                tooltip: 'Caja',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PaginaCaja()),
+                  );
+                },
+              ),
+              // 🧴 Estado salsa de ajo (solo admin/trabajador pueden modificar)
+              IconButton(
+                icon: Icon(Icons.invert_colors,
+                    color: _salsaPotes
+                            .any((p) => (p['fraccion'] as num).toDouble() > 0)
+                        ? Colors.orange
+                        : Colors.grey),
+                tooltip: 'Estado Salsa de ajo',
+                onPressed: isViewer ? showReadOnlyMsg : _showSalsaDialog,
+              ),
+              // 🗑️ Descartar caja local (solo si hay una abierta y no es espectador)
+              if (cajaActiva != null)
+                IconButton(
+                  icon: const Icon(Icons.delete_forever_outlined),
+                  tooltip: 'Descartar caja local',
+                  onPressed: isViewer ? showReadOnlyMsg : _confirmDiscardCajaLocal,
+                ),
+              if (_pedidosPendientes.isNotEmpty && !isViewer)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Badge(
+                    label: Text(_pedidosPendientes.length.toString()),
+                    child: IconButton(
+                      icon: const Icon(Icons.inventory_2_outlined),
+                      tooltip: 'Pedidos Pendientes',
+                      onPressed: _showPendingOrders,
+                    ),
                   ),
+                ),
+            ],
           ),
-        ],
-      ),
-      floatingActionButton: cajaActiva == null || _cart.isEmpty
-          ? null
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FloatingActionButton(
-                  onPressed: _confirmAndClearCart,
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  foregroundColor: Theme.of(context).colorScheme.onError,
-                  heroTag: 'vaciarCarrito',
-                  tooltip: 'Vaciar Carrito',
-                  child: const Icon(Icons.delete_forever_rounded),
+          body: Column(
+            children: [
+              const NetStatusStrip(
+                syncCaja: false,
+                syncGastos: false,
+              ),
+              Expanded(
+                child: (context.watch<CajaService>().cajaActiva == null)
+                    ? _buildCajaCerradaView(canOpenCaja: !isViewer)
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildCategoryRail(),
+                          Expanded(
+                            child: _buildProductosGrid(
+                                qtyById: qtyById,
+                                readOnly: isViewer,
+                                onReadOnlyAction: showReadOnlyMsg),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+          floatingActionButton: (cajaActiva == null || _cart.isEmpty || isViewer)
+              ? null
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    FloatingActionButton(
+                      onPressed: _confirmAndClearCart,
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Theme.of(context).colorScheme.onError,
+                      heroTag: 'vaciarCarrito',
+                      tooltip: 'Vaciar Carrito',
+                      child: const Icon(Icons.delete_forever_rounded),
+                    ),
+                    const SizedBox(width: 16),
+                    FloatingActionButton.extended(
+                      onPressed: () => _openCart(cajaActiva),
+                      heroTag: 'abrirCarrito',
+                      label: Text(
+                          '$_cartCount • S/ ${_cartTotal.toStringAsFixed(2)}'),
+                      icon: const Icon(Icons.shopping_basket_outlined),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                FloatingActionButton.extended(
-                  onPressed: () => _openCart(cajaActiva),
-                  heroTag: 'abrirCarrito',
-                  label:
-                      Text('$_cartCount • S/ ${_cartTotal.toStringAsFixed(2)}'),
-                  icon: const Icon(Icons.shopping_basket_outlined),
-                ),
-              ],
-            ),
+        );
+      },
     );
   }
 
@@ -2488,7 +2547,11 @@ class _PaginaVentasState extends State<PaginaVentas> {
     );
   }
 
-  Widget _buildProductosGrid({required Map<String, int> qtyById}) {
+  Widget _buildProductosGrid({
+    required Map<String, int> qtyById,
+    bool readOnly = false,
+    VoidCallback? onReadOnlyAction,
+  }) {
     if (_selectedCategory == null) {
       return const Center(child: Text('Seleccione una categoría'));
     }
@@ -2534,8 +2597,12 @@ class _PaginaVentasState extends State<PaginaVentas> {
               producto: p,
               currentQty: qty,
               fallbackImagePath: fallbackImage,
-              onAdd: () => _addToCart(p),
-              onRemove: () => _removeOneByProductId(p.id),
+              onAdd: readOnly
+                  ? (onReadOnlyAction ?? () {})
+                  : () => _addToCart(p),
+              onRemove: readOnly
+                  ? (onReadOnlyAction ?? () {})
+                  : () => _removeOneByProductId(p.id),
             );
           },
         );
@@ -2543,7 +2610,7 @@ class _PaginaVentasState extends State<PaginaVentas> {
     );
   }
 
-  Widget _buildCajaCerradaView() {
+  Widget _buildCajaCerradaView({required bool canOpenCaja}) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -2562,11 +2629,13 @@ class _PaginaVentasState extends State<PaginaVentas> {
             // 👉 Ir a la pantalla de Caja para abrirla allí
             FilledButton.icon(
               icon: const Icon(Icons.point_of_sale_outlined),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PaginaCaja()),
-                );
-              },
+              onPressed: canOpenCaja
+                  ? () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const PaginaCaja()),
+                      );
+                    }
+                  : null,
               label: const Text('Abrir caja'),
             ),
           ],

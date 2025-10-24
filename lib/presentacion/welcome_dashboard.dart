@@ -92,10 +92,11 @@ class _WelcomeDashboardState extends State<WelcomeDashboard>
           return const _LoadingScaffold();
         }
 
-        final data = snap.data!.data() ?? {};
-        final nombre = (data['nombre'] as String?)?.trim() ?? '';
-        final rol = ((data['rol'] as String?) ?? 'trabajador').trim();
-        final isAdmin = rol == 'administrador';
+  final data = snap.data!.data() ?? {};
+  final nombre = (data['nombre'] as String?)?.trim() ?? '';
+  final rol = ((data['rol'] as String?) ?? 'espectador').trim();
+  final isAdmin = rol == 'administrador';
+  final isViewer = rol == 'espectador';
 
         if (_needsName(nombre)) {
           return _OnboardingForm(isAdmin: isAdmin);
@@ -121,6 +122,7 @@ class _WelcomeDashboardState extends State<WelcomeDashboard>
                   animation: _fadeAnimation,
                   nombre: nombre,
                   isAdmin: isAdmin,
+                  isViewer: isViewer,
                 ),
         );
       },
@@ -133,12 +135,14 @@ class _WelcomeView extends StatelessWidget {
   final Animation<double> animation;
   final String nombre;
   final bool isAdmin;
+  final bool isViewer;
 
   const _WelcomeView({
     super.key,
     required this.animation,
     required this.nombre,
     required this.isAdmin,
+    required this.isViewer,
   });
 
   @override
@@ -322,13 +326,17 @@ class _WelcomeView extends StatelessWidget {
                               Icon(
                                 isAdmin
                                     ? Icons.admin_panel_settings
-                                    : Icons.group,
+                                    : (isViewer
+                                        ? Icons.visibility_rounded
+                                        : Icons.group),
                                 color: colorScheme.onPrimary,
                                 size: 18,
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                isAdmin ? 'Administrador' : 'Equipo de Ventas',
+                                isAdmin
+                                    ? 'Administrador'
+                                    : (isViewer ? 'Espectador' : 'Equipo de Ventas'),
                                 style: theme.textTheme.titleSmall?.copyWith(
                                   color: colorScheme.onPrimary,
                                   fontWeight: FontWeight.w600,
