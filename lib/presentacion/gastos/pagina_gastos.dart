@@ -7,6 +7,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service.dart';
+import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service_offline.dart';
+import 'package:shawarma_pos_nuevo/presentacion/login/pagina_login.dart';
 
 // Base
 import 'package:shawarma_pos_nuevo/datos/modelos/categoria.dart';
@@ -353,6 +356,41 @@ class _PaginaGastosState extends State<PaginaGastos> {
             style: GoogleFonts.cinzelDecorative(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
+          // ⬅️ Volver a login offline si estamos en modo admin local/offline
+          if (context.read<AuthService>().isOffline)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Volver a login offline',
+              onPressed: () async {
+                final should = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    title: const Text('Volver a Login offline'),
+                    content: const Text(
+                        'Se cerrará la sesión offline actual y volverás a la pantalla de login.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancelar'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Continuar'),
+                      ),
+                    ],
+                  ),
+                );
+                if (should != true) return;
+                await context.read<AuthService>().clearOfflineMode();
+                if (!context.mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const PaginaLogin()),
+                  (route) => false,
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.shopping_cart_outlined),
             tooltip: 'Lista de Compras',
