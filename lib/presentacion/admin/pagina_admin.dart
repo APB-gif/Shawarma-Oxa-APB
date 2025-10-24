@@ -440,8 +440,17 @@ class _PaginaAdminState extends State<PaginaAdmin>
     final theme = Theme.of(context);
     final auth = context.read<AuthService>();
 
-    bool hasSales = await auth.hasOfflineSalesPin();
-    bool hasAdmin = await auth.hasOfflineAdminPin();
+    // Obtener estado desde Firestore; si falla, usar cache local
+    bool hasSales = false;
+    bool hasAdmin = false;
+    try {
+      final state = await auth.getRemotePinsState();
+      hasSales = state['sales'] ?? false;
+      hasAdmin = state['admin'] ?? false;
+    } catch (_) {
+      hasSales = await auth.hasOfflineSalesPin();
+      hasAdmin = await auth.hasOfflineAdminPin();
+    }
 
     showDialog(
       context: context,
@@ -483,8 +492,7 @@ class _PaginaAdminState extends State<PaginaAdmin>
               maxLength: 8,
               decoration: InputDecoration(
                 labelText: 'Nuevo PIN de ventas',
-                helperText:
-                    'Por defecto: 12332100 si no se configura ninguno.',
+                helperText: 'Se requiere un PIN configurado para validar offline.',
                 prefixIcon: const Icon(Icons.store_mall_directory_outlined),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -503,7 +511,7 @@ class _PaginaAdminState extends State<PaginaAdmin>
                 if (hasSales)
                   TextButton.icon(
                     onPressed: () async {
-                      await auth.clearOfflineSalesPin();
+                      await auth.clearRemoteSalesPin();
                       setState(() => hasSales = false);
                       ScaffoldMessenger.of(context).showSnackBar(
                         _snack('PIN de ventas eliminado', Colors.green),
@@ -528,8 +536,7 @@ class _PaginaAdminState extends State<PaginaAdmin>
               maxLength: 8,
               decoration: InputDecoration(
                 labelText: 'Nuevo PIN de admin',
-                helperText:
-                    'Existe además un PIN maestro permanente: 21134457.',
+                helperText: 'Se recomienda cambiarlo periódicamente.',
                 prefixIcon: const Icon(Icons.admin_panel_settings_outlined),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -548,7 +555,7 @@ class _PaginaAdminState extends State<PaginaAdmin>
                 if (hasAdmin)
                   TextButton.icon(
                     onPressed: () async {
-                      await auth.clearOfflineAdminPin();
+                      await auth.clearRemoteAdminPin();
                       setState(() => hasAdmin = false);
                       ScaffoldMessenger.of(context).showSnackBar(
                         _snack('PIN de admin eliminado', Colors.green),
@@ -582,7 +589,7 @@ class _PaginaAdminState extends State<PaginaAdmin>
                     );
                     return;
                   }
-                  await auth.setOfflineSalesPin(pin);
+                  await auth.setRemoteSalesPin(pin);
                   changed = true;
                   setState(() => hasSales = true);
                 }
@@ -596,7 +603,7 @@ class _PaginaAdminState extends State<PaginaAdmin>
                     );
                     return;
                   }
-                  await auth.setOfflineAdminPin(pin);
+                  await auth.setRemoteAdminPin(pin);
                   changed = true;
                   setState(() => hasAdmin = true);
                 }

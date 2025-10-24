@@ -118,6 +118,14 @@ class _PaginaLoginState extends State<PaginaLogin>
       if (mounted) {
         setState(() => _isOffline = !online);
       }
+      // Si hay internet, sincroniza PINs remotos a cache local para permitir validación offline
+      if (online && mounted) {
+        try {
+          await context.read<AuthService>().syncPinsFromRemote();
+        } catch (e) {
+          debugPrint('No se pudo sincronizar PINs remotos: $e');
+        }
+      }
     } catch (e) {
       debugPrint('Error checking connectivity: $e');
       if (mounted) {
@@ -404,7 +412,7 @@ class _PaginaLoginState extends State<PaginaLogin>
           maxLength: 8,
           decoration: InputDecoration(
             labelText: 'PIN',
-            helperText: 'Por defecto: 12332100 (si no se configuró otro PIN).',
+            helperText: 'Ingresa el PIN configurado por el administrador.',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
             ),
