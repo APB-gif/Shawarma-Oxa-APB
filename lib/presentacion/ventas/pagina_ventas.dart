@@ -1224,8 +1224,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                       return;
                                     }
 
-                                    // Backup del estado anterior para poder deshacer
-                                    final prevSnapshot = _pedidosPendientes
+                  // Backup del estado anterior para poder deshacer
+                  final prevSnapshot = _pedidosPendientes
                                         .map((p) => PedidoPendiente(
                                               nombre: p.nombre,
                                               items: List<ItemCarrito>.from(
@@ -1235,7 +1235,10 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                             ))
                                         .toList();
 
-                                    modalSetState(() {
+                  // Preparar variable para el nombre combinado (usada en el Snackbar)
+                  String mergedName = '';
+
+                  modalSetState(() {
                                       final sourceIndex = _pedidosPendientes
                                           .indexWhere((p) => p == incoming);
                                       final targetIndex = index;
@@ -1247,9 +1250,9 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                       final target = _pedidosPendientes
                                           .elementAt(targetIndex);
 
-                                      // Combinar nombres: "Destino + Origen"
-                                      final mergedName =
-                                          '${target.nombre} + ${source.nombre}';
+                    // Combinar nombres: "Destino + Origen"
+                    mergedName =
+                      '${target.nombre} + ${source.nombre}';
 
                                       final mergedItems = <ItemCarrito>[]
                                         ..addAll(target.items)
@@ -1274,27 +1277,28 @@ class _PaginaVentasState extends State<PaginaVentas> {
 
                                     setState(() {});
 
-                                    // Mostrar Snackbar con opción a deshacer
-                                    final messengerContext =
-                                        (mainScaffoldContext ?? context);
-                                    ScaffoldMessenger.of(messengerContext)
-                                        .showSnackBar(SnackBar(
-                                      content: Text(
-                                          'Órdenes unidas. ${_pedidosPendientes[index].nombre}'),
-                                      action: SnackBarAction(
-                                        label: 'Deshacer',
-                                        onPressed: () {
-                                          // Restaurar snapshot anterior
-                                          modalSetState(() {
-                                            _pedidosPendientes.clear();
-                                            _pedidosPendientes
-                                                .addAll(prevSnapshot);
-                                          });
-                                          setState(() {});
-                                        },
-                                      ),
-                                      duration: const Duration(seconds: 5),
-                                    ));
+                                    // Mostrar Snackbar con opción a deshacer (usar mergedName calculado)
+                                    if (mergedName.isNotEmpty) {
+                                      final messengerContext =
+                                          (mainScaffoldContext ?? context);
+                                      ScaffoldMessenger.of(messengerContext)
+                                          .showSnackBar(SnackBar(
+                                        content: Text('Órdenes unidas. $mergedName'),
+                                        action: SnackBarAction(
+                                          label: 'Deshacer',
+                                          onPressed: () {
+                                            // Restaurar snapshot anterior
+                                            modalSetState(() {
+                                              _pedidosPendientes.clear();
+                                              _pedidosPendientes
+                                                  .addAll(prevSnapshot);
+                                            });
+                                            setState(() {});
+                                          },
+                                        ),
+                                        duration: const Duration(seconds: 5),
+                                      ));
+                                    }
                                   },
                                   builder: (context, candidateData, rejected) {
                                     final isReceiving = candidateData.isNotEmpty;
