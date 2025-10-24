@@ -82,6 +82,10 @@ class _PaginaVentasState extends State<PaginaVentas> {
   final List<ItemCarrito> _cart = [];
   final List<PedidoPendiente> _pedidosPendientes = [];
   String? _activeOrderName;
+  
+  // Estado para deshacer merge
+  List<PedidoPendiente>? _lastMergeSnapshot;
+  String? _lastMergedName;
 
   @override
   void initState() {
@@ -745,6 +749,11 @@ class _PaginaVentasState extends State<PaginaVentas> {
     });
   }
 
+  void _clearMergeHistory() {
+    _lastMergeSnapshot = null;
+    _lastMergedName = null;
+  }
+
   Future<void> _confirmAndClearCart() async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
@@ -877,9 +886,10 @@ class _PaginaVentasState extends State<PaginaVentas> {
         return StatefulBuilder(builder: (context, modalSetState) {
           return DraggableScrollableSheet(
             expand: false,
-            initialChildSize: 0.6,
+            // Usar más espacio de pantalla para ver más pedidos cómodamente
+            initialChildSize: 0.8,
             minChildSize: 0.4,
-            maxChildSize: 0.9,
+            maxChildSize: 0.98,
             builder: (_, controller) {
               return Container(
                 decoration: BoxDecoration(
@@ -891,7 +901,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                   children: [
                     // Header con gradiente
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      // Reducimos levemente el padding para ganar espacio vertical útil
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -934,18 +945,80 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    '${_pedidosPendientes.length} ${_pedidosPendientes.length == 1 ? 'pedido guardado' : 'pedidos guardados'}',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 14,
-                                    ),
+                                  // Cambiamos a Wrap para evitar overflow y distribuir mejor
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 6,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    children: [
+                                      Text(
+                                        '${_pedidosPendientes.length} ${_pedidosPendientes.length == 1 ? 'pedido guardado' : 'pedidos guardados'}',
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      if (_lastMergeSnapshot != null)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.withOpacity(0.85),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.undo_rounded,
+                                                size: 12,
+                                                color: Colors.white,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Deshacer disponible',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                softWrap: false,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ],
                               ),
                             ),
+                            if (_lastMergeSnapshot != null)
+                              IconButton(
+                                onPressed: () {
+                                  modalSetState(() {
+                                    _pedidosPendientes.clear();
+                                    _pedidosPendientes.addAll(_lastMergeSnapshot!);
+                                    _lastMergeSnapshot = null;
+                                    _lastMergedName = null;
+                                  });
+                                  setState(() {});
+                                  // Evitar usar SnackBar dentro del modal (puede no haber Scaffold descendiente)
+                                  // Feedback visual queda implícito al ver restaurados los pedidos
+                                },
+                                icon: const Icon(Icons.undo_rounded,
+                                    color: Colors.white),
+                tooltip: _lastMergedName != null
+                  ? 'Deshacer última unión ('
+                    '$_lastMergedName)'
+                  : 'Deshacer última unión',
+                              ),
                             IconButton(
-                              onPressed: () => Navigator.pop(ctx),
+                              onPressed: () {
+                                _clearMergeHistory(); // Limpiar historial al cerrar
+                                Navigator.pop(ctx);
+                              },
                               icon: const Icon(Icons.close_rounded,
                                   color: Colors.white),
                               tooltip: 'Cerrar',
@@ -1295,8 +1368,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                       return;
                                     }
 
-                  // Backup del estado anterior para poder deshacer
-                  final prevSnapshot = _pedidosPendientes
+                                    // Backup del estado anterior para poder deshacer
+                                    final prevSnapshot = _pedidosPendientes
                                         .map((p) => PedidoPendiente(
                                               nombre: p.nombre,
                                               items: List<ItemCarrito>.from(
@@ -1306,10 +1379,11 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                             ))
                                         .toList();
 
-                  // Preparar variable para el nombre combinado (usada en el Snackbar)
-                  String mergedName = '';
-
-                                    // Animación de impacto antes del merge
+                                    // Preparar variable para el nombre combinado (usada en el Snackbar)
+                                    String mergedName = '';
+                                    
+                                    // Guardar snapshot globalmente para el botón de deshacer
+                                    _lastMergeSnapshot = prevSnapshot;                                    // Animación de impacto antes del merge
                                     await _showCollisionEffect(context);
                                     
                                     modalSetState(() {
@@ -1327,6 +1401,9 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                       // Combinar nombres: "Destino + Origen"
                                       mergedName =
                                           '${target.nombre} + ${source.nombre}';
+                                      
+                                      // Guardar nombre para poder referenciar en deshacer
+                                      _lastMergedName = mergedName;
 
                                       final mergedItems = <ItemCarrito>[]
                                         ..addAll(target.items)
@@ -1352,28 +1429,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                     setState(() {});
                                     
                                     // Mostrar efecto visual de éxito
-                                    _showMergeSuccessEffect(mergedName);                                    // Mostrar Snackbar con opción a deshacer (usar mergedName calculado)
-                                    if (mergedName.isNotEmpty) {
-                                      final messengerContext =
-                                          (mainScaffoldContext ?? context);
-                                      ScaffoldMessenger.of(messengerContext)
-                                          .showSnackBar(SnackBar(
-                                        content: Text('Órdenes unidas. $mergedName'),
-                                        action: SnackBarAction(
-                                          label: 'Deshacer',
-                                          onPressed: () {
-                                            // Restaurar snapshot anterior
-                                            modalSetState(() {
-                                              _pedidosPendientes.clear();
-                                              _pedidosPendientes
-                                                  .addAll(prevSnapshot);
-                                            });
-                                            setState(() {});
-                                          },
-                                        ),
-                                        duration: const Duration(seconds: 5),
-                                      ));
-                                    }
+                                    _showMergeSuccessEffect(mergedName);                                    // No mostrar Snackbar aquí - el botón deshacer está en el modal
+                                    // El feedback de éxito ya se muestra con las partículas
                                   },
                                   builder: (context, candidateData, rejected) {
                                     final isReceiving = candidateData.isNotEmpty;
