@@ -1564,12 +1564,7 @@ class _VistaCajaAbierta extends StatelessWidget {
                             }
                           },
                     child: isCerrando
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
+                        ? _ModernLoadingWidget()
                         : const Text('Sí, Cerrar Caja'),
                   ),
                 ],
@@ -2150,6 +2145,161 @@ class _VentaEliminadaCard extends StatelessWidget {
           trailing: Text(DateFormat('hh:mm a').format(venta.fecha)),
         ),
       ),
+    );
+  }
+}
+
+// --- Widget de carga moderno y animado ---
+class _ModernLoadingWidget extends StatefulWidget {
+  @override
+  _ModernLoadingWidgetState createState() => _ModernLoadingWidgetState();
+}
+
+class _ModernLoadingWidgetState extends State<_ModernLoadingWidget>
+    with TickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late AnimationController _rotationController;
+  late AnimationController _scaleController;
+  late Animation<double> _pulseAnimation;
+  late Animation<double> _rotationAnimation;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Controlador para el efecto pulsante
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    
+    // Controlador para la rotación
+    _rotationController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+    
+    // Controlador para la escala
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _pulseAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.2,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    _rotationAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _rotationController,
+      curve: Curves.linear,
+    ));
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _scaleController,
+      curve: Curves.elasticOut,
+    ));
+
+    // Iniciar animaciones
+    _scaleController.forward();
+    _pulseController.repeat(reverse: true);
+    _rotationController.repeat();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _rotationController.dispose();
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        _pulseAnimation,
+        _rotationAnimation,
+        _scaleAnimation,
+      ]),
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Círculo pulsante con gradiente
+              Transform.scale(
+                scale: _pulseAnimation.value,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.9),
+                        Colors.white.withOpacity(0.6),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.3),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Transform.rotate(
+                    angle: _rotationAnimation.value * 2 * 3.14159,
+                    child: Container(
+                      margin: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.8),
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.sync_rounded,
+                        color: Colors.white,
+                        size: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Texto animado con efecto de aparición
+              AnimatedOpacity(
+                opacity: _scaleAnimation.value,
+                duration: const Duration(milliseconds: 300),
+                child: const Text(
+                  'Cerrando caja...',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
