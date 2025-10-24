@@ -73,7 +73,7 @@ class _PaginaVentasState extends State<PaginaVentas> {
     {'id': 2, 'fraccion': 1.0},
     {'id': 3, 'fraccion': 1.0},
   ];
-  int _nextPoteId = 4;
+  // _nextPoteId ya no es necesario: los potes se numeran secuencialmente (1..N)
 
   // Listener de Firestore para sincronización en tiempo real
   StreamSubscription<DocumentSnapshot>? _salsaSubscription;
@@ -119,12 +119,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
               final potes = potesData
                   .map((p) => Map<String, dynamic>.from(p as Map))
                   .toList();
-              final maxId = potes.fold<int>(0,
-                  (max, p) => (p['id'] as int) > max ? (p['id'] as int) : max);
-
               setState(() {
                 _salsaPotes = potes;
-                _nextPoteId = maxId + 1;
               });
             }
           } catch (e) {
@@ -168,7 +164,7 @@ class _PaginaVentasState extends State<PaginaVentas> {
     // Copiar estado actual para editar
     final tmpPotes =
         _salsaPotes.map((p) => Map<String, dynamic>.from(p)).toList();
-    int tmpNextId = _nextPoteId;
+  // tmpNextId no es necesario con renumeración automática; usaremos el largo + 1 al guardar
 
     final result = await showDialog<bool>(
       context: context,
@@ -395,7 +391,12 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                         IconButton(
                                           onPressed: () {
                                             setStateDialog(() {
+                                              // Eliminar el pote seleccionado
                                               tmpPotes.removeAt(index);
+                                              // Reindexar los potes para que queden consecutivos
+                                              for (var i = 0; i < tmpPotes.length; i++) {
+                                                tmpPotes[i]['id'] = i + 1;
+                                              }
                                             });
                                           },
                                           icon: Icon(
@@ -526,16 +527,9 @@ class _PaginaVentasState extends State<PaginaVentas> {
                             child: OutlinedButton.icon(
                               onPressed: () {
                                 setStateDialog(() {
-                                  // Recalcular el siguiente ID basado en los potes existentes
-                                  final maxId = tmpPotes.fold<int>(
-                                      0,
-                                      (max, p) => (p['id'] as int) > max
-                                          ? (p['id'] as int)
-                                          : max);
-                                  final nuevoId = maxId + 1;
-                                  tmpPotes
-                                      .add({'id': nuevoId, 'fraccion': 1.0});
-                                  tmpNextId = nuevoId + 1;
+                                  // Asignar el siguiente ID secuencialmente para mantener orden
+                                  final nuevoId = tmpPotes.length + 1;
+                                  tmpPotes.add({'id': nuevoId, 'fraccion': 1.0});
                                 });
                               },
                               icon:
@@ -649,7 +643,6 @@ class _PaginaVentasState extends State<PaginaVentas> {
     if (result == true) {
       setState(() {
         _salsaPotes = tmpPotes;
-        _nextPoteId = tmpNextId;
       });
       await _saveSalsaEstado();
     }
