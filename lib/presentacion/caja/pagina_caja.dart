@@ -12,6 +12,8 @@ import 'package:shawarma_pos_nuevo/datos/servicios/caja_service.dart';
 import 'package:shawarma_pos_nuevo/presentacion/widgets/notificaciones.dart';
 import 'package:shawarma_pos_nuevo/presentacion/pagina_principal.dart';
 import 'package:shawarma_pos_nuevo/presentacion/caja/gasto_apertura_dialog.dart';
+import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service.dart';
+import 'package:shawarma_pos_nuevo/presentacion/auth/auth_gate.dart';
 
 // --------- Helpers ---------
 String _catNombre(dynamic p) {
@@ -394,22 +396,101 @@ class PaginaCaja extends StatelessWidget {
             final isOff = rol == 'fuera de servicio';
 
             if (isOff) {
+              final colorScheme = Theme.of(context).colorScheme;
               return Scaffold(
-                appBar: AppBar(title: const Text('Caja')),
-                body: const Center(
+                appBar: AppBar(
+                  title: const Text('Caja'),
+                  actions: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () async {
+                            final shouldLogout = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16)),
+                                title: Row(
+                                  children: [
+                                    Icon(Icons.logout_rounded,
+                                        color: colorScheme.primary),
+                                    const SizedBox(width: 8),
+                                    const Text('Cerrar Sesión'),
+                                  ],
+                                ),
+                                content: const Text(
+                                    '¿Quieres cerrar sesión para cambiar de cuenta?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    child: const Text('Salir'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (shouldLogout != true) return;
+
+                            principalMessengerKey.currentState
+                                ?.clearSnackBars();
+                            final rootNav = Navigator.of(context,
+                                rootNavigator: true);
+                            if (rootNav.canPop()) {
+                              rootNav.popUntil((route) => route.isFirst);
+                            }
+
+                            await context.read<AuthService>().signOut();
+                            if (!context.mounted) return;
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                  builder: (_) => const AuthGate()),
+                              (route) => false,
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.red.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.logout_rounded,
+                              color: Colors.red,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                body: Center(
                   child: Padding(
-                    padding: EdgeInsets.all(24.0),
+                    padding: const EdgeInsets.all(24.0),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.lock_person_rounded,
-                            size: 64, color: Colors.redAccent),
-                        SizedBox(height: 12),
-                        Text('Acceso restringido',
+                            size: 64, color: colorScheme.error),
+                        const SizedBox(height: 12),
+                        const Text('Acceso restringido',
                             style: TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold)),
-                        SizedBox(height: 8),
-                        Text(
+                        const SizedBox(height: 8),
+                        const Text(
                           'Tu rol actual no permite operar en Caja.',
                           textAlign: TextAlign.center,
                         ),
