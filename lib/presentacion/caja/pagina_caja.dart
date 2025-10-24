@@ -2285,7 +2285,8 @@ class _ModernLoadingWidgetState extends State<_ModernLoadingWidget>
               const SizedBox(width: 12),
               // Texto animado con efecto de aparición
               AnimatedOpacity(
-                opacity: _scaleAnimation.value,
+                // elasticOut puede sobrepasar 1.0, por eso limitamos el rango seguro 0..1
+                opacity: _scaleAnimation.value.clamp(0.0, 1.0).toDouble(),
                 duration: const Duration(milliseconds: 300),
                 child: const Text(
                   'Cerrando caja...',
