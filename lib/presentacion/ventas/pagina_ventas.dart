@@ -1195,7 +1195,35 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                 return DragTarget<PedidoPendiente>(
                                   onWillAccept: (incoming) =>
                                       incoming != null && incoming != pedido,
-                                  onAccept: (incoming) {
+                                  onAccept: (incoming) async {
+                                    
+
+                                    // Pedir confirmación antes de unir
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: const Text('Unir órdenes'),
+                                        content: Text(
+                                            '¿Deseas unir "${incoming.nombre}" dentro de "${pedido.nombre}"?'),
+                                        actions: [
+                                          TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx, false),
+                                              child: const Text('No')),
+                                          FilledButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, true),
+                                            child: const Text('Sí, unir'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (confirm != true) {
+                                      // Usuario canceló, no hacer nada
+                                      return;
+                                    }
+
                                     // Backup del estado anterior para poder deshacer
                                     final prevSnapshot = _pedidosPendientes
                                         .map((p) => PedidoPendiente(
