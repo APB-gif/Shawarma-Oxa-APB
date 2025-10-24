@@ -1309,8 +1309,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                   // Preparar variable para el nombre combinado (usada en el Snackbar)
                   String mergedName = '';
 
-                                    // Ejecutar merge con animación
-                                    await Future.delayed(const Duration(milliseconds: 200));
+                                    // Animación de impacto antes del merge
+                                    await _showCollisionEffect(context);
                                     
                                     modalSetState(() {
                                       final sourceIndex = _pedidosPendientes
@@ -1383,102 +1383,253 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                           pointerDragAnchorStrategy,
                                       feedback: Material(
                                         color: Colors.transparent,
-                                        child: Opacity(
-                                          opacity: 0.98,
-                                          child: SizedBox(
-                                            width: MediaQuery.of(context)
-                                                    .size
-                                                    .width -
-                                                64,
-                                            child: Container(
-                                              padding: const EdgeInsets.all(12),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black
-                                                        .withOpacity(0.12),
-                                                    blurRadius: 12,
-                                                    offset: const Offset(0, 6),
+                                        child: Transform.rotate(
+                                          angle: 0.05, // Ligera rotación durante drag
+                                          child: Opacity(
+                                            opacity: 0.95,
+                                            child: SizedBox(
+                                              width: MediaQuery.of(context).size.width - 48,
+                                              child: Container(
+                                                margin: const EdgeInsets.only(bottom: 12),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: theme.colorScheme.primary,
+                                                    width: 2,
                                                   ),
-                                                ],
-                                              ),
-                                              child: Row(
-                                                children: [
-                                                  const Icon(
-                                                    Icons.inventory_2_rounded,
-                                                    size: 20,
-                                                    color: Colors.black87,
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Expanded(
-                                                    child: Text(
-                                                      '${pedido.nombre} — ${pedido.items.length} items',
-                                                      style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: theme.colorScheme.primary.withOpacity(0.3),
+                                                      blurRadius: 20,
+                                                      offset: const Offset(0, 8),
+                                                      spreadRadius: 4,
                                                     ),
+                                                    BoxShadow(
+                                                      color: Colors.black.withOpacity(0.15),
+                                                      blurRadius: 15,
+                                                      offset: const Offset(0, 10),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Theme(
+                                                  data: theme.copyWith(
+                                                    dividerColor: Colors.transparent,
                                                   ),
-                                                ],
+                                                  child: ExpansionTile(
+                                                    tilePadding: const EdgeInsets.symmetric(
+                                                        horizontal: 16, vertical: 8),
+                                                    childrenPadding: const EdgeInsets.all(0),
+                                                    leading: Container(
+                                                      padding: const EdgeInsets.all(10),
+                                                      decoration: BoxDecoration(
+                                                        color: theme.colorScheme.primary.withOpacity(0.2),
+                                                        borderRadius: BorderRadius.circular(10),
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.open_with_rounded,
+                                                        color: theme.colorScheme.primary,
+                                                        size: 24,
+                                                      ),
+                                                    ),
+                                                    title: Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: Text(
+                                                            pedido.nombre,
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.bold,
+                                                              fontSize: 16,
+                                                              color: theme.colorScheme.primary,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Container(
+                                                          padding: const EdgeInsets.symmetric(
+                                                              horizontal: 8, vertical: 4),
+                                                          decoration: BoxDecoration(
+                                                            color: theme.colorScheme.primary,
+                                                            borderRadius: BorderRadius.circular(12),
+                                                          ),
+                                                          child: Text(
+                                                            'MOVIENDO',
+                                                            style: TextStyle(
+                                                              color: theme.colorScheme.onPrimary,
+                                                              fontSize: 10,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    subtitle: Padding(
+                                                      padding: const EdgeInsets.only(top: 6),
+                                                      child: Row(
+                                                        children: [
+                                                          Icon(
+                                                            Icons.receipt_long_rounded,
+                                                            size: 14,
+                                                            color: theme.colorScheme.primary,
+                                                          ),
+                                                          const SizedBox(width: 4),
+                                                          Text(
+                                                            '${pedido.items.length} productos',
+                                                            style: TextStyle(
+                                                              fontSize: 13,
+                                                              color: theme.colorScheme.primary,
+                                                              fontWeight: FontWeight.w600,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 12),
+                                                          Container(
+                                                            padding: const EdgeInsets.symmetric(
+                                                                horizontal: 8, vertical: 4),
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.green.shade50,
+                                                              borderRadius: BorderRadius.circular(6),
+                                                              border: Border.all(
+                                                                  color: Colors.green.shade200),
+                                                            ),
+                                                            child: Text(
+                                                              'S/ ${pedido.subtotal.toStringAsFixed(2)}',
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight: FontWeight.bold,
+                                                                color: Colors.green.shade700,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    trailing: Icon(
+                                                      Icons.drag_indicator_rounded,
+                                                      color: theme.colorScheme.primary,
+                                                    ),
+                                                    children: const [],
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                      childWhenDragging:
-                                          Opacity(opacity: 0.45, child: card),
-                                      child: AnimatedContainer(
-                                        duration:
-                                            const Duration(milliseconds: 200),
-                                        curve: Curves.easeOutCubic,
-                                        transform: isReceiving
-                                            ? (Matrix4.identity()..scale(1.02))
-                                            : Matrix4.identity(),
-                                        decoration: isReceiving
-                                            ? BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: theme.colorScheme.primary
-                                                        .withOpacity(0.15),
-                                                    blurRadius: 20,
-                                                    offset: const Offset(0, 8),
-                                                    spreadRadius: 2,
-                                                  ),
-                                                  BoxShadow(
-                                                    color: Colors.white.withOpacity(0.6),
-                                                    blurRadius: 4,
-                                                    offset: const Offset(0, -1),
-                                                  ),
-                                                ],
-                                              )
-                                            : null,
-                                        child: Container(
-                                          decoration: isReceiving
-                                              ? BoxDecoration(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  border: Border.all(
-                                                    color: theme.colorScheme.primary.withOpacity(0.4),
-                                                    width: 2,
-                                                  ),
-                                                  gradient: LinearGradient(
-                                                    colors: [
-                                                      theme.colorScheme.primary.withOpacity(0.05),
-                                                      theme.colorScheme.primary.withOpacity(0.02),
-                                                    ],
-                                                    begin: Alignment.topLeft,
-                                                    end: Alignment.bottomRight,
-                                                  ),
-                                                )
-                                              : null,
-                                          child: card,
+                                      childWhenDragging: Transform.scale(
+                                        scale: 0.95,
+                                        child: Opacity(
+                                          opacity: 0.3,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: Colors.grey.shade300,
+                                                width: 2,
+                                                style: BorderStyle.solid,
+                                              ),
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(10),
+                                              child: ColorFiltered(
+                                                colorFilter: ColorFilter.mode(
+                                                  Colors.grey.shade400,
+                                                  BlendMode.saturation,
+                                                ),
+                                                child: card,
+                                              ),
+                                            ),
+                                          ),
                                         ),
+                                      ),
+                                      child: TweenAnimationBuilder<double>(
+                                        duration: const Duration(milliseconds: 150),
+                                        tween: Tween<double>(
+                                          begin: 0.0,
+                                          end: isReceiving ? 1.0 : 0.0,
+                                        ),
+                                        curve: Curves.elasticOut,
+                                        builder: (context, pulseValue, child) {
+                                          return AnimatedContainer(
+                                            duration: const Duration(milliseconds: 200),
+                                            curve: Curves.easeOutCubic,
+                                            transform: Matrix4.identity()
+                                              ..scale(1.0 + (pulseValue * 0.03))
+                                              ..rotateZ(pulseValue * 0.005), // Micro rotación
+                                            decoration: isReceiving
+                                                ? BoxDecoration(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: theme.colorScheme.primary
+                                                            .withOpacity(0.2 + pulseValue * 0.1),
+                                                        blurRadius: 20 + pulseValue * 10,
+                                                        offset: const Offset(0, 8),
+                                                        spreadRadius: 2 + pulseValue * 2,
+                                                      ),
+                                                      BoxShadow(
+                                                        color: Colors.white.withOpacity(0.8),
+                                                        blurRadius: 8,
+                                                        offset: const Offset(0, -2),
+                                                      ),
+                                                    ],
+                                                  )
+                                                : null,
+                                            child: Container(
+                                              decoration: isReceiving
+                                                  ? BoxDecoration(
+                                                      borderRadius: BorderRadius.circular(12),
+                                                      border: Border.all(
+                                                        color: Color.lerp(
+                                                          theme.colorScheme.primary.withOpacity(0.3),
+                                                          theme.colorScheme.primary.withOpacity(0.8),
+                                                          pulseValue,
+                                                        )!,
+                                                        width: 2 + pulseValue,
+                                                      ),
+                                                      gradient: LinearGradient(
+                                                        colors: [
+                                                          theme.colorScheme.primary
+                                                              .withOpacity(0.05 + pulseValue * 0.1),
+                                                          theme.colorScheme.primary
+                                                              .withOpacity(0.02 + pulseValue * 0.05),
+                                                        ],
+                                                        begin: Alignment.topLeft,
+                                                        end: Alignment.bottomRight,
+                                                      ),
+                                                    )
+                                                  : null,
+                                              child: Stack(
+                                                children: [
+                                                  card,
+                                                  if (isReceiving)
+                                                    Positioned(
+                                                      top: 8,
+                                                      right: 8,
+                                                      child: Container(
+                                                        padding: const EdgeInsets.all(6),
+                                                        decoration: BoxDecoration(
+                                                          color: theme.colorScheme.primary,
+                                                          shape: BoxShape.circle,
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: theme.colorScheme.primary
+                                                                  .withOpacity(0.4),
+                                                              blurRadius: 8,
+                                                              spreadRadius: 2,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: Icon(
+                                                          Icons.add_circle_rounded,
+                                                          color: theme.colorScheme.onPrimary,
+                                                          size: 16,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
                                       ),
                                     );
                                   },
@@ -2043,6 +2194,24 @@ class _PaginaVentasState extends State<PaginaVentas> {
 
   // ===================== EFECTOS VISUALES PARA MERGE =====================
   
+  Future<void> _showCollisionEffect(BuildContext context) async {
+    // Mostrar efecto de colisión breve
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => const _CollisionEffect(),
+    );
+    
+    // Esperar a que termine la animación
+    await Future.delayed(const Duration(milliseconds: 600));
+    
+    // Cerrar el diálogo de colisión
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+  }
+
   void _showMergeSuccessEffect(String mergedName) {
     final messengerContext = (mainScaffoldContext ?? context);
     
@@ -2839,6 +3008,117 @@ class _MergeSuccessOverlayState extends State<_MergeSuccessOverlay>
       ),
     );
   }
+}
+
+/// Widget de efecto de colisión
+class _CollisionEffect extends StatefulWidget {
+  const _CollisionEffect();
+
+  @override
+  State<_CollisionEffect> createState() => _CollisionEffectState();
+}
+
+class _CollisionEffectState extends State<_CollisionEffect>
+    with TickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _waveAnimation;
+  late Animation<double> _flashAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    
+    _waveAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart),
+    );
+    
+    _flashAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+      ),
+    );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Stack(
+            children: [
+              // Flash blanco de impacto
+              if (_flashAnimation.value > 0)
+                Container(
+                  color: Colors.white.withOpacity(
+                    (1.0 - _flashAnimation.value) * 0.6,
+                  ),
+                ),
+              
+              // Ondas de choque desde el centro
+              Center(
+                child: CustomPaint(
+                  painter: _ShockwavePainter(_waveAnimation.value),
+                  size: MediaQuery.of(context).size,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Painter para ondas de choque
+class _ShockwavePainter extends CustomPainter {
+  final double progress;
+  
+  _ShockwavePainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxRadius = size.width > size.height ? size.width : size.height;
+    
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+    
+    // Múltiples ondas con diferentes velocidades
+    final waves = [0.8, 0.6, 0.4, 0.2];
+    
+    for (int i = 0; i < waves.length; i++) {
+      final waveProgress = (progress - waves[i] * 0.1).clamp(0.0, 1.0);
+      if (waveProgress > 0) {
+        final radius = maxRadius * waveProgress * 0.6;
+        final opacity = (1.0 - waveProgress) * 0.4;
+        
+        paint.color = Colors.blue.shade600.withOpacity(opacity);
+        
+        canvas.drawCircle(center, radius, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ShockwavePainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
 
 /// Painter para partículas animadas
