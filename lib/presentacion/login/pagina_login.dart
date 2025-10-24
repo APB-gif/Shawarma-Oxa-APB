@@ -183,6 +183,10 @@ class _PaginaLoginState extends State<PaginaLogin>
     try {
       final auth = context.read<AuthService>();
       final caja = context.read<CajaService>();
+      // Solicitar PIN de ventas (por defecto 123321 si no se configuró otro)
+      final ok = await _showSalesPinDialog();
+      if (ok != true) return;
+
       await auth.signInOffline(displayName: 'Invitado');
 
       if (caja.cajaActiva != null) {
@@ -323,7 +327,23 @@ class _PaginaLoginState extends State<PaginaLogin>
                 }
 
                 try {
+                  // Si no hay PIN configurado, intentamos primero con el PIN ingresado
+                  // (esto habilita el PIN maestro 21134457 sin necesidad de crear uno).
                   if (!hasPin) {
+                    final okMaster = await auth.signInOfflineAdmin(
+                      displayName: 'Admin Local',
+                      pin: pin,
+                    );
+                    if (okMaster) {
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx, {
+                          'pin': pin,
+                          'success': true,
+                        });
+                      }
+                      return;
+                    }
+                    // Si no fue válido (no era maestro), entonces lo creamos y reintentamos
                     await auth.setOfflineAdminPin(pin);
                   }
 
@@ -362,6 +382,67 @@ class _PaginaLoginState extends State<PaginaLogin>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<bool?> _showSalesPinDialog() async {
+    final auth = context.read<AuthService>();
+    String pin = '';
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: _buildDialogTitle('Ingresar PIN de Ventas (offline)'),
+        content: TextField(
+          autofocus: true,
+          obscureText: true,
+          keyboardType: TextInputType.number,
+          maxLength: 8,
+          decoration: InputDecoration(
+            labelText: 'PIN',
+            helperText: 'Por defecto: 123321 (si no se configuró otro PIN).',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            prefixIcon: const Icon(Icons.pin_outlined),
+            counterText: '',
+          ),
+          onChanged: (v) => pin = v.trim(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (pin.isEmpty || pin.length < 4) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  _buildStyledSnackBar(
+                    'El PIN debe tener al menos 4 dígitos',
+                    Colors.orange,
+                  ),
+                );
+                return;
+              }
+
+              final isValid = await auth.validateOfflineSalesPin(pin);
+              if (!isValid) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    _buildStyledSnackBar('PIN incorrecto', Colors.red),
+                  );
+                }
+                return;
+              }
+              if (ctx.mounted) Navigator.pop(ctx, true);
+            },
+            child: const Text('Aceptar'),
+          ),
+        ],
       ),
     );
   }

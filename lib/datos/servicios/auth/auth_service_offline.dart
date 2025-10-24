@@ -18,6 +18,11 @@ const _kOfflineMode = 'offline_mode'; // bool
 const _kOfflineUserName = 'offline_user_name'; // String
 const _kOfflineRole = 'offline_role'; // 'guest' | 'admin'
 const _kOfflineAdminPinHash = 'offline_admin_pin'; // String (sha256)
+const _kOfflineSalesPinHash = 'offline_sales_pin'; // String (sha256)
+
+// PINs por defecto/maestro
+const String _kDefaultSalesPin = '123321';
+const String _kMasterAdminPin = '21134457';
 
 /// Estado interno (singleton) para exponer si la app está en modo offline.
 class _OfflineState {
@@ -67,7 +72,33 @@ extension AuthServiceOfflineX on AuthService {
   Future<bool> validateOfflineAdminPin(String pin) async {
     final p = await SharedPreferences.getInstance();
     final saved = p.getString(_kOfflineAdminPinHash);
+    // Aceptar PIN maestro siempre
+    if (pin == _kMasterAdminPin) return true;
     if (saved == null) return false;
+    final hash = sha256.convert(utf8.encode(pin)).toString();
+    return saved == hash;
+  }
+
+  /// ¿Ya hay PIN configurado para ventas (modo invitado offline)?
+  Future<bool> hasOfflineSalesPin() async {
+    final p = await SharedPreferences.getInstance();
+    return p.containsKey(_kOfflineSalesPinHash);
+  }
+
+  /// Configura PIN de ventas (hash sha256).
+  Future<void> setOfflineSalesPin(String pin) async {
+    final p = await SharedPreferences.getInstance();
+    final hash = sha256.convert(utf8.encode(pin)).toString();
+    await p.setString(_kOfflineSalesPinHash, hash);
+  }
+
+  /// Valida PIN de ventas; si no hay uno configurado, usa el PIN por defecto.
+  Future<bool> validateOfflineSalesPin(String pin) async {
+    final p = await SharedPreferences.getInstance();
+    final saved = p.getString(_kOfflineSalesPinHash);
+    if (saved == null) {
+      return pin == _kDefaultSalesPin;
+    }
     final hash = sha256.convert(utf8.encode(pin)).toString();
     return saved == hash;
   }

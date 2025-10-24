@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service.dart';
+import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service_offline.dart';
 import 'package:shawarma_pos_nuevo/presentacion/admin/almacen_page.dart';
 import 'package:shawarma_pos_nuevo/presentacion/admin/categoria_page.dart';
 import 'package:shawarma_pos_nuevo/presentacion/admin/roles_page.dart';
@@ -416,12 +417,168 @@ class _PaginaAdminState extends State<PaginaAdmin>
           MaterialPageRoute(builder: (context) => const RolesPage()),
         ),
       ),
+      AdminCardData(
+        title: 'PINs',
+        subtitle: 'Seguridad offline',
+        description: 'Configurar PIN de Admin y Ventas',
+        icon: FontAwesomeIcons.key,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF06B6D4), Color(0xFF0EA5E9)],
+        ),
+        onPressed: () => _showManagePinsDialog(context),
+      ),
     ];
 
     return adminOptions
         .map((option) => _buildEnhancedAdminCard(option, isDesktop))
         .toList();
   }
+
+  void _showManagePinsDialog(BuildContext context) {
+    final adminPinController = TextEditingController();
+    final salesPinController = TextEditingController();
+    final theme = Theme.of(context);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              width: 6,
+              height: 24,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Configurar PINs Offline',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('PIN de Ventas (invitado offline)',
+                  style: theme.textTheme.titleSmall),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: salesPinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 8,
+              decoration: InputDecoration(
+                labelText: 'Nuevo PIN de ventas',
+                helperText:
+                    'Por defecto es 123321 si no se configura ninguno.',
+                prefixIcon: const Icon(Icons.store_mall_directory_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                counterText: '',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('PIN de Admin local (offline)',
+                  style: theme.textTheme.titleSmall),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: adminPinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 8,
+              decoration: InputDecoration(
+                labelText: 'Nuevo PIN de admin',
+                helperText:
+                    'Existe además un PIN maestro permanente: 21134457.',
+                prefixIcon: const Icon(Icons.admin_panel_settings_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                counterText: '',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            icon: const Icon(Icons.save_outlined),
+            label: const Text('Guardar'),
+            onPressed: () async {
+              final auth = context.read<AuthService>();
+              bool changed = false;
+              try {
+                if (salesPinController.text.trim().isNotEmpty) {
+                  final pin = salesPinController.text.trim();
+                  if (pin.length < 4) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      _snack('El PIN de ventas debe tener al menos 4 dígitos',
+                          Colors.orange),
+                    );
+                    return;
+                  }
+                  await auth.setOfflineSalesPin(pin);
+                  changed = true;
+                }
+                if (adminPinController.text.trim().isNotEmpty) {
+                  final pin = adminPinController.text.trim();
+                  if (pin.length < 4) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      _snack('El PIN de admin debe tener al menos 4 dígitos',
+                          Colors.orange),
+                    );
+                    return;
+                  }
+                  await auth.setOfflineAdminPin(pin);
+                  changed = true;
+                }
+                if (changed) {
+                  if (context.mounted) Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    _snack('PIN(s) actualizado(s) correctamente',
+                        Colors.green),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    _snack('No hay cambios para guardar', Colors.grey),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  _snack('Error: ${e.toString()}', Colors.red),
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  SnackBar _snack(String msg, Color color) => SnackBar(
+        content: Text(msg),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
+      );
 
   Widget _buildEnhancedAdminCard(AdminCardData data, bool isDesktop) {
     return MouseRegion(
