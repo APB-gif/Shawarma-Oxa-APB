@@ -1196,7 +1196,17 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                   onWillAccept: (incoming) =>
                                       incoming != null && incoming != pedido,
                                   onAccept: (incoming) {
-                                    // Merge: añadir items de incoming a target (pedido)
+                                    // Backup del estado anterior para poder deshacer
+                                    final prevSnapshot = _pedidosPendientes
+                                        .map((p) => PedidoPendiente(
+                                              nombre: p.nombre,
+                                              items: List<ItemCarrito>.from(
+                                                  p.items),
+                                              subtotal: p.subtotal,
+                                              fecha: p.fecha,
+                                            ))
+                                        .toList();
+
                                     modalSetState(() {
                                       final sourceIndex = _pedidosPendientes
                                           .indexWhere((p) => p == incoming);
@@ -1209,6 +1219,10 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                       final target = _pedidosPendientes
                                           .elementAt(targetIndex);
 
+                                      // Combinar nombres: "Destino + Origen"
+                                      final mergedName =
+                                          '${target.nombre} + ${source.nombre}';
+
                                       final mergedItems = <ItemCarrito>[]
                                         ..addAll(target.items)
                                         ..addAll(source.items);
@@ -1216,20 +1230,43 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                       final mergedSubtotal =
                                           (target.subtotal) + (source.subtotal);
 
-                                      // Reemplazar target con la orden resultante
+                                      // Reemplazar target con la orden resultante (nombre combinado)
                                       _pedidosPendientes[targetIndex] =
                                           PedidoPendiente(
-                                        nombre: target.nombre,
+                                        nombre: mergedName,
                                         items: mergedItems,
                                         subtotal: mergedSubtotal,
                                         fecha: DateTime.now(),
                                       );
 
-                                      // Eliminar la orden source (tener cuidado con índices)
+                                      // Eliminar la orden source
                                       _pedidosPendientes
                                           .removeWhere((p) => p == source);
                                     });
+
                                     setState(() {});
+
+                                    // Mostrar Snackbar con opción a deshacer
+                                    final messengerContext =
+                                        (mainScaffoldContext ?? context);
+                                    ScaffoldMessenger.of(messengerContext)
+                                        .showSnackBar(SnackBar(
+                                      content: Text(
+                                          'Órdenes unidas. ${_pedidosPendientes[index].nombre}'),
+                                      action: SnackBarAction(
+                                        label: 'Deshacer',
+                                        onPressed: () {
+                                          // Restaurar snapshot anterior
+                                          modalSetState(() {
+                                            _pedidosPendientes.clear();
+                                            _pedidosPendientes
+                                                .addAll(prevSnapshot);
+                                          });
+                                          setState(() {});
+                                        },
+                                      ),
+                                      duration: const Duration(seconds: 5),
+                                    ));
                                   },
                                   builder: (context, candidateData, rejected) {
                                     final isReceiving = candidateData.isNotEmpty;
