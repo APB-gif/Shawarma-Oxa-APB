@@ -298,9 +298,9 @@ class _PaginaLoginState extends State<PaginaLogin>
             autofocus: true,
             obscureText: true,
             keyboardType: TextInputType.number,
-            maxLength: 6,
+            maxLength: 8,
             decoration: InputDecoration(
-              labelText: 'PIN (4-6 dígitos)',
+              labelText: 'PIN (8 dígitos)',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -316,10 +316,11 @@ class _PaginaLoginState extends State<PaginaLogin>
             ),
             FilledButton(
               onPressed: () async {
-                if (pin.isEmpty || pin.length < 4) {
+                final pinOk = RegExp(r'^\d{8}$').hasMatch(pin);
+                if (!pinOk) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
                     _buildStyledSnackBar(
-                      'El PIN debe tener al menos 4 dígitos',
+                      'El PIN debe tener exactamente 8 dígitos numéricos',
                       Colors.orange,
                     ),
                   );
@@ -403,7 +404,7 @@ class _PaginaLoginState extends State<PaginaLogin>
           maxLength: 8,
           decoration: InputDecoration(
             labelText: 'PIN',
-            helperText: 'Por defecto: 123321 (si no se configuró otro PIN).',
+            helperText: 'Por defecto: 12332100 (si no se configuró otro PIN).',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -419,10 +420,11 @@ class _PaginaLoginState extends State<PaginaLogin>
           ),
           FilledButton(
             onPressed: () async {
-              if (pin.isEmpty || pin.length < 4) {
+              final pinOk = RegExp(r'^\d{8}$').hasMatch(pin);
+              if (!pinOk) {
                 ScaffoldMessenger.of(ctx).showSnackBar(
                   _buildStyledSnackBar(
-                    'El PIN debe tener al menos 4 dígitos',
+                    'El PIN debe tener exactamente 8 dígitos numéricos',
                     Colors.orange,
                   ),
                 );

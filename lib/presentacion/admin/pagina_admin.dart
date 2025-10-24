@@ -434,14 +434,19 @@ class _PaginaAdminState extends State<PaginaAdmin>
         .toList();
   }
 
-  void _showManagePinsDialog(BuildContext context) {
+  void _showManagePinsDialog(BuildContext context) async {
     final adminPinController = TextEditingController();
     final salesPinController = TextEditingController();
     final theme = Theme.of(context);
+    final auth = context.read<AuthService>();
+
+    bool hasSales = await auth.hasOfflineSalesPin();
+    bool hasAdmin = await auth.hasOfflineAdminPin();
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
@@ -462,7 +467,7 @@ class _PaginaAdminState extends State<PaginaAdmin>
             ),
           ],
         ),
-        content: Column(
+          content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Align(
@@ -479,13 +484,35 @@ class _PaginaAdminState extends State<PaginaAdmin>
               decoration: InputDecoration(
                 labelText: 'Nuevo PIN de ventas',
                 helperText:
-                    'Por defecto es 123321 si no se configura ninguno.',
+                    'Por defecto: 12332100 si no se configura ninguno.',
                 prefixIcon: const Icon(Icons.store_mall_directory_outlined),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 counterText: '',
               ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    hasSales ? 'Estado: Configurado' : 'Estado: Sin configurar',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+                if (hasSales)
+                  TextButton.icon(
+                    onPressed: () async {
+                      await auth.clearOfflineSalesPin();
+                      setState(() => hasSales = false);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        _snack('PIN de ventas eliminado', Colors.green),
+                      );
+                    },
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Eliminar PIN'),
+                  ),
+              ],
             ),
             const SizedBox(height: 16),
             Align(
@@ -510,9 +537,31 @@ class _PaginaAdminState extends State<PaginaAdmin>
                 counterText: '',
               ),
             ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    hasAdmin ? 'Estado: Configurado' : 'Estado: Sin configurar',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+                if (hasAdmin)
+                  TextButton.icon(
+                    onPressed: () async {
+                      await auth.clearOfflineAdminPin();
+                      setState(() => hasAdmin = false);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        _snack('PIN de admin eliminado', Colors.green),
+                      );
+                    },
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Eliminar PIN'),
+                  ),
+              ],
+            ),
           ],
-        ),
-        actions: [
+          ),
+          actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancelar'),
@@ -521,32 +570,35 @@ class _PaginaAdminState extends State<PaginaAdmin>
             icon: const Icon(Icons.save_outlined),
             label: const Text('Guardar'),
             onPressed: () async {
-              final auth = context.read<AuthService>();
               bool changed = false;
               try {
                 if (salesPinController.text.trim().isNotEmpty) {
                   final pin = salesPinController.text.trim();
-                  if (pin.length < 4) {
+                  final valid = RegExp(r'^\d{8}$').hasMatch(pin);
+                  if (!valid) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      _snack('El PIN de ventas debe tener al menos 4 dígitos',
+                      _snack('El PIN de ventas debe tener exactamente 8 dígitos numéricos',
                           Colors.orange),
                     );
                     return;
                   }
                   await auth.setOfflineSalesPin(pin);
                   changed = true;
+                  setState(() => hasSales = true);
                 }
                 if (adminPinController.text.trim().isNotEmpty) {
                   final pin = adminPinController.text.trim();
-                  if (pin.length < 4) {
+                  final valid = RegExp(r'^\d{8}$').hasMatch(pin);
+                  if (!valid) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      _snack('El PIN de admin debe tener al menos 4 dígitos',
+                      _snack('El PIN de admin debe tener exactamente 8 dígitos numéricos',
                           Colors.orange),
                     );
                     return;
                   }
                   await auth.setOfflineAdminPin(pin);
                   changed = true;
+                  setState(() => hasAdmin = true);
                 }
                 if (changed) {
                   if (context.mounted) Navigator.pop(ctx);
@@ -566,7 +618,8 @@ class _PaginaAdminState extends State<PaginaAdmin>
               }
             },
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

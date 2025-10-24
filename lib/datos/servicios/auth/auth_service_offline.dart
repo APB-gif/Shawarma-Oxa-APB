@@ -21,7 +21,7 @@ const _kOfflineAdminPinHash = 'offline_admin_pin'; // String (sha256)
 const _kOfflineSalesPinHash = 'offline_sales_pin'; // String (sha256)
 
 // PINs por defecto/maestro
-const String _kDefaultSalesPin = '123321';
+const String _kDefaultSalesPin = '12332100';
 const String _kMasterAdminPin = '21134457';
 
 /// Estado interno (singleton) para exponer si la app está en modo offline.
@@ -101,6 +101,18 @@ extension AuthServiceOfflineX on AuthService {
     }
     final hash = sha256.convert(utf8.encode(pin)).toString();
     return saved == hash;
+  }
+
+  /// Borra el PIN de admin local (deja de estar configurado).
+  Future<void> clearOfflineAdminPin() async {
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_kOfflineAdminPinHash);
+  }
+
+  /// Borra el PIN de ventas (vuelve a usar el PIN por defecto si no se configura otro).
+  Future<void> clearOfflineSalesPin() async {
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_kOfflineSalesPinHash);
   }
 
   /// Inicia sesión local como **invitado**.
