@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 
 import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service.dart';
 import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service_offline.dart';
@@ -24,6 +25,14 @@ class _PinsPageState extends State<PinsPage>
   int salesCount = 0;
   int adminCount = 0;
   bool isLoading = true;
+  
+  // Remote hashes (SHA256) fetched from Firestore
+  List<String> salesHashes = <String>[];
+  List<String> adminHashes = <String>[];
+
+  // Toggles to show/hide the hashes in the UI
+  bool showSalesHashes = false;
+  bool showAdminHashes = false;
 
   @override
   void initState() {
@@ -65,8 +74,12 @@ class _PinsPageState extends State<PinsPage>
     try {
       final lists = await auth.getRemotePins();
       setState(() {
-        salesCount = lists['sales']?.length ?? 0;
-        adminCount = lists['admin']?.length ?? 0;
+  final List? sList = lists['sales'] as List?;
+  final List? aList = lists['admin'] as List?;
+  salesHashes = sList?.whereType<String>().toList() ?? <String>[];
+  adminHashes = aList?.whereType<String>().toList() ?? <String>[];
+        salesCount = salesHashes.length;
+        adminCount = adminHashes.length;
         hasSalesPin = salesCount > 0;
         hasAdminPin = adminCount > 0;
         isLoading = false;
@@ -77,6 +90,9 @@ class _PinsPageState extends State<PinsPage>
       setState(() {
         hasSalesPin = hasSales;
         hasAdminPin = hasAdmin;
+        // When remote fetch fails, we keep hashes empty but indicate presence
+        salesHashes = <String>[];
+        adminHashes = <String>[];
         salesCount = hasSales ? 1 : 0;
         adminCount = hasAdmin ? 1 : 0;
         isLoading = false;
@@ -247,6 +263,11 @@ class _PinsPageState extends State<PinsPage>
               ),
               count: salesCount,
               hasPin: hasSalesPin,
+              hashes: salesHashes,
+              showHashes: showSalesHashes,
+              onToggleShowHashes: () {
+                setState(() => showSalesHashes = !showSalesHashes);
+              },
               onAdd: () => _showAddPinDialog('sales'),
               onRemove: () => _showRemovePinDialog('sales'),
               onClearAll: () => _showClearAllDialog('sales'),
@@ -266,6 +287,11 @@ class _PinsPageState extends State<PinsPage>
               ),
               count: adminCount,
               hasPin: hasAdminPin,
+              hashes: adminHashes,
+              showHashes: showAdminHashes,
+              onToggleShowHashes: () {
+                setState(() => showAdminHashes = !showAdminHashes);
+              },
               onAdd: () => _showAddPinDialog('admin'),
               onRemove: () => _showRemovePinDialog('admin'),
               onClearAll: () => _showClearAllDialog('admin'),
@@ -355,6 +381,9 @@ class _PinsPageState extends State<PinsPage>
     required Gradient gradient,
     required int count,
     required bool hasPin,
+    required List<String> hashes,
+    required bool showHashes,
+    required VoidCallback onToggleShowHashes,
     required VoidCallback onAdd,
     required VoidCallback onRemove,
     required VoidCallback onClearAll,
@@ -495,6 +524,64 @@ class _PinsPageState extends State<PinsPage>
                 ),
             ],
           ),
+          const SizedBox(height: 16),
+
+          // Mostrar/ocultar hashes
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: onToggleShowHashes,
+                icon: Icon(showHashes ? Icons.visibility_off : Icons.visibility, size: 18),
+                label: Text(showHashes ? 'Ocultar PINs' : 'Mostrar PINs'),
+              ),
+              const SizedBox(width: 12),
+              if (hashes.isNotEmpty)
+                Text('(${hashes.length})', style: TextStyle(color: const Color(0xFF64748B))),
+            ],
+          ),
+
+          if (showHashes && hashes.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: hashes.map((h) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SelectableText(
+                            h,
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              color: Colors.grey.shade800,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () async {
+                            await Clipboard.setData(ClipboardData(text: h));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              _buildSnackBar('Hash copiado al portapapeles', Colors.green),
+                            );
+                          },
+                          icon: const Icon(Icons.copy, size: 18),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -874,16 +961,11 @@ class _PinsPageState extends State<PinsPage>
       final auth = context.read<AuthService>();
       if (type == 'sales') {
         await auth.addRemoteSalesPin(pin);
-        setState(() {
-          salesCount += 1;
-          hasSalesPin = true;
-        });
+        // refresh remote lists
+        await _loadPinsState();
       } else {
         await auth.addRemoteAdminPin(pin);
-        setState(() {
-          adminCount += 1;
-          hasAdminPin = true;
-        });
+        await _loadPinsState();
       }
       ScaffoldMessenger.of(context).showSnackBar(
         _buildSnackBar('PIN añadido correctamente', Colors.green),
@@ -900,16 +982,10 @@ class _PinsPageState extends State<PinsPage>
       final auth = context.read<AuthService>();
       if (type == 'sales') {
         await auth.removeRemoteSalesPin(pin);
-        setState(() {
-          salesCount = (salesCount - 1).clamp(0, 9999);
-          hasSalesPin = salesCount > 0;
-        });
+        await _loadPinsState();
       } else {
         await auth.removeRemoteAdminPin(pin);
-        setState(() {
-          adminCount = (adminCount - 1).clamp(0, 9999);
-          hasAdminPin = adminCount > 0;
-        });
+        await _loadPinsState();
       }
       ScaffoldMessenger.of(context).showSnackBar(
         _buildSnackBar('PIN eliminado correctamente', Colors.green),
@@ -926,16 +1002,10 @@ class _PinsPageState extends State<PinsPage>
       final auth = context.read<AuthService>();
       if (type == 'sales') {
         await auth.clearRemoteSalesPin();
-        setState(() {
-          salesCount = 0;
-          hasSalesPin = false;
-        });
+        await _loadPinsState();
       } else {
         await auth.clearRemoteAdminPin();
-        setState(() {
-          adminCount = 0;
-          hasAdminPin = false;
-        });
+        await _loadPinsState();
       }
       ScaffoldMessenger.of(context).showSnackBar(
         _buildSnackBar('Todos los PINs eliminados correctamente', Colors.green),
