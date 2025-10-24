@@ -5,6 +5,7 @@ import 'package:collection/collection.dart';
 
 import '../modelos/caja.dart';
 import '../modelos/venta.dart';
+import '../modelos/gasto.dart';
 
 /// Modelo liviano para gastos (no dependemos del modelo Gasto)
 class GastoResumen {
@@ -14,6 +15,7 @@ class GastoResumen {
   final Map<String, double> pagos;
   final String?
       label; // etiqueta resumida para mostrar en UI (p.ej. 'Pollo: Pechuga')
+  final List<GastoItem> items; // items del gasto para detalle en informes
 
   GastoResumen({
     required this.id,
@@ -21,6 +23,7 @@ class GastoResumen {
     required this.total,
     required this.pagos,
     this.label,
+    this.items = const [],
   });
 }
 
@@ -305,19 +308,20 @@ class InformeService with ChangeNotifier {
       // label: preferir 'Categoria: Nombre' del primer item si existe;
       // si no hay items con info, usar descripcion; si tampoco, 'Gasto'
       String? label;
+      List<GastoItem> items = const [];
       try {
         final itemsRaw = data['items'];
         if (itemsRaw is List && itemsRaw.isNotEmpty) {
-          final first = itemsRaw.first;
-          if (first is Map) {
-            // Usar solo el nombre del producto (no la categoría)
-            final nombre = (first['nombre'] ?? first['nombreProducto'] ?? '')
-                .toString()
-                .trim();
-            if (nombre.isNotEmpty) {
-              label = nombre;
-            }
-          }
+          // Parsear items completos
+          items = itemsRaw
+              .whereType<Map>()
+              .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e))
+              .map(GastoItem.fromJson)
+              .toList();
+          // Título sugerido desde el primer item
+          final first = items.first;
+          final nombre = (first.nombre).toString().trim();
+          if (nombre.isNotEmpty) label = nombre;
         }
       } catch (_) {
         // ignore
@@ -333,7 +337,13 @@ class InformeService with ChangeNotifier {
       if (label == null || label.isEmpty) label = 'Gasto';
 
       return GastoResumen(
-          id: doc.id, fecha: fecha, total: total, pagos: pagos, label: label);
+        id: doc.id,
+        fecha: fecha,
+        total: total,
+        pagos: pagos,
+        label: label,
+        items: items,
+      );
     }).toList();
 
     // --- CAJAS (normalizamos números antes de usar el modelo) ---
@@ -498,6 +508,7 @@ class InformeService with ChangeNotifier {
           total: monto,
           pagos: {metodo: monto},
           label: old.label,
+          items: old.items,
         );
       }
 

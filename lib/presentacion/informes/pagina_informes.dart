@@ -919,7 +919,7 @@ class _TabGastosState extends State<_TabGastos> {
                     ),
                     children: gastosDia
                         .sorted((a, b) => b.fecha.compareTo(a.fecha))
-                        .map((g) => _GastoTileLite(g))
+                        .map((g) => _GastoTile(gasto: g))
                         .toList(),
                   ),
                 );
@@ -932,68 +932,164 @@ class _TabGastosState extends State<_TabGastos> {
   }
 }
 
-class _GastoTileLite extends StatelessWidget {
-  final GastoResumen g;
-  const _GastoTileLite(this.g);
+class _GastoTile extends StatelessWidget {
+  final GastoResumen gasto;
+  const _GastoTile({required this.gasto});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final metodos = g.pagos.keys.join(', ');
+    final metodosMap = gasto.pagos;
+    final metodosDisplay = metodosMap.entries
+        .map((e) => '${_displayMethodForGastos(e.key)}: S/ ${e.value.toStringAsFixed(2)}')
+        .join(' • ');
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-      leading: CircleAvatar(
-        radius: 18,
-        backgroundColor: _ThemeColors.secondaryGradientEnd.withOpacity(0.1),
-        child: const Icon(Icons.receipt_long_outlined,
-            color: _ThemeColors.secondaryGradientEnd, size: 18),
-      ),
-      title: Text(
-        '${g.label ?? 'Gasto'}: S/ ${g.total.toStringAsFixed(2)}',
-        style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800, fontSize: 14, color: _ThemeColors.accentText),
-      ),
-      subtitle: Text(
-        metodos.isEmpty ? '—' : metodos,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: _ThemeColors.inactive,
-          fontSize: 12,
+    return _GlassCard(
+      child: ExpansionTile(
+        initiallyExpanded: false,
+        tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        title: Row(
+          children: [
+            const Icon(Icons.receipt_long_outlined,
+                color: _ThemeColors.secondaryGradientEnd, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${gasto.label ?? 'Gasto'}: S/ ${gasto.total.toStringAsFixed(2)}',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: _ThemeColors.accentText),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    metodosDisplay.isEmpty ? '—' : metodosDisplay,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: _ThemeColors.inactive, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              DateFormat('hh:mm a', 'es').format(gasto.fecha),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: _ThemeColors.inactive, fontSize: 12),
+            ),
+          ],
         ),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined,
+                  color: _ThemeColors.primaryGradientEnd, size: 18),
+              tooltip: 'Editar gasto',
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
+              onPressed: () => _showEditGastoDialog(context, gasto),
+            ),
+            const SizedBox(width: 2),
+            IconButton(
+              icon: const Icon(Icons.delete_outline,
+                  color: _ThemeColors.danger, size: 18),
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
+              onPressed: () {
+                _showDeleteConfirmationDialog(
+                  context: context,
+                  itemName: "gasto",
+                  onConfirm: () {
+                    context.read<InformeService>().deleteGasto(gasto.id);
+                  },
+                );
+              },
+            ),
+          ],
+        ),
         children: [
-          Text(
-            DateFormat('hh:mm a', 'es').format(g.fecha),
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: _ThemeColors.inactive, fontSize: 12),
-          ),
-          const SizedBox(width: 4),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined,
-                color: _ThemeColors.primaryGradientEnd, size: 18),
-            tooltip: 'Editar gasto',
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(),
-            onPressed: () {
-              _showEditGastoDialog(context, g);
-            },
-          ),
-          const SizedBox(width: 2),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: _ThemeColors.danger, size: 18),
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(),
-            onPressed: () {
-              _showDeleteConfirmationDialog(
-                context: context,
-                itemName: "gasto",
-                onConfirm: () {
-                  context.read<InformeService>().deleteGasto(g.id);
-                },
-              );
-            },
+          const Divider(height: 1, color: _ThemeColors.inactive),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (gasto.items.isEmpty)
+                  Text('— sin items —',
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: _ThemeColors.inactive))
+                else
+                  ...gasto.items.map((it) {
+                    final subtotal = it.subtotal;
+                    final qtyStr = (it.cantidad % 1 == 0)
+                        ? it.cantidad.toStringAsFixed(0)
+                        : it.cantidad.toStringAsFixed(2);
+                    final cat = (it.categoriaId ?? '').trim();
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  it.nombre,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600, fontSize: 13),
+                                ),
+                                if (cat.isNotEmpty)
+                                  Text('Cat: $cat',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                          color: _ThemeColors.inactive, fontSize: 11)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${qtyStr}× S/ ${it.precio.toStringAsFixed(2)}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                                color: _ThemeColors.inactive, fontSize: 12),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'S/ ${subtotal.toStringAsFixed(2)}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: _ThemeColors.accentText),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                const SizedBox(height: 8),
+                if (metodosMap.isNotEmpty)
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: metodosMap.entries.map((e) {
+                      return Chip(
+                        avatar: Icon(_getPaymentMethodIcon(e.key),
+                            size: 14, color: _ThemeColors.secondaryGradientEnd),
+                        label: Text(
+                          '${_displayMethodForGastos(e.key)}: S/ ${e.value.toStringAsFixed(2)}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        backgroundColor:
+                            _ThemeColors.secondaryGradientEnd.withOpacity(0.1),
+                        side: BorderSide(color: Colors.grey.shade300),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                      );
+                    }).toList(),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
