@@ -1003,7 +1003,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                 final itemCount = pedido.items.length;
                                 final timeAgo = _formatTimeAgo(pedido.fecha);
 
-                                return Container(
+                                // Construir la tarjeta como widget reutilizable
+                                final card = Container(
                                   margin: const EdgeInsets.only(bottom: 12),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
@@ -1188,6 +1189,129 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                       ],
                                     ),
                                   ),
+                                );
+
+                                // Habilitar drag & drop para unir órdenes: presionar largo y arrastrar
+                                return DragTarget<PedidoPendiente>(
+                                  onWillAccept: (incoming) =>
+                                      incoming != null && incoming != pedido,
+                                  onAccept: (incoming) {
+                                    // Merge: añadir items de incoming a target (pedido)
+                                    modalSetState(() {
+                                      final sourceIndex = _pedidosPendientes
+                                          .indexWhere((p) => p == incoming);
+                                      final targetIndex = index;
+                                      if (sourceIndex == -1 ||
+                                          sourceIndex == targetIndex) return;
+
+                                      final source = _pedidosPendientes
+                                          .elementAt(sourceIndex);
+                                      final target = _pedidosPendientes
+                                          .elementAt(targetIndex);
+
+                                      final mergedItems = <ItemCarrito>[]
+                                        ..addAll(target.items)
+                                        ..addAll(source.items);
+
+                                      final mergedSubtotal =
+                                          (target.subtotal) + (source.subtotal);
+
+                                      // Reemplazar target con la orden resultante
+                                      _pedidosPendientes[targetIndex] =
+                                          PedidoPendiente(
+                                        nombre: target.nombre,
+                                        items: mergedItems,
+                                        subtotal: mergedSubtotal,
+                                        fecha: DateTime.now(),
+                                      );
+
+                                      // Eliminar la orden source (tener cuidado con índices)
+                                      _pedidosPendientes
+                                          .removeWhere((p) => p == source);
+                                    });
+                                    setState(() {});
+                                  },
+                                  builder: (context, candidateData, rejected) {
+                                    final isReceiving = candidateData.isNotEmpty;
+                                    return LongPressDraggable<PedidoPendiente>(
+                                      data: pedido,
+                                      dragAnchorStrategy:
+                                          pointerDragAnchorStrategy,
+                                      feedback: Material(
+                                        color: Colors.transparent,
+                                        child: Opacity(
+                                          opacity: 0.98,
+                                          child: SizedBox(
+                                            width: MediaQuery.of(context)
+                                                    .size
+                                                    .width -
+                                                64,
+                                            child: Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.12),
+                                                    blurRadius: 12,
+                                                    offset: const Offset(0, 6),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.inventory_2_rounded,
+                                                    size: 20,
+                                                    color: Colors.black87,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      '${pedido.nombre} — ${pedido.items.length} items',
+                                                      style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      childWhenDragging:
+                                          Opacity(opacity: 0.45, child: card),
+                                      child: AnimatedContainer(
+                                        duration:
+                                            const Duration(milliseconds: 180),
+                                        transform: isReceiving
+                                            ? (Matrix4.identity()..scale(1.01))
+                                            : Matrix4.identity(),
+                                        decoration: isReceiving
+                                            ? BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: theme.colorScheme.primary
+                                                        .withOpacity(0.06),
+                                                    blurRadius: 12,
+                                                    offset: const Offset(0, 6),
+                                                  ),
+                                                ],
+                                              )
+                                            : null,
+                                        child: card,
+                                      ),
+                                    );
+                                  },
                                 );
                               },
                             ),
