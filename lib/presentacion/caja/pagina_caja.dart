@@ -67,6 +67,72 @@ Future<void> _mostrarDialogoAbrirCajaGenerico(BuildContext context) async {
     final authSvc = Provider.of<AuthService>(context, listen: false);
 
     try {
+      // Antes de abrir, validar si el trabajador tiene permiso según horarios
+      final uidNow = FirebaseAuth.instance.currentUser?.uid;
+      if (uidNow != null && !(user?.email ?? '').contains('@admin')) {
+        try {
+          // Si no es administrador, comprobar horarios y bandera de habilitación
+          final userDoc = await FirebaseFirestore.instance.collection('users').doc(uidNow).get();
+          final currentRole = (userDoc.data()?['rol'] ?? '').toString().toLowerCase();
+          final habilitadoPorAdmin = (userDoc.data()?['habilitado_fuera_horario'] ?? false) as bool;
+
+          bool allowedBySchedule = false;
+          if (currentRole == 'administrador') allowedBySchedule = true;
+
+          if (!allowedBySchedule) {
+            final now = DateTime.now();
+            final weekdayIndex = now.weekday - 1; // 0=Lun .. 6=Dom (coincide con UI)
+            final horariosSnap = await FirebaseFirestore.instance
+                .collection('horarios')
+                .where('userId', isEqualTo: uidNow)
+                .where('active', isEqualTo: true)
+                .get();
+
+            for (final h in horariosSnap.docs) {
+              try {
+                final data = h.data();
+                final days = (data['days'] is List) ? List<dynamic>.from(data['days']) : <dynamic>[];
+                if (days.isNotEmpty && !days.contains(weekdayIndex)) continue;
+                final s = (data['startTime'] ?? '').toString();
+                final e = (data['endTime'] ?? '').toString();
+                if (s.isEmpty || e.isEmpty) continue;
+                final sp = s.split(':');
+                final ep = e.split(':');
+                if (sp.length != 2 || ep.length != 2) continue;
+                final sh = int.tryParse(sp[0]) ?? 0;
+                final sm = int.tryParse(sp[1]) ?? 0;
+                final eh = int.tryParse(ep[0]) ?? 0;
+                final em = int.tryParse(ep[1]) ?? 0;
+                final startDt = DateTime(now.year, now.month, now.day, sh, sm);
+                final endDt = DateTime(now.year, now.month, now.day, eh, em);
+                // Si end < start asumimos que cruza medianoche y añadimos 1 día a end
+                final adjustedEnd = endDt.isBefore(startDt) ? endDt.add(const Duration(days: 1)) : endDt;
+                final nowDt = now;
+                final nowCmp = nowDt.isBefore(startDt) ? nowDt.add(const Duration(days: 1)) : nowDt;
+                if ((nowDt.isAtSameMomentAs(startDt) || nowDt.isAfter(startDt)) && nowDt.isBefore(adjustedEnd)) {
+                  allowedBySchedule = true;
+                  break;
+                }
+              } catch (_) {}
+            }
+          }
+
+          if (!allowedBySchedule && habilitadoPorAdmin != true) {
+            if (mainScaffoldContext != null) {
+              mostrarNotificacionElegante(
+                mainScaffoldContext!,
+                'No es hora de apertura para tu turno. Pide al administrador habilitar el ingreso.',
+                esError: true,
+                messengerKey: principalMessengerKey,
+              );
+            }
+            return;
+          }
+        } catch (_) {
+          // En caso de fallo al comprobar horarios, permitimos la apertura por compatibilidad
+        }
+      }
+
       await cajaService.abrirCaja(
         montoInicial: monto,
         usuarioId: user?.uid ?? 'local',
