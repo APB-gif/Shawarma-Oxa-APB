@@ -35,6 +35,11 @@ class UsuariosPage extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
+                      tooltip: 'Configurar horario',
+                      icon: const Icon(Icons.access_time),
+                      onPressed: () => _showConfigureScheduleDialog(context, d.id, displayName),
+                    ),
+                    IconButton(
                       tooltip: 'Asignar horario',
                       icon: const Icon(Icons.schedule),
                       onPressed: () => _showAssignScheduleDialog(context, d.id, displayName),
@@ -287,5 +292,127 @@ class UsuariosPage extends StatelessWidget {
     final hh = picked.hour.toString().padLeft(2, '0');
     final mm = picked.minute.toString().padLeft(2, '0');
     return '$hh:$mm';
+  }
+
+  Future<void> _showConfigureScheduleDialog(BuildContext context, String userId, String displayName) async {
+    TimeOfDay start = const TimeOfDay(hour: 9, minute: 0);
+    TimeOfDay end = const TimeOfDay(hour: 17, minute: 0);
+    final selectedDays = <int>{0,1,2,3,4,5,6};
+
+    String fmt(TimeOfDay t) => t.hour.toString().padLeft(2, '0') + ':' + t.minute.toString().padLeft(2, '0');
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setState) {
+          return AlertDialog(
+            title: Text('Configurar horario - $displayName'),
+            content: SizedBox(
+              width: 460,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Presets'),
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 8, children: [
+                    OutlinedButton(
+                      onPressed: () => setState(() { start = const TimeOfDay(hour: 9, minute: 0); end = const TimeOfDay(hour: 17, minute: 0); }),
+                      child: const Text('Mañana 09:00-17:00'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => setState(() { start = const TimeOfDay(hour: 17, minute: 0); end = const TimeOfDay(hour: 23, minute: 0); }),
+                      child: const Text('Noche 17:00-23:00'),
+                    ),
+                  ]),
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    Expanded(
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Inicio'),
+                        subtitle: Text(fmt(start)),
+                        onTap: () async {
+                          final p = await showTimePicker(context: context, initialTime: start);
+                          if (p != null) setState(() => start = p);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Fin'),
+                        subtitle: Text(fmt(end)),
+                        onTap: () async {
+                          final p = await showTimePicker(context: context, initialTime: end);
+                          if (p != null) setState(() => end = p);
+                        },
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 12),
+                  const Text('Días'),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    children: List.generate(7, (idx) {
+                      const labels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+                      final selected = selectedDays.contains(idx);
+                      return ChoiceChip(
+                        label: Text(labels[idx]),
+                        selected: selected,
+                        onSelected: (sel) {
+                          setState(() {
+                            if (sel) { selectedDays.add(idx); } else { selectedDays.remove(idx); }
+                          });
+                        },
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancelar')),
+              ElevatedButton(
+                onPressed: () async {
+                  try {
+                    // Desactivar otros horarios activos del usuario
+                    final q = await FirebaseFirestore.instance.collection('horarios').where('userId', isEqualTo: userId).get();
+                    final batch = FirebaseFirestore.instance.batch();
+                    for (final doc in q.docs) {
+                      batch.set(doc.reference, {'active': false, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+                    }
+                    // Crear el nuevo horario activo
+                    await FirebaseFirestore.instance.collection('horarios').add({
+                      'userId': userId,
+                      'userName': displayName,
+                      'startTime': fmt(start),
+                      'endTime': fmt(end),
+                      'days': selectedDays.toList()..sort(),
+                      'active': true,
+                      'createdAt': FieldValue.serverTimestamp(),
+                      'updatedAt': FieldValue.serverTimestamp(),
+                    });
+                    await batch.commit();
+                    if (context.mounted) {
+                      Navigator.of(ctx).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Horario configurado correctamente')));
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      Navigator.of(ctx).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+                    }
+                  }
+                },
+                child: const Text('Guardar'),
+              ),
+            ],
+          );
+        });
+      },
+    );
   }
 }
