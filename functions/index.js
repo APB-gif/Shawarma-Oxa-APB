@@ -48,7 +48,15 @@ exports.syncRolesBySchedule = functions.pubsub
   .timeZone(process.env.TIMEZONE || 'America/Lima')
   .onRun(async (context) => {
     const db = admin.firestore();
-    const TZ = process.env.TIMEZONE || 'America/Lima';
+    // Zona horaria: preferimos la configuración de functions (firebase functions:config:set schedule.timezone="...")
+    let TZ = 'America/Lima';
+    try {
+      const cfg = functions.config && functions.config();
+      if (cfg && cfg.schedule && cfg.schedule.timezone) TZ = cfg.schedule.timezone;
+      else if (process.env.TIMEZONE) TZ = process.env.TIMEZONE;
+    } catch (e) {
+      if (process.env.TIMEZONE) TZ = process.env.TIMEZONE;
+    }
     const now = DateTime.now().setZone(TZ);
 
     try {
