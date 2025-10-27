@@ -152,3 +152,28 @@ exports.syncRolesBySchedule = functions.pubsub
 
     return null;
   });
+
+// HTTP endpoint to create a template evening schedule (17:00 - 23:00)
+// This helps admins create a reusable horario that can be assigned to users.
+exports.createEveningSchedule = functions.https.onRequest(async (req, res) => {
+  cors(req, res, async () => {
+    try {
+      const db = admin.firestore();
+      const now = admin.firestore.FieldValue.serverTimestamp();
+      const docRef = await db.collection('horarios').add({
+        userId: '',
+        userName: 'TEMPLATE - Turno Tarde 17-23',
+        startTime: '17:00',
+        endTime: '23:00',
+        days: [0,1,2,3,4,5,6],
+        active: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return res.json({ ok: true, id: docRef.id });
+    } catch (err) {
+      console.error('createEveningSchedule error:', err);
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+});
