@@ -7,6 +7,7 @@ import 'package:shawarma_pos_nuevo/presentacion/admin/roles_page.dart';
 import 'package:shawarma_pos_nuevo/presentacion/admin/pagina_recetas.dart';
 import 'package:shawarma_pos_nuevo/presentacion/admin/pins_page.dart';
 import 'package:shawarma_pos_nuevo/presentacion/admin/horarios_page.dart';
+import 'package:shawarma_pos_nuevo/presentacion/admin/usuarios_page.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class PaginaAdmin extends StatefulWidget {
@@ -366,6 +367,19 @@ class _PaginaAdminState extends State<PaginaAdmin>
 
   List<Widget> _buildAdminCards(BuildContext context, bool isDesktop) {
     final adminOptions = [
+      AdminCardData(
+        title: 'Usuarios',
+        subtitle: 'Gestionar personal',
+        description: 'Habilitar entrada fuera de horario',
+        icon: FontAwesomeIcons.users,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF4C51BF), Color(0xFF667EEA)],
+        ),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const UsuariosPage()),
+        ),
+      ),
       AdminCardData(
         title: 'Almacén',
         subtitle: 'Gestionar inventario',
