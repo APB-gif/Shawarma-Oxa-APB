@@ -39,6 +39,11 @@ class UsuariosPage extends StatelessWidget {
                       icon: const Icon(Icons.schedule),
                       onPressed: () => _showAssignScheduleDialog(context, d.id, displayName),
                     ),
+                    IconButton(
+                      tooltip: 'Ver/Editar horarios',
+                      icon: const Icon(Icons.edit_calendar),
+                      onPressed: () => _showUserSchedulesDialog(context, d.id, displayName),
+                    ),
                     const SizedBox(width: 8),
                     const Text('Fuera horario'),
                     const SizedBox(width: 8),
@@ -129,5 +134,158 @@ class UsuariosPage extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _showUserSchedulesDialog(BuildContext context, String userId, String displayName) async {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text('Horarios de $displayName'),
+          content: SizedBox(
+            width: 420,
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('horarios')
+                  .where('userId', isEqualTo: userId)
+                  .snapshots(),
+              builder: (context, snap) {
+                if (snap.hasError) return const Text('Error al cargar horarios');
+                if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+                final docs = snap.data!.docs;
+                if (docs.isEmpty) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      SizedBox(height: 8),
+                      Text('Este usuario no tiene horarios asignados.'),
+                    ],
+                  );
+                }
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: docs.length,
+                  itemBuilder: (context, i) {
+                    final ref = docs[i].reference;
+                    final d = docs[i].data();
+                    final s = (d['startTime'] ?? '') as String;
+                    final e = (d['endTime'] ?? '') as String;
+                    final active = (d['active'] ?? true) as bool;
+                    final days = (d['days'] is List)
+                        ? List<int>.from(d['days'] as List)
+                        : <int>[];
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text('$s - $e', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                const Spacer(),
+                                Switch(
+                                  value: active,
+                                  onChanged: (v) async {
+                                    await ref.set({'active': v, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+                                  },
+                                )
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              children: List.generate(7, (idx) {
+                                const labels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+                                final selected = days.contains(idx);
+                                return ChoiceChip(
+                                  label: Text(labels[idx]),
+                                  selected: selected,
+                                  onSelected: (sel) async {
+                                    final newDays = List<int>.from(days);
+                                    if (sel && !newDays.contains(idx)) newDays.add(idx);
+                                    if (!sel) newDays.remove(idx);
+                                    newDays.sort();
+                                    await ref.set({'days': newDays, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+                                  },
+                                );
+                              }),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                OutlinedButton(
+                                  onPressed: () async {
+                                    final newStart = await _pickTime(context, s);
+                                    if (newStart == null) return;
+                                    await ref.set({'startTime': newStart, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+                                  },
+                                  child: const Text('Cambiar inicio'),
+                                ),
+                                const SizedBox(width: 8),
+                                OutlinedButton(
+                                  onPressed: () async {
+                                    final newEnd = await _pickTime(context, e);
+                                    if (newEnd == null) return;
+                                    await ref.set({'endTime': newEnd, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+                                  },
+                                  child: const Text('Cambiar fin'),
+                                ),
+                                const Spacer(),
+                                IconButton(
+                                  tooltip: 'Eliminar',
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () async {
+                                    final ok = await showDialog<bool>(
+                                      context: context,
+                                      builder: (_) => AlertDialog(
+                                        title: const Text('Eliminar horario'),
+                                        content: const Text('¿Seguro que deseas eliminar este horario?'),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+                                          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Eliminar')),
+                                        ],
+                                      ),
+                                    );
+                                    if (ok == true) await ref.delete();
+                                  },
+                                )
+                              ],
+                            )
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _showAssignScheduleDialog(context, userId, displayName);
+              },
+              child: const Text('Agregar desde plantilla'),
+            ),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cerrar')),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<String?> _pickTime(BuildContext context, String current) async {
+    final parts = current.split(':');
+    final initial = TimeOfDay(
+      hour: parts.length > 1 ? int.tryParse(parts[0]) ?? 17 : 17,
+      minute: parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0,
+    );
+    final picked = await showTimePicker(context: context, initialTime: initial);
+    if (picked == null) return null;
+    final hh = picked.hour.toString().padLeft(2, '0');
+    final mm = picked.minute.toString().padLeft(2, '0');
+    return '$hh:$mm';
   }
 }
