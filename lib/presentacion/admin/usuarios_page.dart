@@ -390,14 +390,12 @@ class _UsuariosPageState extends State<UsuariosPage> with TickerProviderStateMix
         final email = (data['email'] as String?) ?? '';
         final nombre = (data['displayName'] ?? data['name'] ?? 'Usuario') as String;
         final rol = (data['rol'] as String?) ?? 'trabajador';
-        final habilitado = (data['habilitado_fuera_horario'] ?? false) as bool;
-
-        return _buildUserCard(nombre, email, rol, habilitado, uid, isTablet, isDesktop);
+        return _buildUserCard(nombre, email, rol, uid, isTablet, isDesktop);
       },
     );
   }
 
-  Widget _buildUserCard(String nombre, String email, String rol, bool habilitado, String uid, bool isTablet, bool isDesktop) {
+  Widget _buildUserCard(String nombre, String email, String rol, String uid, bool isTablet, bool isDesktop) {
     final width = MediaQuery.of(context).size.width;
     final isNarrow = width < 520;
     final cardPadding = isTablet ? 20.0 : 16.0;
@@ -501,13 +499,13 @@ class _UsuariosPageState extends State<UsuariosPage> with TickerProviderStateMix
           if (isNarrow) ...[
             _buildActionButtons(uid, nombre, true),
             const SizedBox(height: 12),
-            _buildOverrideSwitch(habilitado, uid, nombre),
+            _buildScheduleSwitch(uid, nombre),
           ] else ...[
             Row(
               children: [
                 Expanded(child: _buildActionButtons(uid, nombre, false)),
                 const SizedBox(width: 16),
-                _buildOverrideSwitch(habilitado, uid, nombre),
+                _buildScheduleSwitch(uid, nombre),
               ],
             ),
           ],
@@ -517,24 +515,14 @@ class _UsuariosPageState extends State<UsuariosPage> with TickerProviderStateMix
   }
 
   Widget _buildActionButtons(String uid, String nombre, bool isVertical) {
+    // Solo dejar botón de configuración: el resto de acciones (plantilla/editar)
+    // se eliminaron porque la configuración cubre todo el flujo deseado.
     final buttons = [
       _buildActionButton(
         'Configurar',
         Icons.access_time,
         const Color(0xFF059669),
         () => _showConfigureScheduleDialog(context, uid, nombre),
-      ),
-      _buildActionButton(
-        'Plantilla',
-        Icons.schedule,
-        const Color(0xFF3B82F6),
-        () => _showAssignScheduleDialog(context, uid, nombre),
-      ),
-      _buildActionButton(
-        'Editar',
-        Icons.edit_calendar,
-        const Color(0xFF7C3AED),
-        () => _showUserSchedulesDialog(context, uid, nombre),
       ),
     ];
 
@@ -580,7 +568,7 @@ class _UsuariosPageState extends State<UsuariosPage> with TickerProviderStateMix
     );
   }
 
-  Widget _buildOverrideSwitch(bool habilitado, String uid, String nombre) {
+  Widget _buildScheduleSwitch(String uid, String nombre) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -588,80 +576,218 @@ class _UsuariosPageState extends State<UsuariosPage> with TickerProviderStateMix
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            FontAwesomeIcons.userClock,
-            size: 16,
-            color: habilitado ? const Color(0xFF059669) : const Color(0xFF64748B),
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            'Fuera de horario',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Switch(
-            value: habilitado,
-            onChanged: (v) async {
-              try {
-                await FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(uid)
-                    .set(
-                      {'habilitado_fuera_horario': v},
-                      SetOptions(merge: true),
-                    );
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          const Icon(Icons.check_circle, color: Colors.white),
-                          const SizedBox(width: 8),
-                          Text('Actualizado: $nombre'),
-                        ],
-                      ),
-                      backgroundColor: const Color(0xFF10B981),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          const Icon(Icons.error, color: Colors.white),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text('Error: $e')),
-                        ],
-                      ),
-                      backgroundColor: const Color(0xFFEF4444),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  );
-                }
-              }
-            },
-            activeColor: const Color(0xFF059669),
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-        ],
+      child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('horarios')
+            .where('userId', isEqualTo: uid)
+            .where('active', isEqualTo: true)
+            .limit(1)
+            .snapshots(),
+        builder: (context, snap) {
+          final horarioActivo = (snap.data?.docs.isNotEmpty ?? false);
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.access_time,
+                size: 16,
+                color: horarioActivo ? const Color(0xFF059669) : const Color(0xFF64748B),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Horario activo',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Switch(
+                value: horarioActivo,
+                onChanged: (v) async {
+                  try {
+                    // Siempre limpiar el flag de override para evitar que quede activo sin querer
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(uid)
+                        .set({'habilitado_fuera_horario': false}, SetOptions(merge: true));
+
+                    // Sincronizar el/los documentos de horarios del usuario:
+                    final horariosQuery = await FirebaseFirestore.instance
+                        .collection('horarios')
+                        .where('userId', isEqualTo: uid)
+                        .get();
+
+                    if (horariosQuery.docs.isEmpty) {
+                      if (v) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Este usuario no tiene un horario. Usa "Configurar" para crear uno.'),
+                              backgroundColor: Color(0xFF6366F1),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      }
+                      return;
+                    }
+
+                    final batch = FirebaseFirestore.instance.batch();
+                    if (v) {
+                      // Activar el horario más reciente y desactivar el resto
+                      horariosQuery.docs.sort((a, b) {
+                        final aTs = a.data()['createdAt'] as Timestamp?;
+                        final bTs = b.data()['createdAt'] as Timestamp?;
+                        if (aTs == null && bTs == null) return 0;
+                        if (aTs == null) return 1;
+                        if (bTs == null) return -1;
+                        return bTs.compareTo(aTs);
+                      });
+                      final latestId = horariosQuery.docs.first.id;
+                      for (final d in horariosQuery.docs) {
+                        final makeActive = d.id == latestId;
+                        batch.set(
+                          d.reference,
+                          {
+                            'active': makeActive,
+                            'updatedAt': FieldValue.serverTimestamp(),
+                          },
+                          SetOptions(merge: true),
+                        );
+                      }
+                    } else {
+                      // Desactivar todos
+                      for (final d in horariosQuery.docs) {
+                        batch.set(
+                          d.reference,
+                          {
+                            'active': false,
+                            'updatedAt': FieldValue.serverTimestamp(),
+                          },
+                          SetOptions(merge: true),
+                        );
+                      }
+                    }
+
+                    await batch.commit();
+
+                    // Enforce inmediato del rol según horario activo y caja abierta
+                    await _enforceRoleNow(uid);
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.check_circle, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Text(v ? 'Horario activado: $nombre' : 'Horario desactivado: $nombre'),
+                            ],
+                          ),
+                          backgroundColor: const Color(0xFF10B981),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.error, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text('Error: $e')),
+                            ],
+                          ),
+                          backgroundColor: const Color(0xFFEF4444),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                },
+                activeColor: const Color(0xFF059669),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  Future<void> _enforceRoleNow(String uid) async {
+    try {
+      final db = FirebaseFirestore.instance;
+      // Leer usuario
+      final userSnap = await db.collection('users').doc(uid).get();
+      final udata = userSnap.data() ?? {};
+      final rol = ((udata['rol'] as String?) ?? '').toLowerCase();
+      if (rol == 'administrador') return; // no tocar admin
+
+      // Horario activo
+      final actQ = await db
+          .collection('horarios')
+          .where('userId', isEqualTo: uid)
+          .where('active', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      bool inWindow = false;
+      if (actQ.docs.isNotEmpty) {
+        final h = actQ.docs.first.data();
+        final days = (h['days'] as List<dynamic>? ?? []).map((e) => int.tryParse(e.toString()) ?? -1).where((e) => e >= 0).toList();
+        final s = (h['startTime'] as String? ?? '').trim();
+        final e = (h['endTime'] as String? ?? '').trim();
+        if (s.isNotEmpty && e.isNotEmpty) {
+          final now = DateTime.now();
+          final weekdayIndex = now.weekday - 1; // 0..6
+          if (days.isEmpty || days.contains(weekdayIndex)) {
+            final sp = s.split(':');
+            final ep = e.split(':');
+            if (sp.length == 2 && ep.length == 2) {
+              final sh = int.tryParse(sp[0]) ?? 0;
+              final sm = int.tryParse(sp[1]) ?? 0;
+              final eh = int.tryParse(ep[0]) ?? 0;
+              final em = int.tryParse(ep[1]) ?? 0;
+              final start = DateTime(now.year, now.month, now.day, sh, sm);
+              final end = DateTime(now.year, now.month, now.day, eh, em);
+              if (end.isAfter(start)) {
+                inWindow = now.isAfter(start) && now.isBefore(end);
+              } else {
+                // Cruza medianoche
+                inWindow = now.isAfter(start) || now.isBefore(end);
+              }
+            }
+          }
+        }
+      }
+
+      // Caja abierta
+      final liveQ = await db
+          .collection('cajas_live')
+          .where('usuarioId', isEqualTo: uid)
+          .where('estado', isEqualTo: 'abierta')
+          .limit(1)
+          .get();
+      final hasOpenCaja = liveQ.docs.isNotEmpty;
+
+      // Aplicar
+      final newRol = (inWindow || hasOpenCaja) ? 'trabajador' : 'fuera de servicio';
+      if (newRol != rol && newRol.isNotEmpty) {
+        await db.collection('users').doc(uid).set({'rol': newRol}, SetOptions(merge: true));
+      }
+    } catch (e) {
+      // No usar BuildContext aquí para evitar tocar UI cuando la página ya no está montada
+      debugPrint('[_enforceRoleNow] Error aplicando rol inmediato para $uid: $e');
+    }
   }
 
   Widget _buildEmptyState() {
@@ -705,499 +831,11 @@ class _UsuariosPageState extends State<UsuariosPage> with TickerProviderStateMix
     );
   }
 
-  Future<void> _showAssignScheduleDialog(BuildContext context, String userId, String displayName) async {
-    return showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.schedule, color: Color(0xFF3B82F6), size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Plantillas de Horario',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 300,
-            child: FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              future: FirebaseFirestore.instance
-                  .collection('horarios')
-                  .where('active', isEqualTo: true)
-                  .get(),
-              builder: (context, snap) {
-                if (snap.hasError) {
-                  return const Center(
-                    child: Text(
-                      'Error al cargar plantillas',
-                      style: TextStyle(color: Color(0xFFEF4444)),
-                    ),
-                  );
-                }
-                if (!snap.hasData) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF6366F1)),
-                  );
-                }
-                
-                final docs = snap.data!.docs.where((d) {
-                  final data = d.data();
-                  final uid = (data['userId'] ?? '') as String;
-                  final name = (data['userName'] ?? '') as String;
-                  return uid.trim().isEmpty || 
-                         name.toString().toUpperCase().startsWith('TEMPLATE');
-                }).toList();
-                
-                if (docs.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.schedule_outlined, size: 48, color: Color(0xFF64748B)),
-                        SizedBox(height: 12),
-                        Text('No hay plantillas disponibles'),
-                      ],
-                    ),
-                  );
-                }
-                
-                return ListView.separated(
-                  itemCount: docs.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, i) {
-                    final doc = docs[i];
-                    final d = doc.data();
-                    final title = (d['userName'] ?? 'Plantilla') as String;
-                    final s = (d['startTime'] ?? '') as String;
-                    final e = (d['endTime'] ?? '') as String;
-                    final days = (d['days'] is List) 
-                        ? List<int>.from(d['days'] as List) 
-                        : <int>[];
-                    
-                    return Container(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF059669).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.access_time, color: Color(0xFF059669), size: 20),
-                        ),
-                        title: Text(
-                          title,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text('$s - $e'),
-                            if (days.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Wrap(
-                                spacing: 4,
-                                children: days.map((day) {
-                                  const labels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF3B82F6).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      labels[day % 7],
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Color(0xFF3B82F6),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ],
-                          ],
-                        ),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () async {
-                          Navigator.of(ctx).pop();
-                          try {
-                            final copy = Map<String, dynamic>.from(d);
-                            copy['userId'] = userId;
-                            copy['userName'] = displayName;
-                            copy['createdAt'] = FieldValue.serverTimestamp();
-                            copy['updatedAt'] = FieldValue.serverTimestamp();
-                            copy['active'] = true;
-                            
-                            final newRef = await FirebaseFirestore.instance
-                                .collection('horarios')
-                                .add(copy);
-                                
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Row(
-                                    children: [
-                                      const Icon(Icons.check_circle, color: Colors.white),
-                                      const SizedBox(width: 8),
-                                      Text('Horario asignado (${newRef.id})'),
-                                    ],
-                                  ),
-                                  backgroundColor: const Color(0xFF10B981),
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              );
-                            }
-                          } catch (err) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Row(
-                                    children: [
-                                      const Icon(Icons.error, color: Colors.white),
-                                      const SizedBox(width: 8),
-                                      Expanded(child: Text('Error: $err')),
-                                    ],
-                                  ),
-                                  backgroundColor: const Color(0xFFEF4444),
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cerrar'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // Eliminado: _showAssignScheduleDialog (plantillas). La configuración cubre todo el flujo deseado.
 
-  Future<void> _showUserSchedulesDialog(BuildContext context, String userId, String displayName) async {
-    return showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF7C3AED).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.edit_calendar, color: Color(0xFF7C3AED), size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Horarios de $displayName',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 480,
-            height: 400,
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('horarios')
-                  .where('userId', isEqualTo: userId)
-                  .snapshots(),
-              builder: (context, snap) {
-                if (snap.hasError) {
-                  return const Center(
-                    child: Text(
-                      'Error al cargar horarios',
-                      style: TextStyle(color: Color(0xFFEF4444)),
-                    ),
-                  );
-                }
-                if (!snap.hasData) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF6366F1)),
-                  );
-                }
-                
-                final docs = snap.data!.docs;
-                if (docs.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.schedule_outlined, size: 48, color: Color(0xFF64748B)),
-                        SizedBox(height: 12),
-                        Text(
-                          'Este usuario no tiene horarios asignados.',
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                
-                return ListView.separated(
-                  itemCount: docs.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, i) {
-                    final ref = docs[i].reference;
-                    final d = docs[i].data();
-                    final s = (d['startTime'] ?? '') as String;
-                    final e = (d['endTime'] ?? '') as String;
-                    final active = (d['active'] ?? true) as bool;
-                    final days = (d['days'] is List)
-                        ? List<int>.from(d['days'] as List)
-                        : <int>[];
-                        
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: active ? Colors.white : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: active ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
-                        ),
-                        boxShadow: active ? [
-                          BoxShadow(
-                            color: const Color(0xFF059669).withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ] : null,
-                      ),
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.access_time,
-                                color: active ? const Color(0xFF059669) : const Color(0xFF64748B),
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '$s - $e',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                  color: active ? const Color(0xFF1E293B) : const Color(0xFF64748B),
-                                ),
-                              ),
-                              const Spacer(),
-                              Switch(
-                                value: active,
-                                activeColor: const Color(0xFF059669),
-                                onChanged: (v) async {
-                                  await ref.set({
-                                    'active': v,
-                                    'updatedAt': FieldValue.serverTimestamp(),
-                                  }, SetOptions(merge: true));
-                                },
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: List.generate(7, (idx) {
-                              const labels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-                              final selected = days.contains(idx);
-                              return GestureDetector(
-                                onTap: () async {
-                                  final newDays = List<int>.from(days);
-                                  if (selected) {
-                                    newDays.remove(idx);
-                                  } else {
-                                    newDays.add(idx);
-                                  }
-                                  newDays.sort();
-                                  await ref.set({
-                                    'days': newDays,
-                                    'updatedAt': FieldValue.serverTimestamp(),
-                                  }, SetOptions(merge: true));
-                                },
-                                child: Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: selected 
-                                        ? const Color(0xFF3B82F6) 
-                                        : const Color(0xFFF1F5F9),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: selected 
-                                          ? const Color(0xFF3B82F6) 
-                                          : const Color(0xFFE2E8F0),
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      labels[idx],
-                                      style: TextStyle(
-                                        color: selected ? Colors.white : const Color(0xFF64748B),
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () async {
-                                    final newStart = await _pickTime(context, s);
-                                    if (newStart == null) return;
-                                    await ref.set({
-                                      'startTime': newStart,
-                                      'updatedAt': FieldValue.serverTimestamp(),
-                                    }, SetOptions(merge: true));
-                                  },
-                                  icon: const Icon(Icons.schedule, size: 16),
-                                  label: const Text('Inicio'),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () async {
-                                    final newEnd = await _pickTime(context, e);
-                                    if (newEnd == null) return;
-                                    await ref.set({
-                                      'endTime': newEnd,
-                                      'updatedAt': FieldValue.serverTimestamp(),
-                                    }, SetOptions(merge: true));
-                                  },
-                                  icon: const Icon(Icons.schedule_outlined, size: 16),
-                                  label: const Text('Fin'),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                tooltip: 'Eliminar horario',
-                                icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
-                                onPressed: () async {
-                                  final ok = await showDialog<bool>(
-                                    context: context,
-                                    builder: (_) => AlertDialog(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      title: const Text('Eliminar horario'),
-                                      content: const Text(
-                                        '¿Estás seguro de que deseas eliminar este horario?',
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context, false),
-                                          child: const Text('Cancelar'),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () => Navigator.pop(context, true),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(0xFFEF4444),
-                                          ),
-                                          child: const Text('Eliminar'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                  if (ok == true) await ref.delete();
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                _showAssignScheduleDialog(context, userId, displayName);
-              },
-              child: const Text('Agregar plantilla'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cerrar'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // Eliminado: _showUserSchedulesDialog (ver/editar listados). La configuración es la vía única.
 
-  Future<String?> _pickTime(BuildContext context, String current) async {
-    final parts = current.split(':');
-    final initial = TimeOfDay(
-      hour: parts.length > 1 ? int.tryParse(parts[0]) ?? 17 : 17,
-      minute: parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0,
-    );
-    final picked = await showTimePicker(context: context, initialTime: initial);
-    if (picked == null) return null;
-    final hh = picked.hour.toString().padLeft(2, '0');
-    final mm = picked.minute.toString().padLeft(2, '0');
-    return '$hh:$mm';
-  }
+  // Eliminado helper _pickTime (ya no se usa).
 
   Future<void> _showConfigureScheduleDialog(BuildContext context, String userId, String displayName) async {
     TimeOfDay start = const TimeOfDay(hour: 9, minute: 0);
@@ -1235,7 +873,7 @@ class _UsuariosPageState extends State<UsuariosPage> with TickerProviderStateMix
                 ],
               ),
               content: Container(
-                width: 480,
+                // Evitar desbordes horizontales: no fijar ancho, solo limitar altura
                 constraints: const BoxConstraints(maxHeight: 500),
                 child: SingleChildScrollView(
                   child: Column(
@@ -1294,38 +932,80 @@ class _UsuariosPageState extends State<UsuariosPage> with TickerProviderStateMix
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTimeSelector(
-                              'Hora de Inicio',
-                              fmt(start),
-                              Icons.schedule,
-                              () async {
-                                final p = await showTimePicker(
-                                  context: context,
-                                  initialTime: start,
-                                );
-                                if (p != null) setState(() => start = p);
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTimeSelector(
-                              'Hora de Fin',
-                              fmt(end),
-                              Icons.schedule_outlined,
-                              () async {
-                                final p = await showTimePicker(
-                                  context: context,
-                                  initialTime: end,
-                                );
-                                if (p != null) setState(() => end = p);
-                              },
-                            ),
-                          ),
-                        ],
+                      Builder(
+                        builder: (ctx2) {
+                          // Evitar LayoutBuilder dentro de AlertDialog (intrinsics). Usar ancho de pantalla como aproximación.
+                          final screenW = MediaQuery.of(ctx2).size.width;
+                          final narrow = screenW < 380;
+                          if (narrow) {
+                            return Column(
+                              children: [
+                                _buildTimeSelector(
+                                  'Hora de Inicio',
+                                  fmt(start),
+                                  Icons.schedule,
+                                  () async {
+                                    // Usar el contexto local del diálogo para evitar usar un BuildContext ya desmontado
+                                    final p = await showTimePicker(
+                                      context: ctx2,
+                                      initialTime: start,
+                                    );
+                                    if (p != null) setState(() => start = p);
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                                _buildTimeSelector(
+                                  'Hora de Fin',
+                                  fmt(end),
+                                  Icons.schedule_outlined,
+                                  () async {
+                                    // Usar el contexto local del diálogo para evitar usar un BuildContext ya desmontado
+                                    final p = await showTimePicker(
+                                      context: ctx2,
+                                      initialTime: end,
+                                    );
+                                    if (p != null) setState(() => end = p);
+                                  },
+                                ),
+                              ],
+                            );
+                          }
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: _buildTimeSelector(
+                                  'Hora de Inicio',
+                                  fmt(start),
+                                  Icons.schedule,
+                                  () async {
+                                    // Usar el contexto local del diálogo para evitar usar un BuildContext ya desmontado
+                                    final p = await showTimePicker(
+                                      context: ctx2,
+                                      initialTime: start,
+                                    );
+                                    if (p != null) setState(() => start = p);
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildTimeSelector(
+                                  'Hora de Fin',
+                                  fmt(end),
+                                  Icons.schedule_outlined,
+                                  () async {
+                                    // Usar el contexto local del diálogo para evitar usar un BuildContext ya desmontado
+                                    final p = await showTimePicker(
+                                      context: ctx2,
+                                      initialTime: end,
+                                    );
+                                    if (p != null) setState(() => end = p);
+                                  },
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 24),
                       const Text(
@@ -1443,6 +1123,8 @@ class _UsuariosPageState extends State<UsuariosPage> with TickerProviderStateMix
                               'updatedAt': FieldValue.serverTimestamp(),
                             });
                             await batch.commit();
+                            // Enforce inmediato del rol tras crear/activar el horario
+                            await _enforceRoleNow(userId);
                             
                             if (context.mounted) {
                               Navigator.of(ctx).pop();

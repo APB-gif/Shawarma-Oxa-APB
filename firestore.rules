@@ -24,23 +24,23 @@ service cloud.firestore {
       allow create: if isSelf(uid)
                     && request.resource.data.uid == uid
                     && request.resource.data.email == request.auth.token.email;
+
       allow read:   if isSignedIn();
+
+      // Perfil propio limitado y transiciones de rol propias; admin puede todo.
       allow update: if (
                        isSelf(uid)
                        && request.resource.data.uid   == resource.data.uid
                        && request.resource.data.email == resource.data.email
                        && (
-                            // 1) Edición de perfil propia (solo nombre/foto) manteniendo rol
+                            // (1) Perfil propio (nombre/foto), sin cambiar rol
                             (
                               request.resource.data.diff(resource.data).changedKeys()
                                 .hasOnly(['nombre','photoUrl'])
                               && request.resource.data.rol == resource.data.rol
                             )
                             ||
-                            // 2) Transiciones de rol AUTORIZADAS por el propio usuario
-                            //    Permitimos SOLO:
-                            //      - espectador|fuera de servicio -> trabajador (al abrir caja)
-                            //      - trabajador -> fuera de servicio (al cerrar caja)
+                            // (2) Transiciones de rol permitidas por el propio usuario
                             (
                               request.resource.data.diff(resource.data).changedKeys().hasOnly(['rol'])
                               && (
@@ -53,7 +53,17 @@ service cloud.firestore {
                             )
                           )
                      ) || isAdmin();
+
       allow delete: if isAdmin();
+    }
+
+    // ---------- horarios (turnos por usuario) ----------
+    match /horarios/{horarioId} {
+      // Lectura: admin o el dueño del horario (userId == uid)
+      allow read: if isSignedIn() && (isAdmin() || (resource.data.userId == request.auth.uid));
+
+      // Escrituras: solo administradores desde la app; (Funciones con Admin SDK no pasan por reglas)
+      allow create, update, delete: if isAdmin();
     }
 
     // ---------- ventas (raíz) ----------
@@ -114,16 +124,79 @@ service cloud.firestore {
     }
 
     // ---------- configuración (estado compartido) ----------
-    // Incluye: estado de salsa de ajo, configuraciones globales, etc.
     match /configuracion/{configId} {
-      // Cualquier usuario autenticado puede leer la configuración
       allow read: if isSignedIn();
-      
-      // Cualquier usuario autenticado puede escribir (actualizar estado de salsa, etc.)
-      // Si quieres restringir solo a ciertos roles, cambia a: if isAdmin()
       allow write: if isSignedIn();
-      
-      // Solo admins pueden eliminar configuraciones
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Legacy: config/offline_pins ----------
+    match /config/offline_pins {
+      // Lectura permitida para usuarios autenticados (necesario para sincronizar PINs)
+      allow read: if isSignedIn();
+
+      // Crear/Actualizar solo por administradores. Validaciones de esquema.
+      allow create, update: if isAdmin() &&
+        request.resource.data.keys().hasOnly([
+          'adminPinHashes',
+          'salesPinHashes',
+          'adminPinHash',
+          'salesPinHash',
+          'updatedAt',
+          'updatedBy'
+        ]) &&
+        (!('adminPinHashes' in request.resource.data) || request.resource.data.adminPinHashes is list) &&
+        (!('salesPinHashes' in request.resource.data) || request.resource.data.salesPinHashes is list) &&
+        (!('adminPinHash' in request.resource.data) || request.resource.data.adminPinHash is string) &&
+        (!('salesPinHash' in request.resource.data) || request.resource.data.salesPinHash is string) &&
+        (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp) &&
+        (!('updatedBy' in request.resource.data) || request.resource.data.updatedBy is string);
+
+      // Solo admins pueden eliminar
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Documento secreto con PINs en claro ----------
+    match /config/offline_pins_secrets {
+      // Lectura SOLO para administradores
+      allow read: if isAdmin();
+
+      // Escrituras SOLO para administradores, con validación de esquema
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'adminPinsPlain',
+          'salesPinsPlain',
+          'updatedAt',
+          'updatedBy'
+        ]) &&
+        (!('adminPinsPlain' in request.resource.data) || request.resource.data.adminPinsPlain is list) &&
+        (!('salesPinsPlain' in request.resource.data) || request.resource.data.salesPinsPlain is list) &&
+        (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp) &&
+        (!('updatedBy' in request.resource.data) || request.resource.data.updatedBy is string);
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Nueva colección /pins (opcional) ----------
+    match /pins/{docId} {
+      allow read: if isSignedIn();
+
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasOnly(['adminPinHashes', 'salesPinHashes', 'lastUpdated', 'updatedBy']) &&
+        ('adminPinHashes' in request.resource.data) &&
+        ('salesPinHashes' in request.resource.data) &&
+        request.resource.data.adminPinHashes is list &&
+        request.resource.data.salesPinHashes is list &&
+        (!('lastUpdated' in request.resource.data) || request.resource.data.lastUpdated is timestamp) &&
+        (!('updatedBy' in request.resource.data) || request.resource.data.updatedBy is string);
+
+      allow update: if isAdmin() &&
+        request.resource.data.keys().hasOnly(['adminPinHashes', 'salesPinHashes', 'lastUpdated', 'updatedBy']) &&
+        (!('adminPinHashes' in request.resource.data) || request.resource.data.adminPinHashes is list) &&
+        (!('salesPinHashes' in request.resource.data) || request.resource.data.salesPinHashes is list) &&
+        (!('lastUpdated' in request.resource.data) || request.resource.data.lastUpdated is timestamp) &&
+        (!('updatedBy' in request.resource.data) || request.resource.data.updatedBy is string);
+
       allow delete: if isAdmin();
     }
 
@@ -131,9 +204,10 @@ service cloud.firestore {
     match /cajas_live/{cajaId} {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn();
-      allow delete: if isAdmin() || isSignedIn();
+      // Endurecido: solo admin o operador activo puede eliminar la caja en vivo
+      allow delete: if isAdmin() || isActiveOperator(cajaId);
 
-      // --- comandos ---
+      // --- commands ---
       match /commands/{cmdId} {
         allow read: if isSignedIn();
 

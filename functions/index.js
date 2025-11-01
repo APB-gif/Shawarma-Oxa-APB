@@ -87,26 +87,27 @@ exports.syncRolesBySchedule = functions.pubsub
 
         let start = DateTime.fromObject({ year: now.year, month: now.month, day: now.day, hour: sp[0], minute: sp[1] }, { zone: TZ });
         let end = DateTime.fromObject({ year: now.year, month: now.month, day: now.day, hour: ep[0], minute: ep[1] }, { zone: TZ });
-        if (end <= start) {
-          // Cruza medianoche
-          end = end.plus({ days: 1 });
+
+        // Si end <= start significa que el turno cruza medianoche. En ese caso
+        // el intervalo es [start, 23:59... ] U [00:00..., end).
+        let inWindow = false;
+        if (end > start) {
+          // turno en el mismo día
+          inWindow = now >= start && now < end;
+        } else {
+          // turno que cruza medianoche: true si ahora >= start (día 1)
+          // o ahora < end (día siguiente)
+          inWindow = (now >= start) || (now < end);
         }
 
-        // Normalizar ahora para comparaciones (también permitir comparaciones cuando now < start but falls into overnight window)
-        let nowForCheck = now;
-        if (now < start && end.day !== start.day) {
-          // si ahora está antes de start y el end fue ajustado al día siguiente, sumar un día para comparar
-          nowForCheck = now.plus({ days: 1 });
-        }
-
-        if (nowForCheck >= start && nowForCheck < end) {
+        if (inWindow) {
           userNowMap.set(userId, true);
         } else if (!userNowMap.has(userId)) {
           userNowMap.set(userId, false);
         }
       }
 
-      // Recolectar updates por usuario
+  // Recolectar updates por usuario
       const batch = db.batch();
       const processed = new Set();
 
@@ -121,6 +122,22 @@ exports.syncRolesBySchedule = functions.pubsub
         const udata = userSnap.data() || {};
         const rol = (udata.rol || '').toString().toLowerCase();
         const habilitadoFuera = !!udata.habilitado_fuera_horario;
+        // Si existe una expiración explícita del override, respétala; si no, por defecto tratamos el override como no activo.
+        let overrideVigente = false;
+        try {
+          const untilTs = udata.habilitado_fuera_horario_until; // Firestore Timestamp esperado
+          if (habilitadoFuera && untilTs && typeof untilTs.toMillis === 'function') {
+            overrideVigente = untilTs.toMillis() > Date.now();
+          }
+        } catch (e) {
+          // Ignorar problemas de parsing
+          overrideVigente = false;
+        }
+        // Si el flag quedó en true pero ya expiró, lo limpiamos para evitar estados permanentes indeseados.
+        if (habilitadoFuera && !overrideVigente) {
+          console.log(`syncRolesBySchedule: clearing expired habilitado_fuera_horario for user ${userId}`);
+          batch.update(userRef, { habilitado_fuera_horario: false, habilitado_fuera_horario_until: admin.firestore.FieldValue.delete() });
+        }
 
         // No tocar administradores
         if (rol === 'administrador') continue;
@@ -129,15 +146,21 @@ exports.syncRolesBySchedule = functions.pubsub
         const liveQ = await db.collection('cajas_live').where('usuarioId', '==', userId).where('estado', '==', 'abierta').limit(1).get();
         const hasOpenCaja = !liveQ.empty;
 
-        if (inWindow) {
-          // Si está en ventana y no es administrador, poner trabajador (si no lo es ya)
+        if (inWindow || hasOpenCaja) {
+          // Si está en ventana O tiene una caja abierta, mantener/forzar rol 'trabajador'
           if (rol !== 'trabajador') {
+            console.log(`syncRolesBySchedule: will set user ${userId} rol -> trabajador (inWindow=${inWindow}, hasOpenCaja=${hasOpenCaja})`);
             batch.update(userRef, { rol: 'trabajador' });
+          } else {
+            console.log(`syncRolesBySchedule: user ${userId} already trabajador (inWindow=${inWindow}, hasOpenCaja=${hasOpenCaja})`);
           }
         } else {
-          // Fuera de ventana: si rol es trabajador y no tiene caja abierta y no está habilitado por admin, poner fuera de servicio
-          if (rol === 'trabajador' && !hasOpenCaja && !habilitadoFuera) {
+          // Fuera de ventana y sin caja abierta: si rol es trabajador y no está habilitado por admin, poner fuera de servicio
+          if (rol === 'trabajador' && !overrideVigente) {
+            console.log(`syncRolesBySchedule: will set user ${userId} rol -> fuera de servicio (inWindow=${inWindow}, hasOpenCaja=${hasOpenCaja})`);
             batch.update(userRef, { rol: 'fuera de servicio' });
+          } else {
+            console.log(`syncRolesBySchedule: no change for user ${userId} (rol=${rol}, overrideVigente=${overrideVigente}, inWindow=${inWindow}, hasOpenCaja=${hasOpenCaja})`);
           }
         }
       }
@@ -173,6 +196,167 @@ exports.createEveningSchedule = functions.https.onRequest(async (req, res) => {
       return res.json({ ok: true, id: docRef.id });
     } catch (err) {
       console.error('createEveningSchedule error:', err);
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+});
+
+// ======================= IZIPAY INTEGRATION (SKELETON) =======================
+// Nota: Este es un esqueleto seguro para integrar Izipay.
+// - Guarda las credenciales en funciones (NO en el cliente)
+//   firebase functions:config:set izipay.merchant_id="..." izipay.api_key="..." izipay.api_secret="..." izipay.base_url="https://sandbox.api.izipay.pe"
+// - Si no hay credenciales configuradas, se activa un modo MOCK que devuelve URLs/QR simulados.
+
+function getIziConfig() {
+  try {
+    const cfg = functions.config && functions.config();
+    const iz = cfg && cfg.izipay ? cfg.izipay : {};
+    return {
+      merchantId: iz.merchant_id || process.env.IZIPAY_MERCHANT_ID || '',
+      apiKey: iz.api_key || process.env.IZIPAY_API_KEY || '',
+      apiSecret: iz.api_secret || process.env.IZIPAY_API_SECRET || '',
+      baseUrl:
+        iz.base_url || process.env.IZIPAY_BASE_URL || 'https://sandbox.api.izipay.pe',
+    };
+  } catch (e) {
+    return {
+      merchantId: process.env.IZIPAY_MERCHANT_ID || '',
+      apiKey: process.env.IZIPAY_API_KEY || '',
+      apiSecret: process.env.IZIPAY_API_SECRET || '',
+      baseUrl: process.env.IZIPAY_BASE_URL || 'https://sandbox.api.izipay.pe',
+    };
+  }
+}
+
+const _PAYMENT_INTENTS_COL = 'payment_intents';
+
+// Crea una intención de pago en Izipay (o MOCK) y persiste el intento.
+// Body: { amount, currency, reference, method: 'card'|'qr', cajaId, ventaId, returnUrl? }
+exports.izipayCreatePayment = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+    try {
+      const db = admin.firestore();
+      const { amount, currency = 'PEN', reference, method, cajaId, ventaId, returnUrl } = req.body || {};
+      if (!amount || !method || !cajaId) {
+        return res.status(400).json({ error: 'amount, method y cajaId son requeridos' });
+      }
+
+      const cfg = getIziConfig();
+      const mockMode = !cfg.apiKey || !cfg.apiSecret || !cfg.merchantId;
+
+      const docRef = db.collection(_PAYMENT_INTENTS_COL).doc();
+      const intentId = docRef.id;
+
+      let payload = { intentId };
+      let provider = 'izipay';
+
+      if (mockMode) {
+        // Simulación: generar URL/QR de prueba
+        payload.checkoutUrl = `https://example.com/mock-pay?i=${intentId}`;
+        payload.qrPayload = `MOCK-QR-${intentId}`;
+        payload.mock = true;
+      } else {
+        // TODO: Implementar llamada real al API de Izipay con cfg.baseUrl/apiKey/apiSecret.
+        // Mantener el skeleton para no exponer credenciales en cliente.
+        // Sugerido: crear transacción/checkout para tarjetas y generar QR para Yape en Izipay.
+        // Colocar las respuestas esperadas en payload.checkoutUrl / payload.qrPayload según método.
+        payload.checkoutUrl = undefined;
+        payload.qrPayload = undefined;
+      }
+
+      // Persistir el intento
+      await docRef.set({
+        status: 'created',
+        provider,
+        method,
+        amount,
+        currency,
+        reference: reference || ventaId || cajaId,
+        cajaId: cajaId || null,
+        ventaId: ventaId || null,
+        returnUrl: returnUrl || null,
+        mock: !!mockMode,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastUpdate: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return res.json({ ok: true, intentId, ...payload });
+    } catch (err) {
+      console.error('izipayCreatePayment error:', err);
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+});
+
+// Consulta estado de una intención de pago
+// GET /izipay/check-status?intentId=...
+exports.izipayCheckStatus = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const db = admin.firestore();
+      const intentId = req.query.intentId || req.body?.intentId;
+      if (!intentId) return res.status(400).json({ error: 'intentId requerido' });
+      const snap = await db.collection(_PAYMENT_INTENTS_COL).doc(String(intentId)).get();
+      if (!snap.exists) return res.status(404).json({ error: 'Intent no encontrado' });
+      const data = snap.data();
+      return res.json({ ok: true, status: data.status, intent: { id: snap.id, ...data } });
+    } catch (err) {
+      console.error('izipayCheckStatus error:', err);
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+});
+
+// Webhook para recibir notificaciones de Izipay y actualizar el estado.
+// Debe protegerse validando firma/HMAC del proveedor (pendiente en este skeleton).
+exports.izipayWebhook = functions.https.onRequest(async (req, res) => {
+  try {
+    // TODO: validar firma del header con secreto del proveedor.
+    const db = admin.firestore();
+    const body = req.body || {};
+    // Intentar leer referencia/intentId desde el body genérico
+    const intentId = body.intentId || body.reference || body.orderId || body.transactionId;
+    const statusRaw = (body.status || body.result || '').toString().toLowerCase();
+    let status = 'pending';
+    if (['paid', 'success', 'approved', 'ok', 'confirmed'].includes(statusRaw)) status = 'confirmed';
+    if (['failed', 'error', 'declined', 'canceled', 'cancelled'].includes(statusRaw)) status = 'failed';
+
+    if (!intentId) {
+      console.warn('Webhook sin intentId/reference');
+      return res.status(202).json({ ok: true, ignored: true });
+    }
+    const ref = db.collection(_PAYMENT_INTENTS_COL).doc(String(intentId));
+    await ref.set(
+      {
+        status,
+        lastUpdate: admin.firestore.FieldValue.serverTimestamp(),
+        lastWebhook: body,
+      },
+      { merge: true }
+    );
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('izipayWebhook error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// MOCK: confirmar un intento manualmente (útil en pruebas locales)
+// POST { intentId }
+exports.izipayMockConfirm = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const { intentId } = req.body || {};
+      if (!intentId) return res.status(400).json({ error: 'intentId requerido' });
+      const db = admin.firestore();
+      await db
+        .collection(_PAYMENT_INTENTS_COL)
+        .doc(String(intentId))
+        .set({ status: 'confirmed', lastUpdate: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error('izipayMockConfirm error:', err);
       return res.status(500).json({ ok: false, error: err.message });
     }
   });

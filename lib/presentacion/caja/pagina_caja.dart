@@ -108,8 +108,11 @@ Future<void> _mostrarDialogoAbrirCajaGenerico(BuildContext context) async {
                 // Si end < start asumimos que cruza medianoche y añadimos 1 día a end
                 final adjustedEnd = endDt.isBefore(startDt) ? endDt.add(const Duration(days: 1)) : endDt;
                 final nowDt = now;
+                // Cuando el horario cruza medianoche, comparamos una versión
+                // ajustada de "now" para poder estar dentro del intervalo
+                // que abarca la pasada medianoche.
                 final nowCmp = nowDt.isBefore(startDt) ? nowDt.add(const Duration(days: 1)) : nowDt;
-                if ((nowDt.isAtSameMomentAs(startDt) || nowDt.isAfter(startDt)) && nowDt.isBefore(adjustedEnd)) {
+                if ((nowCmp.isAtSameMomentAs(startDt) || nowCmp.isAfter(startDt)) && nowCmp.isBefore(adjustedEnd)) {
                   allowedBySchedule = true;
                   break;
                 }
@@ -1172,6 +1175,27 @@ class _DetalleCajaActivaPage extends StatelessWidget {
                                   motivo: params.motivo,
                                 );
 
+                            // Tras cierre remoto por admin, forzar rol "fuera de servicio" al operador original de esta caja
+                            try {
+                              final operadorUid = (d['usuarioId'] ?? '').toString();
+                              if (operadorUid.isNotEmpty) {
+                                final operadorSnap = await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(operadorUid)
+                                    .get();
+                                final rolOperador = (operadorSnap.data()?['rol'] ?? '')
+                                    .toString()
+                                    .toLowerCase();
+                                if (rolOperador != 'administrador') {
+                                  // Si no es admin, pasarlo a fuera de servicio inmediatamente.
+                                  await FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(operadorUid)
+                                      .update({'rol': 'fuera de servicio'});
+                                }
+                              }
+                            } catch (_) {}
+
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -1799,6 +1823,27 @@ class _VistaCajaAbierta extends StatelessWidget {
                                     if (rol != 'administrador') {
                                       await authSvc.updateUserRole(uid, 'fuera de servicio');
                                     }
+
+                                    // Si la caja fue originalmente abierta por otro usuario (p.ej. admin adoptó y cierra),
+                                    // también actualizar su rol a "fuera de servicio".
+                                    try {
+                                      final originalUid = caja.usuarioAperturaId;
+                                      if (originalUid.isNotEmpty && originalUid != uid) {
+                                        final originalSnap = await FirebaseFirestore.instance
+                                            .collection('users')
+                                            .doc(originalUid)
+                                            .get();
+                                        final rolOriginal = (originalSnap.data()?['rol'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
+                                        if (rolOriginal != 'administrador') {
+                                          await FirebaseFirestore.instance
+                                              .collection('users')
+                                              .doc(originalUid)
+                                              .update({'rol': 'fuera de servicio'});
+                                        }
+                                      }
+                                    } catch (_) {}
                                   }
                                 } catch (_) {}
 

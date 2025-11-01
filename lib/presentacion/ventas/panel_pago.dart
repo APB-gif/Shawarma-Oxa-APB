@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:shawarma_pos_nuevo/presentacion/pagina_principal.dart';
 import 'package:intl/intl.dart'; // <-- AÑADIDO
 import 'package:shawarma_pos_nuevo/presentacion/ventas/item_carrito.dart';
+// removed provider and caja_service imports as panel pago restored to local-only flow
+import 'dart:async';
 
 enum MetodoDePago {
   cash,
@@ -296,7 +298,7 @@ class _PanelPagoState extends State<PanelPago> {
         return;
       }
 
-      // Aquí se ejecuta la lógica de descuento de insumos y registro de venta
+      // Registrar venta localmente (sin procesar pasarelas externas aquí)
       await widget.onConfirm(pagos: pagos, fechaVenta: _fechaVenta);
       if (mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();

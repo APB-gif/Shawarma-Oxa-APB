@@ -6,7 +6,6 @@ import 'package:shawarma_pos_nuevo/presentacion/admin/categoria_page.dart';
 import 'package:shawarma_pos_nuevo/presentacion/admin/roles_page.dart';
 import 'package:shawarma_pos_nuevo/presentacion/admin/pagina_recetas.dart';
 import 'package:shawarma_pos_nuevo/presentacion/admin/pins_page.dart';
-import 'package:shawarma_pos_nuevo/presentacion/admin/horarios_page.dart';
 import 'package:shawarma_pos_nuevo/presentacion/admin/usuarios_page.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
@@ -445,19 +444,8 @@ class _PaginaAdminState extends State<PaginaAdmin>
           MaterialPageRoute(builder: (context) => const PinsPage()),
         ),
       ),
-      AdminCardData(
-        title: 'Horarios',
-        subtitle: 'Turnos y roles automáticos',
-        description: 'Crear y programar horarios de personal',
-        icon: FontAwesomeIcons.clock,
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
-        ),
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const HorariosPage()),
-        ),
-      ),
+      // La gestión de horarios ahora se hace desde la página de Usuarios.
+      // Hemos eliminado la entrada y la import a `horarios_page.dart`.
     ];
 
     return adminOptions
