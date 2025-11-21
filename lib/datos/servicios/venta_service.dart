@@ -39,9 +39,9 @@ class VentaService {
   /// Mueve una venta desde "pendientes" a "eliminadas" en la caja (local).
   Future<void> marcarVentaEliminadaLocal(
       Venta venta, CajaService cajaService) async {
-    await cajaService.registrarVentaEliminada(venta);
-    // Opcional: también quitarla de pendientes si aún estuviera
     await cajaService.eliminarVentaLocal(venta);
+    // Registrar en el historial de eliminadas (permite reintento si ya existía)
+    await cajaService.registrarVentaEliminada(venta);
     if (kDebugMode) {
       print('[VentaService] Venta ${venta.id} marcada como ELIMINADA (local).');
     }

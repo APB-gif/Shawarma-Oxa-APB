@@ -16,7 +16,11 @@ String _metodoKey(PaymentMethod m) {
     case PaymentMethod.izipayCard:
       return 'Ruben';
     case PaymentMethod.yapePersonal:
-      return 'Aharhel';
+      return 'Aharhel YS';
+    case PaymentMethod.aharhelYS:
+      return 'Aharhel YS';
+    case PaymentMethod.aharhelGastos:
+      return 'Aharhel Gastos';
     default:
       return m.displayName;
   }
@@ -50,6 +54,7 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
   final _stCashCtl = TextEditingController();
   final _stCardCtl = TextEditingController();
   final _stYapeCtl = TextEditingController();
+  final _stAharhelGastosCtl = TextEditingController();
 
   // Split por item: item.uniqueId -> chosen PaymentMethod
   final Map<String, PaymentMethod> _splitItemChoice = {};
@@ -240,7 +245,8 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                           final cash = p(_stCashCtl);
                           final card = p(_stCardCtl);
                           final yape = p(_stYapeCtl);
-                          final assigned = cash + card + yape;
+                          final agh = p(_stAharhelGastosCtl);
+                          final assigned = cash + card + yape + agh;
                           if ((assigned - widget.totalGasto).abs() > 0.01) {
                             ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -250,7 +256,8 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                           }
                           if (cash > 0) pagos[_metodoKey(PaymentMethod.cash)] = cash;
                           if (card > 0) pagos[_metodoKey(PaymentMethod.izipayCard)] = card;
-                          if (yape > 0) pagos[_metodoKey(PaymentMethod.yapePersonal)] = yape;
+                          if (yape > 0) pagos[_metodoKey(PaymentMethod.aharhelYS)] = yape;
+                          if (agh > 0) pagos[_metodoKey(PaymentMethod.aharhelGastos)] = agh;
                         } else {
                           // por item: asignar cada item al método seleccionado
                           final totals = <String, double>{};
@@ -399,15 +406,18 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
     final List<PaymentMethod> paymentOptions = [
       PaymentMethod.cash,
       PaymentMethod.izipayCard,
-      PaymentMethod.yapePersonal,
+      PaymentMethod.aharhelYS,
+      PaymentMethod.aharhelGastos,
     ];
 
     String displayNameForGastos(PaymentMethod m) {
       switch (m) {
         case PaymentMethod.izipayCard:
           return 'Ruben';
-        case PaymentMethod.yapePersonal:
-          return 'Aharhel';
+        case PaymentMethod.aharhelYS:
+          return 'Aharhel YS';
+        case PaymentMethod.aharhelGastos:
+          return 'Aharhel Gastos';
         default:
           return m.displayName;
       }
@@ -555,7 +565,8 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                 if (_isSplit) {
                   _stCashCtl.text = '';
                   _stCardCtl.text = '';
-                  _stYapeCtl.text = '';
+                      _stYapeCtl.text = '';
+                      _stAharhelGastosCtl.text = '';
                   for (final it in widget.items) {
                     _splitItemChoice[it.uniqueId] = PaymentMethod.cash;
                   }
@@ -754,7 +765,7 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
     // final theme = Theme.of(context); // no usado
     double otherSumExcluding(TextEditingController c) {
       double p(TextEditingController cc) => double.tryParse(cc.text.replaceAll(',', '.')) ?? 0.0;
-      final controllers = [_stCashCtl, _stCardCtl, _stYapeCtl];
+      final controllers = [_stCashCtl, _stCardCtl, _stYapeCtl, _stAharhelGastosCtl];
       return controllers.where((x) => x != c).map(p).fold(0.0, (a, b) => a + b);
     }
 
@@ -766,13 +777,15 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
       });
     }
 
-    return Column(
+        return Column(
       children: [
         _buildMoneyFieldWithButton('Efectivo', _stCashCtl, Icons.payments_rounded, () => autoFill(_stCashCtl)),
         const SizedBox(height: 12),
         _buildMoneyFieldWithButton('Tarjeta (Ruben)', _stCardCtl, Icons.credit_card_rounded, () => autoFill(_stCardCtl)),
         const SizedBox(height: 12),
-        _buildMoneyFieldWithButton('Yape (Aharhel)', _stYapeCtl, Icons.qr_code_rounded, () => autoFill(_stYapeCtl)),
+      _buildMoneyFieldWithButton('Aharhel YS', _stYapeCtl, Icons.qr_code_rounded, () => autoFill(_stYapeCtl)),
+        const SizedBox(height: 12),
+      _buildMoneyFieldWithButton('Aharhel Gastos', _stAharhelGastosCtl, Icons.account_balance_wallet_rounded, () => autoFill(_stAharhelGastosCtl)),
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(12),
@@ -804,7 +817,7 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
 
   double _sumSplitTotal() {
     double p(TextEditingController cc) => double.tryParse(cc.text.replaceAll(',', '.')) ?? 0.0;
-    return p(_stCashCtl) + p(_stCardCtl) + p(_stYapeCtl);
+    return p(_stCashCtl) + p(_stCardCtl) + p(_stYapeCtl) + p(_stAharhelGastosCtl);
   }
 
 
@@ -887,17 +900,20 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
     // final theme = Theme.of(context); // no usado
     final cashIcon = PaymentMethod.cash.icon;
     final cardIcon = PaymentMethod.izipayCard.icon;
-    final yapeIcon = PaymentMethod.yapePersonal.icon;
+    final yapeIcon = PaymentMethod.aharhelYS.icon;
+    final aghIcon = PaymentMethod.aharhelGastos.icon;
 
     return Column(
       children: widget.items.map((it) {
         final chosen = _splitItemChoice[it.uniqueId] ?? PaymentMethod.cash;
         final idx = chosen == PaymentMethod.cash
-            ? 0
-            : chosen == PaymentMethod.izipayCard
-                ? 1
-                : 2;
-        final selected = [idx == 0, idx == 1, idx == 2];
+          ? 0
+          : chosen == PaymentMethod.izipayCard
+            ? 1
+            : chosen == PaymentMethod.aharhelYS
+              ? 2
+              : 3;
+        final selected = [idx == 0, idx == 1, idx == 2, idx == 3];
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
@@ -971,12 +987,14 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                   selectedBorderColor: Colors.transparent,
                   onPressed: (i) {
                     setState(() {
-                      _splitItemChoice[it.uniqueId] =
+                        _splitItemChoice[it.uniqueId] =
                           i == 0
-                              ? PaymentMethod.cash
-                              : i == 1
-                                  ? PaymentMethod.izipayCard
-                                  : PaymentMethod.yapePersonal;
+                            ? PaymentMethod.cash
+                            : i == 1
+                              ? PaymentMethod.izipayCard
+                              : i == 2
+                                ? PaymentMethod.aharhelYS
+                                : PaymentMethod.aharhelGastos;
                     });
                   },
                   children: [
@@ -989,8 +1007,12 @@ class _PanelPagoGastosState extends State<PanelPagoGastos> {
                       child: Icon(cardIcon, size: 18),
                     ),
                     Tooltip(
-                      message: 'Yape (Aharhel)',
+                      message: 'Aharhel YS',
                       child: Icon(yapeIcon, size: 18),
+                    ),
+                    Tooltip(
+                      message: 'Aharhel Gastos',
+                      child: Icon(aghIcon, size: 18),
                     ),
                   ],
                 ),

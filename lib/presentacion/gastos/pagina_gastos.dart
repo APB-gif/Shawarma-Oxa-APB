@@ -23,6 +23,10 @@ import 'package:shawarma_pos_nuevo/datos/servicios/servicio_gastos.dart';
 // Catálogo local (fallback)
 import 'package:shawarma_pos_nuevo/datos/catalogo_gastos.dart';
 
+// Admin categories page (reusable full UI)
+import 'package:shawarma_pos_nuevo/presentacion/admin/categoria_page.dart';
+import 'package:flutter/foundation.dart';
+
 // Helpers
 import 'package:shawarma_pos_nuevo/core/net/connectivity_utils.dart'
     show hasInternet;
@@ -67,7 +71,8 @@ class _PaginaGastosState extends State<PaginaGastos> {
     _cargarDatosDeGastos();
   }
 
-  Future<void> _cargarDatosDeGastos() async {
+  Future<void> _cargarDatosDeGastos({bool forceReload = false}) async {
+    if (forceReload) _repo.limpiarCache();
     if (!mounted) return;
 
     // Puedes mostrar loading aquí si quieres, pero también lo haré al final:
@@ -420,7 +425,7 @@ class _PaginaGastosState extends State<PaginaGastos> {
                 const VerticalDivider(width: 1),
                 Expanded(
                   child: RefreshIndicator(
-                    onRefresh: _cargarDatosDeGastos,
+                    onRefresh: () => _cargarDatosDeGastos(forceReload: true),
                     child: _buildGastosGrid(
                       productos: productosDeCategoria,
                       qtyById: qtyById,
@@ -488,30 +493,56 @@ class _PaginaGastosState extends State<PaginaGastos> {
     );
   }
 
+
+
   Widget _buildCategoryRail() {
     final theme = Theme.of(context);
     return Container(
       color: theme.colorScheme.surface,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-        itemCount: _categoriasDeGastos.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (context, i) {
-          final cat = _categoriasDeGastos[i];
-          final selected = cat.id == _selectedCategory?.id;
-          return Tooltip(
-            message: cat.nombre,
-            waitDuration: const Duration(milliseconds: 300),
-            child: _CategoryTile(
-              cat: cat,
-              selected: selected,
-              onTap: () => setState(() => _selectedCategory = cat),
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+              itemCount: _categoriasDeGastos.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, i) {
+                final cat = _categoriasDeGastos[i];
+                final selected = cat.id == _selectedCategory?.id;
+                return Tooltip(
+                  message: cat.nombre,
+                  waitDuration: const Duration(milliseconds: 300),
+                  child: _CategoryTile(
+                    cat: cat,
+                    selected: selected,
+                    onTap: () => setState(() => _selectedCategory = cat),
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+          // Footer: button to open admin category page (full features: image, orden, id)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 6.0),
+            child: Material(
+              color: const Color(0xFFEF4444),
+              shape: const CircleBorder(),
+              child: IconButton(
+                onPressed: () async {
+                  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CategoriaPage()));
+                  await _cargarDatosDeGastos(forceReload: true);
+                },
+                icon: const Icon(Icons.add, size: 18, color: Colors.white),
+                tooltip: 'Agregar categoría',
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  
 
   Widget _buildGastosGrid({
     required List<Producto> productos,

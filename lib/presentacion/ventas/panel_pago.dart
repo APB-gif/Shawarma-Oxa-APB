@@ -6,6 +6,7 @@ import 'package:intl/intl.dart'; // <-- AÑADIDO
 import 'package:shawarma_pos_nuevo/presentacion/ventas/item_carrito.dart';
 // removed provider and caja_service imports as panel pago restored to local-only flow
 import 'dart:async';
+import 'package:shawarma_pos_nuevo/core/net/connectivity_utils.dart';
 
 enum MetodoDePago {
   cash,
@@ -115,6 +116,14 @@ class _PanelPagoState extends State<PanelPago> {
   // Eliminado: el selector antiguo por método se reemplazó por el editor de montos por ítem
   // NUEVO: Variable de estado para la fecha de la venta
   DateTime _fechaVenta = DateTime.now();
+  // NUEVO: indica que la venta se está procesando (bloquea la UI)
+  bool _isProcessing = false;
+  // NUEVO: indica que la venta se está procesando (bloquea la UI)
+  // Debug / timeout helpers
+  Timer? _processingTimer;
+  int _processingSeconds = 0;
+  // Timeout configurable para verificación de conectividad / guardado offline
+  final int _connectivityTimeoutSeconds = 5;
 
   double get _subtotal => widget.subtotal;
   double _cardWithFee(double base) => base * (1 + _cardFeeRate);
@@ -254,6 +263,7 @@ class _PanelPagoState extends State<PanelPago> {
   }
 
   void _confirm() async {
+    print('[PanelPago] _confirm: inicio (method=$_method, subtotal=$_subtotal)');
     final Map<String, double> pagos = {};
     try {
       switch (_method) {
@@ -270,7 +280,6 @@ class _PanelPagoState extends State<PanelPago> {
           pagos['Yape Personal'] = _subtotal;
           break;
         case MetodoDePago.split:
-          // Construir totales por método desde el modo activo (por ítem o por total)
           final totals = _currentSplitTotals();
           final cashAmount = totals[MetodoDePago.cash] ?? 0.0;
           final cardBase = totals[MetodoDePago.izipayCard] ?? 0.0;
@@ -298,18 +307,651 @@ class _PanelPagoState extends State<PanelPago> {
         return;
       }
 
-      // Registrar venta localmente (sin procesar pasarelas externas aquí)
-      await widget.onConfirm(pagos: pagos, fechaVenta: _fechaVenta);
-      if (mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
+      setState(() {
+        _isProcessing = true;
+      });
+      print('[PanelPago] _confirm: set _isProcessing=true');
+      _startProcessingTimer();
+
+      // Verificar conectividad con timeout usando helper (maneja v3/v6 del plugin)
+      print('[PanelPago] _confirm: comprobando conectividad (timeout ${_connectivityTimeoutSeconds}s)');
+      bool isOnline = false;
+      try {
+        isOnline = await hasInternet(timeout: Duration(seconds: _connectivityTimeoutSeconds));
+      } catch (err) {
+        print('[PanelPago] hasInternet lanzó error: $err');
+        isOnline = false;
+      }
+      print('[PanelPago] hasInternet => $isOnline');
+
+      if (isOnline) {
+        try {
+          print('[PanelPago] onConfirm (online) - iniciando');
+          await widget.onConfirm(pagos: pagos, fechaVenta: _fechaVenta);
+          print('[PanelPago] onConfirm (online) - OK');
+
+          // Preparar contexto seguro para mostrar diálogo después de cerrar el panel
+          final hostContext = Navigator.of(context).overlay?.context ?? context;
+
+          // Cerrar panel actual devolviendo resultado true para que el parent lo procese
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop(true);
+          }
+
+          // Pequeña espera para que la animación de cierre termine
+          await Future.delayed(const Duration(milliseconds: 260));
+
+          // Mostrar diálogo de éxito sobre el contexto padre
+          _showSuccessDialog(hostContext: hostContext);
+        } catch (e) {
+          print('[PanelPago] onConfirm (online) - error: $e');
+
+          final hostContext = Navigator.of(context).overlay?.context ?? context;
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop(false);
+          }
+          await Future.delayed(const Duration(milliseconds: 260));
+          _showErrorDialog(e.toString(), hostContext: hostContext);
+        } finally {
+          print('[PanelPago] _confirm: finalizando (online)');
+          _stopProcessingTimer();
+          if (mounted) {
+            setState(() {
+              _isProcessing = false;
+            });
+          }
+        }
+      } else {
+        // Offline: intentar guardar localmente pero no bloquear la UI largo tiempo
+        print('[PanelPago] Offline: intentando guardar localmente (timeout ${_connectivityTimeoutSeconds}s)');
+        try {
+          await widget
+              .onConfirm(pagos: pagos, fechaVenta: _fechaVenta)
+              .timeout(Duration(seconds: _connectivityTimeoutSeconds), onTimeout: () => Future.value());
+          print('[PanelPago] Intento offline finalizado (ok/timeout)');
+        } catch (err) {
+          print('[PanelPago] Intento offline lanzó error: $err');
+          // Ignorar errores en el intento offline
+        }
+
+        if (mounted) {
+          print('[PanelPago] _confirm: finalizando (offline)');
+          _stopProcessingTimer();
+          setState(() {
+            _isProcessing = false;
+          });
+
+          // Capturar un contexto estable (overlay) para mostrar el diálogo
+          final hostContext = Navigator.of(context).overlay?.context ?? context;
+
+          // Cerrar el panel actual (si está abierto) antes de mostrar el diálogo
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop(true);
+          }
+
+          // Esperar un pequeño lapso para que la animación de cierre termine
+          await Future.delayed(const Duration(milliseconds: 260));
+
+          // Mostrar diálogo usando el contexto del overlay (padre)
+          _showOfflineSaveDialog(hostContext: hostContext);
+        }
       }
     } catch (e) {
+      print('[PanelPago] _confirm: excepción externa: $e');
       principalMessengerKey.currentState?.showSnackBar(
-        SnackBar(
-            content:
-                Text('Error al registrar la venta o descontar insumos: $e')),
+        SnackBar(content: Text('Error al registrar la venta o descontar insumos: $e')),
       );
+      _stopProcessingTimer();
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
+  }
+
+  // Inicia el timer de procesamiento que actualiza el contador cada segundo.
+  void _startProcessingTimer() {
+    _processingTimer?.cancel();
+    _processingSeconds = 0;
+    _processingTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      _processingSeconds++;
+      // Actualizar UI con cada tick (muestra el contador)
+      if (mounted) setState(() {});
+      print('[PanelPago] timer tick: ${_processingSeconds}s');
+    });
+  }
+
+  // Detiene y limpia el timer de procesamiento
+  void _stopProcessingTimer() {
+    if (_processingTimer != null) {
+      print('[PanelPago] _stopProcessingTimer: deteniendo timer en ${_processingSeconds}s');
+      _processingTimer?.cancel();
+      _processingTimer = null;
+    }
+    _processingSeconds = 0;
+  }
+
+  void _showErrorDialog(String errorMessage, {BuildContext? hostContext}) {
+    final dialogContext = hostContext ?? context;
+    showDialog(
+      context: dialogContext,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Center(
+            child: ScaleTransition(
+            scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+              CurvedAnimation(
+                parent: ModalRoute.of(ctx)?.animation ?? const AlwaysStoppedAnimation<double>(1.0),
+                curve: Curves.elasticOut,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icono de error con animación
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.red.shade400,
+                          Colors.red.shade600,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(50),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withOpacity(0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.error_outline_rounded,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Texto de error
+                  const Text(
+                    '¡Error al Registrar!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Hubo un problema al guardar la venta',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Detalles del error
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.warning_amber_rounded,
+                            size: 20, color: Colors.red.shade700),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            errorMessage,
+                            style: TextStyle(
+                              color: Colors.red.shade900,
+                              fontSize: 13,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Botones de acción
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Reintentar',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.red.shade600,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Volver',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showOfflineSaveDialog({BuildContext? hostContext}) {
+    final dialogContext = hostContext ?? context;
+    showDialog(
+      context: dialogContext,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Center(
+            child: ScaleTransition(
+            scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+              CurvedAnimation(
+                parent: ModalRoute.of(ctx)?.animation ?? const AlwaysStoppedAnimation<double>(1.0),
+                curve: Curves.elasticOut,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icono de WiFi sin conexión
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.amber.shade400,
+                          Colors.amber.shade600,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(50),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.amber.withOpacity(0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.wifi_off_rounded,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Título
+                  const Text(
+                    '¡Venta Guardada Localmente!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Sin conexión a internet en este momento',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Detalles principales
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.amber.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.check_circle_outline_rounded,
+                                size: 18, color: Colors.amber.shade700),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Venta registrada en el dispositivo',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.amber.shade900,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(Icons.cloud_queue_rounded,
+                                size: 18, color: Colors.amber.shade700),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Se sincronizará cuando regrese internet',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.amber.shade900,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(Icons.receipt_long_rounded,
+                                size: 18, color: Colors.amber.shade700),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Total: S/ ${_subtotal.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.amber.shade900,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Información de sincronización
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded,
+                            size: 18, color: Colors.blue.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'La venta se enviará automáticamente cuando haya conexión',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue.shade900,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Botón para continuar
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx); // Cerrar diálogo
+                      },
+                      icon: const Icon(Icons.check_circle_outline_rounded),
+                      label: const Text(
+                        'Continuar',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.amber.shade600,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ).then((_) {
+      // El panel se cierra automáticamente después del diálogo
+    });
+  }
+
+  void _showSuccessDialog({BuildContext? hostContext}) {
+    final dialogContext = hostContext ?? context;
+    showDialog(
+      context: dialogContext,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Center(
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+              CurvedAnimation(
+                parent: ModalRoute.of(ctx)?.animation ?? const AlwaysStoppedAnimation<double>(1.0),
+                curve: Curves.elasticOut,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.green.shade400,
+                          Colors.green.shade600,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(50),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.green.withOpacity(0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    '¡Venta Registrada!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'La venta se ha guardado correctamente',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.receipt_long_rounded,
+                                size: 18, color: Colors.green.shade700),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Total: S/ ${_subtotal.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: Colors.green.shade900,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.schedule_rounded,
+                                size: 18, color: Colors.green.shade700),
+                            const SizedBox(width: 8),
+                            Text(
+                              DateFormat('dd/MM/yyyy HH:mm').format(_fechaVenta),
+                              style: TextStyle(
+                                color: Colors.green.shade800,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                      },
+                      icon: const Icon(Icons.check_circle_outline_rounded),
+                      label: const Text('Continuar', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.green.shade600,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -321,197 +963,392 @@ class _PanelPagoState extends State<PanelPago> {
           color: const Color(0xFFF8FAFC),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: Column(
+        child: Stack(
           children: [
-            // Header con gradiente azul moderno (consistente con panel_carrito)
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
-                ),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Column(
-                  children: [
-                    Row(
+            Column(
+              children: [
+                // Header con gradiente azul moderno (consistente con panel_carrito)
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
+                    ),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.payment_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text(
-                                'Procesar Pago',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              if (widget.items.isNotEmpty)
-                                Text(
-                                  '${widget.items.length} producto${widget.items.length != 1 ? 's' : ''}',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.8),
-                                    fontSize: 12,
+                              child: const Icon(
+                                Icons.payment_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Procesar Pago',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
+                                  if (widget.items.isNotEmpty)
+                                    Text(
+                                      '${widget.items.length} producto${widget.items.length != 1 ? 's' : ''}',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.8),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.close, color: Colors.white),
+                                iconSize: 20,
+                                constraints:
+                                    const BoxConstraints(minWidth: 32, minHeight: 32),
+                                padding: EdgeInsets.zero,
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Total en card blanco moderno
+                        Container(
+                          margin: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
                             ],
                           ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white),
-                            iconSize: 20,
-                            constraints: const BoxConstraints(
-                                minWidth: 32, minHeight: 32),
-                            padding: EdgeInsets.zero,
-                            onPressed: () => Navigator.of(context).pop(),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Total a Pagar',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  if (_method == MetodoDePago.izipayCard) ...[
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.shade100,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        'Incluye 5% tarjeta',
+                                        style: TextStyle(
+                                          color: Colors.orange.shade700,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              Text(
+                                'S/ ${_totalAPagar.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  color: Color(0xFF1E40AF),
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    // Total en card blanco moderno
-                    Container(
-                      margin: const EdgeInsets.all(12),
+                  ),
+                ),
+
+                // Contenido scrolleable moderno
+                Expanded(
+                  child: Container(
+                    color: const Color(0xFFF1F5F9),
+                    child: ListView(
                       padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Total a Pagar',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                      children: [
+                        // Métodos de pago
+                        _buildPaymentMethodsSection(),
+
+                        const SizedBox(height: 20),
+
+                        // Campos según método
+                        ..._buildFieldsByMethod(),
+
+                        const SizedBox(height: 20),
+
+                        // Selector de fecha y hora
+                        _buildDateTimePicker(),
+
+                        const SizedBox(height: 20),
+
+                        // Botón de confirmar moderno
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          child: FilledButton.icon(
+                            onPressed: _confirm,
+                            icon: const Icon(Icons.check_circle_rounded, size: 20),
+                            label: const Text('Confirmar y Guardar'),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: const Color(0xFF1E40AF),
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              shadowColor:
+                                  const Color(0xFF1E40AF).withOpacity(0.3),
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
-                              if (_method == MetodoDePago.izipayCard) ...[
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.shade100,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    'Incluye 5% tarjeta',
-                                    style: TextStyle(
-                                      color: Colors.orange.shade700,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          Text(
-                            'S/ ${_totalAPagar.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              color: Color(0xFF1E40AF),
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+
+                        SizedBox(
+                            height: MediaQuery.of(context).viewInsets.bottom + 16),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
 
-            // Contenido scrolleable moderno
-            Expanded(
-              child: Container(
-                color: const Color(0xFFF1F5F9),
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    // Métodos de pago
-                    _buildPaymentMethodsSection(),
-
-                    const SizedBox(height: 20),
-
-                    // Campos según método
-                    ..._buildFieldsByMethod(),
-
-                    const SizedBox(height: 20),
-
-                    // Selector de fecha y hora
-                    _buildDateTimePicker(),
-
-                    const SizedBox(height: 20),
-
-                    // Botón de confirmar moderno
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      child: FilledButton.icon(
-                        onPressed: _confirm,
-                        icon: const Icon(Icons.check_circle_rounded, size: 20),
-                        label: const Text('Confirmar y Guardar'),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: const Color(0xFF1E40AF),
-                          foregroundColor: Colors.white,
-                          elevation: 2,
-                          shadowColor: const Color(0xFF1E40AF).withOpacity(0.3),
-                          textStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+            // Overlay bloqueante profesional mejorado
+            _isProcessing
+                ? Positioned.fill(
+                    child: AbsorbPointer(
+                      absorbing: true,
+                      child: Container(
+                        color: Colors.black.withOpacity(0.5),
+                        child: Center(
+                          child: ScaleTransition(
+                            scale: Tween<double>(begin: 0.9, end: 1.0).animate(
+                              CurvedAnimation(
+                                parent: ModalRoute.of(context)?.animation ?? const AlwaysStoppedAnimation<double>(1.0),
+                                curve: Curves.easeOut,
+                              ),
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.all(32),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 12),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Indicador de progreso circular animado
+                                  Container(
+                                    width: 100,
+                                    height: 100,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.blue.shade50,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.blue.withOpacity(0.15),
+                                          blurRadius: 16,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Center(
+                                      child: SizedBox(
+                                        width: 70,
+                                        height: 70,
+                                        child: CircularProgressIndicator(
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                            Color(0xFF1E40AF),
+                                          ),
+                                          strokeWidth: 5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  // Título
+                                  const Text(
+                                    'Procesando Venta',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  // Subtítulo
+                                  Text(
+                                    'Por favor espera mientras se guarda la venta',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade600,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  // Detalles de progreso
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.blue.shade200),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.check_circle_outline_rounded,
+                                              size: 18,
+                                              color: Colors.blue.shade700,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'Validando información',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.blue.shade900,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.cloud_upload_outlined,
+                                              size: 18,
+                                              color: Colors.blue.shade700,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'Registrando venta',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.blue.shade900,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.inventory_2_outlined,
+                                              size: 18,
+                                              color: Colors.blue.shade700,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'Actualizando insumos',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.blue.shade900,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  // Indicador de tiempo
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.schedule_rounded,
+                                        size: 14,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        _processingSeconds > 0
+                                            ? 'Tiempo transcurrido: ${_processingSeconds}s'
+                                            : 'Esto puede tomar unos segundos...',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-
-                    SizedBox(
-                        height: MediaQuery.of(context).viewInsets.bottom + 16),
-                  ],
-                ),
-              ),
-            ),
+                  )
+                : const SizedBox.shrink(),
           ],
         ),
       ),

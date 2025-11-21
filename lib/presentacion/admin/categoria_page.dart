@@ -256,6 +256,18 @@ class _CategoriaPageState extends State<CategoriaPage>
     final nombreController = TextEditingController();
     final ordenController = TextEditingController();
     final nombreDocumentoController = TextEditingController();
+    // Autogenerar nombre de documento (slug) a medida que el usuario escribe el nombre,
+    // pero no sobrescribir si el usuario ya editó el campo manualmente.
+    String previousGeneratedSlug = nombreDocumentoController.text.trim();
+    nombreController.addListener(() {
+      final name = nombreController.text.trim();
+      final gen = _slugify(name);
+      final currentDoc = nombreDocumentoController.text.trim();
+      if (currentDoc.isEmpty || currentDoc == previousGeneratedSlug) {
+        nombreDocumentoController.text = gen;
+        previousGeneratedSlug = gen;
+      }
+    });
     String selectedTipo = tipoInicial ?? _tipoCategoria;
     String? iconPath;
 
@@ -607,8 +619,7 @@ class _CategoriaPageState extends State<CategoriaPage>
                                                   nombreDocumentoController.text
                                                       .trim();
 
-                                              if (nombre.isEmpty ||
-                                                  nombreDocumento.isEmpty) {
+                                              if (nombre.isEmpty) {
                                                 _showErrorSnackBar(
                                                     'El nombre es requerido');
                                                 return;
@@ -697,16 +708,33 @@ class _CategoriaPageState extends State<CategoriaPage>
                                                   return;
                                                 }
 
-                                                await FirebaseFirestore.instance
-                                                    .collection('categorias')
-                                                    .doc(nombreDocumento)
-                                                    .set({
+                                                final Map<String, dynamic> dataToSave = {
                                                   'nombre': nombre,
                                                   'tipo': selectedTipo,
                                                   'orden': orden,
-                                                  'iconAssetPath':
-                                                      finalImageUrl,
-                                                });
+                                                  'iconAssetPath': finalImageUrl,
+                                                };
+                                                debugPrint('Creando categoría docId=${nombreDocumento.isEmpty ? '<auto>' : nombreDocumento} data=$dataToSave');
+                                                if (nombreDocumento.isEmpty) {
+                                                  // Generar slug legible a partir del nombre y evitar colisiones
+                                                  String baseSlug = _slugify(nombre);
+                                                  String candidate = baseSlug;
+                                                  int suffix = 0;
+                                                  while (true) {
+                                                    final docRef = FirebaseFirestore.instance.collection('categorias').doc(candidate);
+                                                    final docSnap = await docRef.get();
+                                                    if (!docSnap.exists) break;
+                                                    suffix++;
+                                                    candidate = '$baseSlug-$suffix';
+                                                  }
+                                                  debugPrint('Usando slug para docId: $candidate');
+                                                  await FirebaseFirestore.instance.collection('categorias').doc(candidate).set(dataToSave);
+                                                } else {
+                                                  await FirebaseFirestore.instance
+                                                      .collection('categorias')
+                                                      .doc(nombreDocumento)
+                                                      .set(dataToSave);
+                                                }
 
                                                 if (mounted) {
                                                   Navigator.of(dialogCtx).pop();
@@ -890,7 +918,7 @@ class _CategoriaPageState extends State<CategoriaPage>
   }
 
   void _showSuccessSnackBar(String message) {
-    categoriaMessengerKey.currentState?.showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -907,7 +935,7 @@ class _CategoriaPageState extends State<CategoriaPage>
   }
 
   void _showErrorSnackBar(String message) {
-    categoriaMessengerKey.currentState?.showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -1334,6 +1362,76 @@ class _CategoriaPageState extends State<CategoriaPage>
     AdminRepository.instance.eliminarCategoria(categoriaId);
   }
 
+  // Propaga el renombre de una categoría a productos y a items dentro de gastos.
+  Future<void> _propagateCategoriaRename(String categoriaId, String oldName, String newName) async {
+    try {
+      final db = FirebaseFirestore.instance;
+      // Actualizar productos: donde categoriaId == categoriaId o categoriaNombre == oldName
+      final productosByIdSnap = await db.collection('productos').where('categoriaId', isEqualTo: categoriaId).get();
+      final productosByNombreSnap = await db.collection('productos').where('categoriaNombre', isEqualTo: oldName).get();
+      final productosToUpdate = <DocumentReference>[];
+      for (final d in productosByIdSnap.docs) productosToUpdate.add(d.reference);
+      for (final d in productosByNombreSnap.docs) if (!productosToUpdate.contains(d.reference)) productosToUpdate.add(d.reference);
+
+      int ops = 0;
+      WriteBatch batch = db.batch();
+      for (final pref in productosToUpdate) {
+        batch.set(pref, {'categoriaNombre': newName}, SetOptions(merge: true));
+        ops++;
+        if (ops >= 400) {
+          await batch.commit();
+          batch = db.batch();
+          ops = 0;
+        }
+      }
+      if (ops > 0) await batch.commit();
+
+        // Actualizar gastos: escanear y reemplazar categoriaNombre en items
+        // Limitar a los últimos 30 días para evitar sobrecargar lecturas
+        final cutoff = DateTime.now().subtract(const Duration(days: 30));
+        final gastosQuery = db.collection('gastos')
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
+          .orderBy('createdAt', descending: true)
+          .limit(10000);
+        final gastosSnap = await gastosQuery.get();
+      ops = 0;
+      batch = db.batch();
+      for (final g in gastosSnap.docs) {
+        final data = g.data();
+        final items = (data['items'] as List?) ?? [];
+        var changed = false;
+        final newItems = items.map((it) {
+          try {
+            final mapIt = Map<String, dynamic>.from(it as Map);
+            final catName = (mapIt['categoriaNombre'] ?? '').toString();
+            final catId = (mapIt['categoriaId'] ?? '').toString();
+            if (catName.toLowerCase() == oldName.toLowerCase() || catId == categoriaId) {
+              mapIt['categoriaNombre'] = newName;
+              changed = true;
+            }
+            return mapIt;
+          } catch (_) {
+            return it;
+          }
+        }).toList();
+        if (changed) {
+          batch.update(g.reference, {'items': newItems});
+          ops++;
+          if (ops >= 400) {
+            await batch.commit();
+            batch = db.batch();
+            ops = 0;
+          }
+        }
+      }
+      if (ops > 0) await batch.commit();
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Propagación completada: categoría -> $newName'), backgroundColor: Colors.green));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error propagando cambios: $e'), backgroundColor: Colors.red));
+    }
+  }
+
   Future<void> _editCategoria(BuildContext context,
       {required String categoriaId}) async {
     final categoriaDoc = await FirebaseFirestore.instance
@@ -1599,6 +1697,7 @@ class _CategoriaPageState extends State<CategoriaPage>
                                           }
                                           setState(() => _isLoading = true);
                                           try {
+                                            final oldNombre = categoriaDoc['nombre'] ?? '';
                                             await FirebaseFirestore.instance
                                                 .collection('categorias')
                                                 .doc(categoriaId)
@@ -1608,6 +1707,13 @@ class _CategoriaPageState extends State<CategoriaPage>
                                               'orden': orden,
                                               'iconAssetPath': iconPath ?? '',
                                             });
+                                            // Limpiar cache para forzar recarga en UI de gastos/productos
+                                            try {
+                                              AdminRepository.instance.limpiarCache();
+                                            } catch (_) {}
+                                            // Propagar renombre a productos.categoriaNombre y a items de gastos
+                                            _showSuccessSnackBar('Categoría actualizada. Iniciando propagación de cambios...');
+                                            await _propagateCategoriaRename(categoriaId, oldNombre.toString(), nombre);
                                             if (mounted) {
                                               Navigator.of(dialogCtx).pop();
                                               _showSuccessSnackBar(
@@ -1730,5 +1836,20 @@ class _CategoriaPageState extends State<CategoriaPage>
         ],
       ),
     );
+  }
+
+  // Genera un slug legible desde un nombre. Ej: "Comidas Rápidas" -> "comidas-rapidas"
+  String _slugify(String input) {
+    var s = input.trim().toLowerCase();
+    // Reemplazar caracteres no alfanuméricos por guiones
+    s = s.replaceAll(RegExp(r"[^a-z0-9]+"), '-');
+    // Eliminar guiones repetidos
+    s = s.replaceAll(RegExp(r"-+"), '-');
+    // Recortar guiones al inicio/fin
+    s = s.replaceAll(RegExp(r"^-|-$"), '');
+    if (s.isEmpty) s = 'categoria';
+    // Limitar longitud razonable
+    if (s.length > 50) s = s.substring(0, 50);
+    return s;
   }
 }

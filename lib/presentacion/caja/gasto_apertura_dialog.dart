@@ -623,13 +623,13 @@ Future<bool> showGastoInsumosAperturaDialog(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(
+                    OutlinedButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      style: TextButton.styleFrom(
+                      style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10),
+                            horizontal: 20, vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                       child: const Text(
@@ -638,7 +638,7 @@ Future<bool> showGastoInsumosAperturaDialog(
                             fontSize: 14, fontWeight: FontWeight.w600),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     FilledButton.icon(
                       onPressed: () async {
                         if (!(formKey.currentState?.validate() ?? false))
@@ -862,10 +862,11 @@ ${detalle}''',
                       },
                       icon: const Icon(Icons.check_circle_rounded, size: 18),
                       style: FilledButton.styleFrom(
+                        backgroundColor: Colors.green.shade600,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10),
+                            horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         elevation: 2,
                       ),

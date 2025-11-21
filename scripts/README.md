@@ -4,7 +4,7 @@ Propósito
 --------
 Este script renombra las claves usadas en el campo `pagos` de documentos de la colección `gastos` en Firestore:
 - `Tarjeta` -> `Ruben`
-- `Yape Personal` o `Yape` -> `Aharhel`
+-- `Yape Personal` o `Yape` -> `Aharhel`
 
 El script realiza un dry-run por defecto (solo muestra cuántos documentos serían afectados y ejemplos). Use `--apply` para realizar los cambios.
 
@@ -59,3 +59,24 @@ Si quieres, puedo modificar el script para:
 - También migrar la colección de `cajas` u otras colecciones.
 - Crear una copia de seguridad automática (p. ej. duplicar documentos antes de actualizar).
 - Ejecutarlo desde una función de Cloud Run/Cloud Function (si prefieres no usar localmente).
+
+Scripts adicionales
+------------------
+Se añadió `migrate_producto_aharhel.js` para:
+- Renombrar documentos en la colección `productos` cuyo `nombre` sea `Aharhel` -> `Gasto Aharhel`.
+- Actualizar documentos en la colección `gastos` cambiando `items[].nombre` de `Aharhel` -> `Gasto Aharhel`.
+- Corregir claves en `pagos` dentro de `gastos`: si existe `Gasto Aharhel` lo renombra a `Aharhel`.
+
+Ejemplo de uso (dry-run):
+
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS = 'C:\path\to\service-account.json'
+node .\scripts\migrate_producto_aharhel.js --limit 100
+```
+
+Y para aplicar:
+
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS = 'C:\path\to\service-account.json'
+node .\scripts\migrate_producto_aharhel.js --apply --limit 100
+```

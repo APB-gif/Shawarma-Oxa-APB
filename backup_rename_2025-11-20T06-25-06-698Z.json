@@ -1,0 +1,256 @@
+{
+  "categories": [
+    {
+      "id": "Aharhel",
+      "data": {
+        "tipo": "gasto",
+        "orden": 0,
+        "iconAssetPath": "https://firebasestorage.googleapis.com/v0/b/shawarmaoxa-pos.firebasestorage.app/o/imagenes_gastos%2FCategoria%2F1759850689457.jpg?alt=media&token=280583a0-e378-4947-b59f-01a189f0314b",
+        "nombre": "Cat Aharhel"
+      }
+    }
+  ],
+  "products": [
+    {
+      "id": "gastos_aharhel",
+      "data": {
+        "precio": 0,
+        "tipo": "gasto",
+        "categoriaNombre": "Cat Aharhel",
+        "imagenUrl": "",
+        "categoriaId": "Aharhel",
+        "nombre": "Gastos Aharhel Ga"
+      }
+    },
+    {
+      "id": "internet",
+      "data": {
+        "precio": 0,
+        "id": "internet",
+        "nombre": "Internet",
+        "categoriaId": "Aharhel",
+        "tipo": "gasto",
+        "categoriaNombre": "Cat Aharhel",
+        "imagenUrl": ""
+      }
+    },
+    {
+      "id": "yape_vuelto",
+      "data": {
+        "precio": 0,
+        "id": "yape_vuelto",
+        "nombre": "Yape Vuelto",
+        "categoriaId": "Aharhel",
+        "tipo": "gasto",
+        "categoriaNombre": "Cat Aharhel",
+        "imagenUrl": ""
+      }
+    },
+    {
+      "id": "Internet",
+      "data": {
+        "precio": 0,
+        "tipo": "gasto",
+        "categoriaNombre": "Aharhel",
+        "nombre": "Internet",
+        "imagenUrl": "",
+        "categoriaId": "Gasto Aharhel"
+      }
+    },
+    {
+      "id": "Yape Vuelto",
+      "data": {
+        "precio": 0,
+        "tipo": "gasto",
+        "categoriaNombre": "Aharhel",
+        "nombre": "Yape Vuelto",
+        "imagenUrl": "https://firebasestorage.googleapis.com/v0/b/shawarmaoxa-pos.firebasestorage.app/o/imagenes_gastos%2FProductos%2F1760150507451.png?alt=media&token=f6bef52c-41e6-4cae-a0a1-f0750cade13a",
+        "categoriaId": "Gasto Aharhel"
+      }
+    },
+    {
+      "id": "gastos_aharhel",
+      "data": {
+        "precio": 0,
+        "tipo": "gasto",
+        "categoriaNombre": "Cat Aharhel",
+        "imagenUrl": "",
+        "categoriaId": "Aharhel",
+        "nombre": "Gastos Aharhel Ga"
+      }
+    }
+  ],
+  "gastos": [
+    {
+      "id": "TbNxO5W6LB9OUOZ6CsTR",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1763619822,
+          "_nanoseconds": 258000000
+        },
+        "total": 10,
+        "proveedor": "Proveedor",
+        "id": "TbNxO5W6LB9OUOZ6CsTR",
+        "items": [
+          {
+            "precio": 10,
+            "id": "gastos_aharhel",
+            "cantidad": 1,
+            "nombre": "Gastos Aharhel Ga",
+            "categoriaId": "Aharhel"
+          }
+        ],
+        "pagos": {
+          "Aharhel Gastos": 10
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1763619824,
+          "_nanoseconds": 483000000
+        }
+      }
+    },
+    {
+      "id": "ylzECjwCDNWWwNHXamIG",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1763618490,
+          "_nanoseconds": 292000000
+        },
+        "total": 10,
+        "proveedor": "Proveedor",
+        "id": "ylzECjwCDNWWwNHXamIG",
+        "pagos": {
+          "Aharhel Gastos": 10
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1763618492,
+          "_nanoseconds": 292000000
+        },
+        "items": [
+          {
+            "precio": 10,
+            "id": "gastos_aharhel",
+            "cantidad": 1,
+            "nombre": "Aharhel Gastos",
+            "categoriaId": "Aharhel",
+            "producto": {
+              "nombre": "Aharhel Gastos"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "Tfmmo3bjtLuNyfUuyj7d",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1763518620,
+          "_nanoseconds": 418000000
+        },
+        "total": 12,
+        "proveedor": "Proveedor",
+        "id": "Tfmmo3bjtLuNyfUuyj7d",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1763518622,
+          "_nanoseconds": 421000000
+        },
+        "pagos": {
+          "Aharhel Gastos": 12
+        },
+        "items": [
+          {
+            "precio": 12,
+            "categoriaNombre": "Cat Aharhel",
+            "cantidad": 1,
+            "id": "Aharhel",
+            "nombre": "Gastos Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "voIm2yBtjezvVNGPcA1y",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761624000,
+          "_nanoseconds": 0
+        },
+        "total": 7.5,
+        "proveedor": "Proveedor",
+        "id": "voIm2yBtjezvVNGPcA1y",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761683220,
+          "_nanoseconds": 742000000
+        },
+        "pagos": {
+          "Aharhel Gastos": 7.5
+        },
+        "items": [
+          {
+            "precio": 7.5,
+            "categoriaNombre": "Cat Aharhel",
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Gastos Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "z8wNJMg2Qoh8GTVetgUY",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761523693,
+          "_nanoseconds": 592000000
+        },
+        "total": 10,
+        "proveedor": "Proveedor",
+        "id": "z8wNJMg2Qoh8GTVetgUY",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761523699,
+          "_nanoseconds": 263000000
+        },
+        "pagos": {
+          "Aharhel Gastos": 10
+        },
+        "items": [
+          {
+            "precio": 10,
+            "categoriaNombre": "Cat Aharhel",
+            "cantidad": 1,
+            "id": "Aharhel",
+            "nombre": "Gastos Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      }
+    }
+  ],
+  "mappings": {
+    "categorias": {
+      "Aharhel": "Gasto Aharhel"
+    },
+    "productos": {
+      "gastos_aharhel": "Gastos Aharhel Gaa",
+      "Aharhel": "Aharhel Gastos"
+    }
+  },
+  "createdAt": "2025-11-20T06:25:06.699Z"
+}

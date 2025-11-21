@@ -29,6 +29,7 @@ import 'package:shawarma_pos_nuevo/presentacion/pagina_principal.dart';
 
 // 👉 Navegar a la pantalla de Caja
 import 'package:shawarma_pos_nuevo/presentacion/caja/pagina_caja.dart';
+import 'package:shawarma_pos_nuevo/presentacion/caja/modern_dialogs.dart' show showModernConfirmDialog, showCajaDiscardedDialog;
 import 'package:shawarma_pos_nuevo/presentacion/comunes/net_status_strip.dart';
 import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service.dart';
 import 'package:shawarma_pos_nuevo/presentacion/auth/auth_gate.dart';
@@ -2230,11 +2231,9 @@ class _PaginaVentasState extends State<PaginaVentas> {
       _clearCart();
       if (mounted && mainScaffoldContext != null) {
         Navigator.of(context).popUntil((route) => route.isFirst);
-        mostrarNotificacionElegante(
-          mainScaffoldContext!,
-          "Venta registrada en la caja y almacén actualizado",
-          messengerKey: principalMessengerKey,
-        );
+        // Notificación antigua eliminada: se utiliza el diálogo mejorado
+        // mostrado desde el panel de pago, por eso omitimos la llamada
+        // a `mostrarNotificacionElegante` que mostraba el mensaje azul.
       }
     } catch (e) {
       if (mounted && mainScaffoldContext != null) {
@@ -2254,35 +2253,24 @@ class _PaginaVentasState extends State<PaginaVentas> {
     final caja = context.read<CajaService>().cajaActiva;
     if (caja == null) return;
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Descartar caja local'),
-        content: Text(
-          'Se eliminará la caja local actual (ID ${caja.id}) con sus datos temporales '
+    final ok = await showModernConfirmDialog(
+      context,
+      title: 'Descartar Caja Local',
+      message: 'Se eliminará la caja local actual (ID ${caja.id}) con sus datos temporales '
           'no sincronizados. ¿Deseas continuar?',
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error),
-            child: const Text('Sí, descartar'),
-          ),
-        ],
-      ),
+      confirmText: 'Sí, descartar',
+      cancelText: 'Cancelar',
+      confirmColor: Colors.red.shade600,
+      icon: Icons.delete_outline_rounded,
     );
 
     if (ok == true) {
       await context.read<CajaService>().descartarCajaLocal();
       if (mounted && mainScaffoldContext != null) {
-        mostrarNotificacionElegante(
-            mainScaffoldContext!, 'Caja local descartada.',
-            messengerKey: principalMessengerKey);
-        setState(() {}); // refrescar vista
+        await showCajaDiscardedDialog(
+          mainScaffoldContext!,
+          onDismiss: () => setState(() {}),
+        );
       }
     }
   }

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service.dart';
 import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service_offline.dart';
+import 'package:shawarma_pos_nuevo/presentacion/caja/modern_dialogs.dart';
 
 class PinsPage extends StatefulWidget {
   const PinsPage({super.key});
@@ -645,37 +646,150 @@ class _PinsPageState extends State<PinsPage>
                               final controller = TextEditingController(text: p);
                               final newPin = await showDialog<String?>(
                                 context: context,
-                                builder: (ctx) => AlertDialog(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  title: const Text('Editar PIN'),
-                                  content: TextField(
-                                    controller: controller,
-                                    autofocus: true,
-                                    obscureText: true,
-                                    keyboardType: TextInputType.number,
-                                    maxLength: 8,
-                                    decoration: InputDecoration(
-                                      labelText: 'Nuevo PIN (8 dígitos)',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                      counterText: '',
+                                builder: (ctx) => Dialog(
+                                  elevation: 0,
+                                  backgroundColor: Colors.transparent,
+                                  child: Center(
+                                    child: ScaleTransition(
+                                      scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+                                        CurvedAnimation(
+                                          parent: ModalRoute.of(ctx)?.animation ?? const AlwaysStoppedAnimation<double>(1.0),
+                                          curve: Curves.elasticOut,
+                                        ),
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(32),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(20),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.15),
+                                              blurRadius: 24,
+                                              offset: const Offset(0, 12),
+                                            ),
+                                          ],
+                                        ),
+                                        constraints: const BoxConstraints(maxWidth: 500),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 80,
+                                              height: 80,
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  colors: [
+                                                    Colors.purple.shade400,
+                                                    Colors.purple.shade600,
+                                                  ],
+                                                ),
+                                                borderRadius: BorderRadius.circular(50),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.purple.withOpacity(0.3),
+                                                    blurRadius: 16,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Icon(
+                                                Icons.lock_outline_rounded,
+                                                color: Colors.white,
+                                                size: 48,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 24),
+                                            const Text(
+                                              'Editar PIN',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w800,
+                                                color: Color(0xFF1E293B),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              'Ingresa el nuevo PIN de 8 dígitos',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 24),
+                                            TextField(
+                                              controller: controller,
+                                              autofocus: true,
+                                              obscureText: true,
+                                              keyboardType: TextInputType.number,
+                                              maxLength: 8,
+                                              decoration: InputDecoration(
+                                                labelText: 'Nuevo PIN (8 dígitos)',
+                                                border: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                                ),
+                                                enabledBorder: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                                ),
+                                                focusedBorder: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  borderSide: const BorderSide(color: Colors.purple, width: 2),
+                                                ),
+                                                counterText: '',
+                                              ),
+                                            ),
+                                            const SizedBox(height: 24),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                OutlinedButton(
+                                                  style: OutlinedButton.styleFrom(
+                                                    padding: const EdgeInsets.symmetric(
+                                                        horizontal: 24, vertical: 12),
+                                                    side: BorderSide(color: Colors.grey.shade300),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(10),
+                                                    ),
+                                                  ),
+                                                  onPressed: () => Navigator.pop(ctx),
+                                                  child: const Text('Cancelar'),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                FilledButton.icon(
+                                                  onPressed: () {
+                                                    final val = controller.text.trim();
+                                                    if (RegExp(r'^\d{8}$').hasMatch(val)) {
+                                                      Navigator.pop(ctx, val);
+                                                    } else {
+                                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                                        _buildSnackBar('El PIN debe tener exactamente 8 dígitos', Colors.orange),
+                                                      );
+                                                    }
+                                                  },
+                                                  icon: const Icon(Icons.check_circle_rounded, size: 18),
+                                                  style: FilledButton.styleFrom(
+                                                    backgroundColor: Colors.purple.shade600,
+                                                    padding: const EdgeInsets.symmetric(
+                                                        horizontal: 24, vertical: 12),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(10),
+                                                    ),
+                                                  ),
+                                                  label: const Text('Guardar'),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-                                    FilledButton(
-                                      onPressed: () {
-                                        final val = controller.text.trim();
-                                        if (RegExp(r'^\d{8}$').hasMatch(val)) {
-                                          Navigator.pop(ctx, val);
-                                        } else {
-                                          ScaffoldMessenger.of(ctx).showSnackBar(
-                                            _buildSnackBar('El PIN debe tener exactamente 8 dígitos', Colors.orange),
-                                          );
-                                        }
-                                      },
-                                      child: const Text('Guardar'),
-                                    ),
-                                  ],
                                 ),
                               );
                               if (newPin != null && newPin != p) {
@@ -687,20 +801,14 @@ class _PinsPageState extends State<PinsPage>
                           ),
                           IconButton(
                             onPressed: () async {
-                              final confirmed = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: const Text('Eliminar PIN'),
-                                  content: const Text('¿Eliminar este PIN en claro?'),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                                    FilledButton(
-                                      onPressed: () => Navigator.pop(ctx, true),
-                                      style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                                      child: const Text('Eliminar'),
-                                    ),
-                                  ],
-                                ),
+                              final confirmed = await showModernConfirmDialog(
+                                context,
+                                title: 'Eliminar PIN',
+                                message: '¿Eliminar este PIN en claro?',
+                                confirmText: 'Eliminar',
+                                cancelText: 'Cancelar',
+                                confirmColor: Colors.red.shade600,
+                                icon: Icons.lock_open_rounded,
                               );
                               if (confirmed == true) {
                                 await _removePin(type, p);
@@ -793,101 +901,181 @@ class _PinsPageState extends State<PinsPage>
     final controller = TextEditingController();
     final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
+      builder: (ctx) => Dialog(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Center(
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+              CurvedAnimation(
+                parent: ModalRoute.of(ctx)?.animation ?? const AlwaysStoppedAnimation<double>(1.0),
+                curve: Curves.elasticOut,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.add_rounded,
-                color: Color(0xFF10B981),
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Añadir PIN ${type == 'sales' ? 'de Ventas' : 'de Admin'}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              autofocus: true,
-              obscureText: true,
-              keyboardType: TextInputType.number,
-              maxLength: 8,
-              decoration: InputDecoration(
-                labelText: 'PIN (8 dígitos numéricos)',
-                prefixIcon: const Icon(FontAwesomeIcons.key),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                counterText: '',
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF3B82F6).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFF3B82F6).withOpacity(0.2),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.info_outline,
-                    color: Color(0xFF3B82F6),
-                    size: 20,
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'El PIN se sincronizará con Firebase y estará disponible para todos los dispositivos.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue.shade700,
+                ],
+              ),
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.green.shade400,
+                          Colors.green.shade600,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(50),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.green.withOpacity(0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.key_rounded,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Añadir PIN ${type == 'sales' ? 'de Ventas' : 'de Admin'}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Ingresa un PIN de 8 dígitos numéricos',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                    maxLength: 8,
+                    decoration: InputDecoration(
+                      labelText: 'PIN (8 dígitos numéricos)',
+                      prefixIcon: const Icon(FontAwesomeIcons.key),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.green, width: 2),
+                      ),
+                      counterText: '',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3B82F6).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFF3B82F6).withOpacity(0.2),
                       ),
                     ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline,
+                          color: Color(0xFF3B82F6),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'El PIN se sincronizará con Firebase y estará disponible para todos los dispositivos.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                          side: BorderSide(color: Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Cancelar'),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: () {
+                          final pin = controller.text.trim();
+                          if (RegExp(r'^\d{8}$').hasMatch(pin)) {
+                            Navigator.pop(ctx, pin);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              _buildSnackBar('El PIN debe tener exactamente 8 dígitos numéricos', Colors.orange),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.green.shade600,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        label: const Text('Añadir'),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              final pin = controller.text.trim();
-              if (RegExp(r'^\d{8}$').hasMatch(pin)) {
-                Navigator.pop(ctx, pin);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  _buildSnackBar('El PIN debe tener exactamente 8 dígitos numéricos', Colors.orange),
-                );
-              }
-            },
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Añadir'),
-          ),
-        ],
       ),
     );
 
@@ -900,102 +1088,181 @@ class _PinsPageState extends State<PinsPage>
     final controller = TextEditingController();
     final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
+      builder: (ctx) => Dialog(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Center(
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+              CurvedAnimation(
+                parent: ModalRoute.of(ctx)?.animation ?? const AlwaysStoppedAnimation<double>(1.0),
+                curve: Curves.elasticOut,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.remove_rounded,
-                color: Colors.orange,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Eliminar PIN ${type == 'sales' ? 'de Ventas' : 'de Admin'}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              autofocus: true,
-              obscureText: true,
-              keyboardType: TextInputType.number,
-              maxLength: 8,
-              decoration: InputDecoration(
-                labelText: 'PIN a eliminar (8 dígitos)',
-                prefixIcon: const Icon(FontAwesomeIcons.key),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                counterText: '',
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.orange.withOpacity(0.2),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.warning_outlined,
-                    color: Colors.orange,
-                    size: 20,
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Solo se eliminará el PIN específico que ingreses. Otros PINs seguirán funcionando.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.orange.shade700,
+                ],
+              ),
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.orange.shade400,
+                          Colors.orange.shade600,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(50),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.orange.withOpacity(0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.remove_circle_outline_rounded,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Eliminar PIN ${type == 'sales' ? 'de Ventas' : 'de Admin'}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Ingresa el PIN que deseas eliminar',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                    maxLength: 8,
+                    decoration: InputDecoration(
+                      labelText: 'PIN a eliminar (8 dígitos)',
+                      prefixIcon: const Icon(FontAwesomeIcons.key),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.orange, width: 2),
+                      ),
+                      counterText: '',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.orange.withOpacity(0.2),
                       ),
                     ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.warning_outlined,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Solo se eliminará el PIN específico que ingreses. Otros PINs seguirán funcionando.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                          side: BorderSide(color: Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Cancelar'),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: () {
+                          final pin = controller.text.trim();
+                          if (RegExp(r'^\d{8}$').hasMatch(pin)) {
+                            Navigator.pop(ctx, pin);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              _buildSnackBar('El PIN debe tener exactamente 8 dígitos numéricos', Colors.orange),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.remove_rounded, size: 18),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.orange.shade600,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        label: const Text('Eliminar'),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              final pin = controller.text.trim();
-              if (RegExp(r'^\d{8}$').hasMatch(pin)) {
-                Navigator.pop(ctx, pin);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  _buildSnackBar('El PIN debe tener exactamente 8 dígitos numéricos', Colors.orange),
-                );
-              }
-            },
-            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-            icon: const Icon(Icons.remove_rounded),
-            label: const Text('Eliminar'),
-          ),
-        ],
       ),
     );
 
@@ -1007,82 +1274,147 @@ class _PinsPageState extends State<PinsPage>
   Future<void> _showClearAllDialog(String type) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
+      builder: (ctx) => Dialog(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Center(
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+              CurvedAnimation(
+                parent: ModalRoute.of(ctx)?.animation ?? const AlwaysStoppedAnimation<double>(1.0),
+                curve: Curves.elasticOut,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.delete_sweep_rounded,
-                color: Colors.red,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Eliminar todos los PINs',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '¿Estás seguro de que quieres eliminar TODOS los PINs ${type == 'sales' ? 'de Ventas' : 'de Admin'}?',
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.red.withOpacity(0.2),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.warning_outlined,
-                    color: Colors.red,
-                    size: 20,
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Esta acción no se puede deshacer. Los usuarios no podrán acceder al modo offline hasta que se configure un nuevo PIN.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.red.shade700,
+                ],
+              ),
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.red.shade400,
+                          Colors.red.shade600,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(50),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withOpacity(0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.delete_sweep_rounded,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Eliminar todos los PINs',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '¿Estás seguro de que quieres eliminar TODOS los PINs ${type == 'sales' ? 'de Ventas' : 'de Admin'}?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.red.withOpacity(0.2),
                       ),
                     ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.warning_outlined,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Esta acción no se puede deshacer. Los usuarios no podrán acceder al modo offline hasta que se configure un nuevo PIN.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                          side: BorderSide(color: Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancelar'),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        icon: const Icon(Icons.delete_sweep_rounded, size: 18),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.red.shade600,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        label: const Text('Eliminar todos'),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            icon: const Icon(Icons.delete_sweep_rounded),
-            label: const Text('Eliminar todos'),
-          ),
-        ],
       ),
     );
 

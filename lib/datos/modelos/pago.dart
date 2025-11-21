@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 enum PaymentMethod {
   cash,
   izipayCard,
+  aharhelYS,
+  aharhelGastos,
   izipayYape,
   yapePersonal,
   split;
@@ -15,6 +17,10 @@ enum PaymentMethod {
         return 'Efectivo';
       case PaymentMethod.izipayCard:
         return 'Tarjeta';
+      case PaymentMethod.aharhelYS:
+        return 'Aharhel YS';
+      case PaymentMethod.aharhelGastos:
+        return 'Aharhel Gastos';
       case PaymentMethod.izipayYape:
         return 'IziPay Yape';
       case PaymentMethod.yapePersonal:
@@ -31,6 +37,10 @@ enum PaymentMethod {
         return Icons.payments_outlined;
       case PaymentMethod.izipayCard:
         return Icons.credit_card;
+      case PaymentMethod.aharhelYS:
+        return Icons.person;
+      case PaymentMethod.aharhelGastos:
+        return Icons.account_balance_wallet;
       case PaymentMethod.izipayYape:
         return Icons.qr_code_2;
       case PaymentMethod.yapePersonal:

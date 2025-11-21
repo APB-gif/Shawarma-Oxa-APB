@@ -1,0 +1,13 @@
+{
+  "createdAt": "2025-11-20T06:09:56.261Z",
+  "opts": {
+    "apply": true,
+    "limit": 200,
+    "days": 30,
+    "verbose": true,
+    "productId": "gastos_aharhel",
+    "newName": "Aharhel Gastos",
+    "key": "C:\\Users\\Usuario\\Downloads\\shawarmaoxa-pos-firebase-adminsdk-fbsvc-9f6254f225.json"
+  },
+  "updates": []
+}

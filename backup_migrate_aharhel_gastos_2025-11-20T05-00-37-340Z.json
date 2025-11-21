@@ -1,0 +1,1440 @@
+{
+  "productChange": null,
+  "gastos": [
+    {
+      "id": "K3oXN1u2TzUTT9fuEkAH",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1763572057,
+          "_nanoseconds": 534000000
+        },
+        "total": 7.5,
+        "proveedor": "Proveedor",
+        "id": "K3oXN1u2TzUTT9fuEkAH",
+        "items": [
+          {
+            "precio": 7.5,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          }
+        ],
+        "pagos": {
+          "Aharhel": 7.5
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1763572060,
+          "_nanoseconds": 302000000
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1763572057,
+          "_nanoseconds": 534000000
+        },
+        "total": 7.5,
+        "proveedor": "Proveedor",
+        "id": "K3oXN1u2TzUTT9fuEkAH",
+        "items": [
+          {
+            "precio": 7.5,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          }
+        ],
+        "pagos": {
+          "Aharhel YS": 7.5
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1763572060,
+          "_nanoseconds": 302000000
+        }
+      }
+    },
+    {
+      "id": "Tfmmo3bjtLuNyfUuyj7d",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1763518620,
+          "_nanoseconds": 418000000
+        },
+        "total": 12,
+        "proveedor": "Proveedor",
+        "id": "Tfmmo3bjtLuNyfUuyj7d",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1763518622,
+          "_nanoseconds": 421000000
+        },
+        "pagos": {
+          "Aharhel": 12
+        },
+        "items": [
+          {
+            "precio": 12,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1763518620,
+          "_nanoseconds": 418000000
+        },
+        "total": 12,
+        "proveedor": "Proveedor",
+        "id": "Tfmmo3bjtLuNyfUuyj7d",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1763518622,
+          "_nanoseconds": 421000000
+        },
+        "pagos": {
+          "Aharhel Gastos": 12
+        },
+        "items": [
+          {
+            "precio": 12,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Gastos Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "v9cNQvLG5E3kd95IDow5",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1763500992,
+          "_nanoseconds": 307000000
+        },
+        "total": 22.8,
+        "proveedor": "Proveedor",
+        "id": "v9cNQvLG5E3kd95IDow5",
+        "items": [
+          {
+            "precio": 22.8,
+            "id": "gas-papas-hilo-silvino",
+            "cantidad": 1,
+            "nombre": "Papas al Hilo",
+            "categoriaId": "silvino"
+          }
+        ],
+        "pagos": {
+          "Aharhel": 22.8
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1763500998,
+          "_nanoseconds": 756000000
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1763500992,
+          "_nanoseconds": 307000000
+        },
+        "total": 22.8,
+        "proveedor": "Proveedor",
+        "id": "v9cNQvLG5E3kd95IDow5",
+        "items": [
+          {
+            "precio": 22.8,
+            "id": "gas-papas-hilo-silvino",
+            "cantidad": 1,
+            "nombre": "Papas al Hilo",
+            "categoriaId": "silvino"
+          }
+        ],
+        "pagos": {
+          "Aharhel YS": 22.8
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1763500998,
+          "_nanoseconds": 756000000
+        }
+      }
+    },
+    {
+      "id": "mtNKmCDWb91pY1R6Ar1a",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1763353380,
+          "_nanoseconds": 0
+        },
+        "total": 10,
+        "proveedor": "Proveedor",
+        "id": "mtNKmCDWb91pY1R6Ar1a",
+        "items": [
+          {
+            "precio": 10,
+            "id": "Gasolina",
+            "cantidad": 1,
+            "nombre": "Gasolina",
+            "categoriaId": "Gasolina"
+          }
+        ],
+        "pagos": {
+          "Aharhel": 10
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1763393008,
+          "_nanoseconds": 318000000
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1763353380,
+          "_nanoseconds": 0
+        },
+        "total": 10,
+        "proveedor": "Proveedor",
+        "id": "mtNKmCDWb91pY1R6Ar1a",
+        "items": [
+          {
+            "precio": 10,
+            "id": "Gasolina",
+            "cantidad": 1,
+            "nombre": "Gasolina",
+            "categoriaId": "Gasolina"
+          }
+        ],
+        "pagos": {
+          "Aharhel YS": 10
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1763393008,
+          "_nanoseconds": 318000000
+        }
+      }
+    },
+    {
+      "id": "TRPGEVHVUAXrcscRYgWl",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1762971385,
+          "_nanoseconds": 281000000
+        },
+        "total": 12,
+        "proveedor": "Proveedor",
+        "id": "TRPGEVHVUAXrcscRYgWl",
+        "items": [
+          {
+            "precio": 12,
+            "id": "gas-lechuga",
+            "cantidad": 1,
+            "nombre": "Lechuga",
+            "categoriaId": "feria_mercado"
+          }
+        ],
+        "pagos": {
+          "Aharhel": 12
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1762971387,
+          "_nanoseconds": 17000000
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1762971385,
+          "_nanoseconds": 281000000
+        },
+        "total": 12,
+        "proveedor": "Proveedor",
+        "id": "TRPGEVHVUAXrcscRYgWl",
+        "items": [
+          {
+            "precio": 12,
+            "id": "gas-lechuga",
+            "cantidad": 1,
+            "nombre": "Lechuga",
+            "categoriaId": "feria_mercado"
+          }
+        ],
+        "pagos": {
+          "Aharhel YS": 12
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1762971387,
+          "_nanoseconds": 17000000
+        }
+      }
+    },
+    {
+      "id": "RNlbvVnlKSaY58BRnsO1",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1762801896,
+          "_nanoseconds": 882000000
+        },
+        "total": 26.8,
+        "proveedor": "Proveedor",
+        "id": "RNlbvVnlKSaY58BRnsO1",
+        "items": [
+          {
+            "precio": 26.8,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          }
+        ],
+        "pagos": {
+          "Aharhel": 26.8
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1762801900,
+          "_nanoseconds": 821000000
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1762801896,
+          "_nanoseconds": 882000000
+        },
+        "total": 26.8,
+        "proveedor": "Proveedor",
+        "id": "RNlbvVnlKSaY58BRnsO1",
+        "items": [
+          {
+            "precio": 26.8,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          }
+        ],
+        "pagos": {
+          "Aharhel YS": 26.8
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1762801900,
+          "_nanoseconds": 821000000
+        }
+      }
+    },
+    {
+      "id": "Ihi7DiYwb59ijxdVEsvU",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1762278478,
+          "_nanoseconds": 725000000
+        },
+        "total": 25,
+        "proveedor": "Proveedor",
+        "id": "Ihi7DiYwb59ijxdVEsvU",
+        "items": [
+          {
+            "precio": 20,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          },
+          {
+            "precio": 5,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          }
+        ],
+        "pagos": {
+          "Efectivo": 20,
+          "Aharhel": 5
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1762278486,
+          "_nanoseconds": 846000000
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1762278478,
+          "_nanoseconds": 725000000
+        },
+        "total": 25,
+        "proveedor": "Proveedor",
+        "id": "Ihi7DiYwb59ijxdVEsvU",
+        "items": [
+          {
+            "precio": 20,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          },
+          {
+            "precio": 5,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          }
+        ],
+        "pagos": {
+          "Efectivo": 20,
+          "Aharhel YS": 5
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1762278486,
+          "_nanoseconds": 846000000
+        }
+      }
+    },
+    {
+      "id": "5qNkCxVm0iSLG75CTfdS",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761851100,
+          "_nanoseconds": 0
+        },
+        "total": 21.5,
+        "proveedor": "Proveedor",
+        "id": "5qNkCxVm0iSLG75CTfdS",
+        "items": [
+          {
+            "precio": 21.5,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          }
+        ],
+        "pagos": {
+          "Aharhel": 21.5
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761937530,
+          "_nanoseconds": 277000000
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761851100,
+          "_nanoseconds": 0
+        },
+        "total": 21.5,
+        "proveedor": "Proveedor",
+        "id": "5qNkCxVm0iSLG75CTfdS",
+        "items": [
+          {
+            "precio": 21.5,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          }
+        ],
+        "pagos": {
+          "Aharhel YS": 21.5
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761937530,
+          "_nanoseconds": 277000000
+        }
+      }
+    },
+    {
+      "id": "mBm0ADstpCGdMuuFQtHu",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761792360,
+          "_nanoseconds": 327000000
+        },
+        "total": 42,
+        "proveedor": "Proveedor",
+        "id": "mBm0ADstpCGdMuuFQtHu",
+        "items": [
+          {
+            "precio": 42,
+            "id": "gas-papas-hilo-silvino",
+            "cantidad": 1,
+            "nombre": "Papas al Hilo",
+            "categoriaId": "silvino"
+          }
+        ],
+        "pagos": {
+          "Aharhel": 42
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761792363,
+          "_nanoseconds": 680000000
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761792360,
+          "_nanoseconds": 327000000
+        },
+        "total": 42,
+        "proveedor": "Proveedor",
+        "id": "mBm0ADstpCGdMuuFQtHu",
+        "items": [
+          {
+            "precio": 42,
+            "id": "gas-papas-hilo-silvino",
+            "cantidad": 1,
+            "nombre": "Papas al Hilo",
+            "categoriaId": "silvino"
+          }
+        ],
+        "pagos": {
+          "Aharhel YS": 42
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761792363,
+          "_nanoseconds": 680000000
+        }
+      }
+    },
+    {
+      "id": "wAsKDNgXdnoa0eMIgQJ1",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761664260,
+          "_nanoseconds": 0
+        },
+        "total": 92.42,
+        "proveedor": "Proveedor",
+        "id": "wAsKDNgXdnoa0eMIgQJ1",
+        "pagos": {
+          "Ruben": 90,
+          "Aharhel": 2.42
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761750705,
+          "_nanoseconds": 72000000
+        },
+        "items": [
+          {
+            "precio": 92.42,
+            "id": "Internet",
+            "cantidad": 1,
+            "nombre": "Internet",
+            "categoriaId": "Gasto Aharhel"
+          }
+        ]
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761664260,
+          "_nanoseconds": 0
+        },
+        "total": 92.42,
+        "proveedor": "Proveedor",
+        "id": "wAsKDNgXdnoa0eMIgQJ1",
+        "pagos": {
+          "Ruben": 90,
+          "Aharhel YS": 2.42
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761750705,
+          "_nanoseconds": 72000000
+        },
+        "items": [
+          {
+            "precio": 92.42,
+            "id": "Internet",
+            "cantidad": 1,
+            "nombre": "Internet",
+            "categoriaId": "Gasto Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "voIm2yBtjezvVNGPcA1y",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761624000,
+          "_nanoseconds": 0
+        },
+        "total": 7.5,
+        "proveedor": "Proveedor",
+        "id": "voIm2yBtjezvVNGPcA1y",
+        "pagos": {
+          "Aharhel": 7.5
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761683220,
+          "_nanoseconds": 742000000
+        },
+        "items": [
+          {
+            "precio": 7.5,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761624000,
+          "_nanoseconds": 0
+        },
+        "total": 7.5,
+        "proveedor": "Proveedor",
+        "id": "voIm2yBtjezvVNGPcA1y",
+        "pagos": {
+          "Aharhel Gastos": 7.5
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761683220,
+          "_nanoseconds": 742000000
+        },
+        "items": [
+          {
+            "precio": 7.5,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Gastos Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "AAu42osZgiYXZtZpYbP5",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761434460,
+          "_nanoseconds": 0
+        },
+        "total": 59,
+        "proveedor": "Proveedor",
+        "id": "AAu42osZgiYXZtZpYbP5",
+        "items": [
+          {
+            "precio": 59,
+            "id": "gas-pollo",
+            "cantidad": 1,
+            "nombre": "Pollo",
+            "categoriaId": "carnes_embutidos"
+          }
+        ],
+        "pagos": {
+          "Aharhel": 59
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761607276,
+          "_nanoseconds": 435000000
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761434460,
+          "_nanoseconds": 0
+        },
+        "total": 59,
+        "proveedor": "Proveedor",
+        "id": "AAu42osZgiYXZtZpYbP5",
+        "items": [
+          {
+            "precio": 59,
+            "id": "gas-pollo",
+            "cantidad": 1,
+            "nombre": "Pollo",
+            "categoriaId": "carnes_embutidos"
+          }
+        ],
+        "pagos": {
+          "Aharhel YS": 59
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761607276,
+          "_nanoseconds": 435000000
+        }
+      }
+    },
+    {
+      "id": "z8wNJMg2Qoh8GTVetgUY",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761523693,
+          "_nanoseconds": 592000000
+        },
+        "total": 10,
+        "proveedor": "Proveedor",
+        "id": "z8wNJMg2Qoh8GTVetgUY",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761523699,
+          "_nanoseconds": 263000000
+        },
+        "pagos": {
+          "Aharhel": 10
+        },
+        "items": [
+          {
+            "precio": 10,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1761523693,
+          "_nanoseconds": 592000000
+        },
+        "total": 10,
+        "proveedor": "Proveedor",
+        "id": "z8wNJMg2Qoh8GTVetgUY",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1761523699,
+          "_nanoseconds": 263000000
+        },
+        "pagos": {
+          "Aharhel Gastos": 10
+        },
+        "items": [
+          {
+            "precio": 10,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Gastos Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "w1Dhw6ut8GQDQlVVhXTI",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760496321,
+          "_nanoseconds": 405000000
+        },
+        "total": 3.6,
+        "proveedor": "Proveedor",
+        "id": "w1Dhw6ut8GQDQlVVhXTI",
+        "pagos": {
+          "Aharhel": 3.6
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760496328,
+          "_nanoseconds": 871000000
+        },
+        "items": [
+          {
+            "precio": 3.6,
+            "id": "Yape Vuelto",
+            "cantidad": 1,
+            "nombre": "Yape Vuelto",
+            "categoriaId": "Gasto Aharhel"
+          }
+        ]
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760496321,
+          "_nanoseconds": 405000000
+        },
+        "total": 3.6,
+        "proveedor": "Proveedor",
+        "id": "w1Dhw6ut8GQDQlVVhXTI",
+        "pagos": {
+          "Aharhel YS": 3.6
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760496328,
+          "_nanoseconds": 871000000
+        },
+        "items": [
+          {
+            "precio": 3.6,
+            "id": "Yape Vuelto",
+            "cantidad": 1,
+            "nombre": "Yape Vuelto",
+            "categoriaId": "Gasto Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ZIsmqaFihuv44MeUtgoQ",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760495248,
+          "_nanoseconds": 964000000
+        },
+        "total": 5,
+        "proveedor": "Proveedor",
+        "id": "ZIsmqaFihuv44MeUtgoQ",
+        "pagos": {
+          "Aharhel": 5
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760495250,
+          "_nanoseconds": 717000000
+        },
+        "items": [
+          {
+            "precio": 5,
+            "id": "Yape Vuelto",
+            "cantidad": 1,
+            "nombre": "Yape Vuelto",
+            "categoriaId": "Gasto Aharhel"
+          }
+        ]
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760495248,
+          "_nanoseconds": 964000000
+        },
+        "total": 5,
+        "proveedor": "Proveedor",
+        "id": "ZIsmqaFihuv44MeUtgoQ",
+        "pagos": {
+          "Aharhel YS": 5
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760495250,
+          "_nanoseconds": 717000000
+        },
+        "items": [
+          {
+            "precio": 5,
+            "id": "Yape Vuelto",
+            "cantidad": 1,
+            "nombre": "Yape Vuelto",
+            "categoriaId": "Gasto Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "qvMmY8S1kjGpt42MD5E5",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760463252,
+          "_nanoseconds": 837000000
+        },
+        "total": 5,
+        "proveedor": "Proveedor",
+        "id": "qvMmY8S1kjGpt42MD5E5",
+        "items": [
+          {
+            "precio": 5,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          }
+        ],
+        "pagos": {
+          "Aharhel": 5
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760463257,
+          "_nanoseconds": 415000000
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760463252,
+          "_nanoseconds": 837000000
+        },
+        "total": 5,
+        "proveedor": "Proveedor",
+        "id": "qvMmY8S1kjGpt42MD5E5",
+        "items": [
+          {
+            "precio": 5,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          }
+        ],
+        "pagos": {
+          "Aharhel YS": 5
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760463257,
+          "_nanoseconds": 415000000
+        }
+      }
+    },
+    {
+      "id": "wPuhvdEv5X57ICC5YJ9l",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760229180,
+          "_nanoseconds": 0
+        },
+        "total": 28,
+        "proveedor": "Proveedor",
+        "id": "wPuhvdEv5X57ICC5YJ9l",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760229212,
+          "_nanoseconds": 140000000
+        },
+        "pagos": {
+          "Aharhel": 28
+        },
+        "items": [
+          {
+            "precio": 28,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760229180,
+          "_nanoseconds": 0
+        },
+        "total": 28,
+        "proveedor": "Proveedor",
+        "id": "wPuhvdEv5X57ICC5YJ9l",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760229212,
+          "_nanoseconds": 140000000
+        },
+        "pagos": {
+          "Aharhel Gastos": 28
+        },
+        "items": [
+          {
+            "precio": 28,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Gastos Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "KqxGZL8Wao6fuUkSrhIF",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760229060,
+          "_nanoseconds": 0
+        },
+        "total": 24,
+        "proveedor": "Proveedor",
+        "id": "KqxGZL8Wao6fuUkSrhIF",
+        "items": [
+          {
+            "precio": 24,
+            "id": "gas-lechuga",
+            "cantidad": 1,
+            "nombre": "Lechuga",
+            "categoriaId": "feria_mercado"
+          }
+        ],
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760229129,
+          "_nanoseconds": 318000000
+        },
+        "pagos": {
+          "Aharhel": 24
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760229060,
+          "_nanoseconds": 0
+        },
+        "total": 24,
+        "proveedor": "Proveedor",
+        "id": "KqxGZL8Wao6fuUkSrhIF",
+        "items": [
+          {
+            "precio": 24,
+            "id": "gas-lechuga",
+            "cantidad": 1,
+            "nombre": "Lechuga",
+            "categoriaId": "feria_mercado"
+          }
+        ],
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760229129,
+          "_nanoseconds": 318000000
+        },
+        "pagos": {
+          "Aharhel YS": 24
+        }
+      }
+    },
+    {
+      "id": "R3AnWNLS11jOZtPAgunT",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760205744,
+          "_nanoseconds": 195000000
+        },
+        "total": 22.8,
+        "proveedor": "Proveedor",
+        "id": "R3AnWNLS11jOZtPAgunT",
+        "items": [
+          {
+            "precio": 22.8,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          }
+        ],
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760205745,
+          "_nanoseconds": 709000000
+        },
+        "pagos": {
+          "Aharhel": 22.8
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760205744,
+          "_nanoseconds": 195000000
+        },
+        "total": 22.8,
+        "proveedor": "Proveedor",
+        "id": "R3AnWNLS11jOZtPAgunT",
+        "items": [
+          {
+            "precio": 22.8,
+            "id": "Cocina",
+            "cantidad": 1,
+            "nombre": "Cocina",
+            "categoriaId": "Cocina"
+          }
+        ],
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760205745,
+          "_nanoseconds": 709000000
+        },
+        "pagos": {
+          "Aharhel YS": 22.8
+        }
+      }
+    },
+    {
+      "id": "hUx3AAz376vd3S1ikW6q",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760150568,
+          "_nanoseconds": 240000000
+        },
+        "total": 18.2,
+        "proveedor": "Proveedor",
+        "id": "hUx3AAz376vd3S1ikW6q",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760150572,
+          "_nanoseconds": 805000000
+        },
+        "pagos": {
+          "Aharhel": 18.2
+        },
+        "items": [
+          {
+            "precio": 18.2,
+            "id": "Yape Vuelto",
+            "cantidad": 1,
+            "nombre": "Yape Vuelto",
+            "categoriaId": "Gasto Aharhel"
+          }
+        ]
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1760150568,
+          "_nanoseconds": 240000000
+        },
+        "total": 18.2,
+        "proveedor": "Proveedor",
+        "id": "hUx3AAz376vd3S1ikW6q",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1760150572,
+          "_nanoseconds": 805000000
+        },
+        "pagos": {
+          "Aharhel YS": 18.2
+        },
+        "items": [
+          {
+            "precio": 18.2,
+            "id": "Yape Vuelto",
+            "cantidad": 1,
+            "nombre": "Yape Vuelto",
+            "categoriaId": "Gasto Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "8pLWUD6mCTm1w6DeDwT7",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1759811280,
+          "_nanoseconds": 0
+        },
+        "total": 6.7,
+        "proveedor": "Proveedor",
+        "id": "8pLWUD6mCTm1w6DeDwT7",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1759850907,
+          "_nanoseconds": 33000000
+        },
+        "pagos": {
+          "Aharhel": 6.7
+        },
+        "items": [
+          {
+            "precio": 6.7,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1759811280,
+          "_nanoseconds": 0
+        },
+        "total": 6.7,
+        "proveedor": "Proveedor",
+        "id": "8pLWUD6mCTm1w6DeDwT7",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1759850907,
+          "_nanoseconds": 33000000
+        },
+        "pagos": {
+          "Aharhel Gastos": 6.7
+        },
+        "items": [
+          {
+            "precio": 6.7,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Gastos Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "wER3iB3ffeetKYljrGUP",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1759678020,
+          "_nanoseconds": 0
+        },
+        "total": 30,
+        "proveedor": "Proveedor",
+        "id": "wER3iB3ffeetKYljrGUP",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1759850830,
+          "_nanoseconds": 237000000
+        },
+        "pagos": {
+          "Efectivo": 30
+        },
+        "items": [
+          {
+            "precio": 30,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1759678020,
+          "_nanoseconds": 0
+        },
+        "total": 30,
+        "proveedor": "Proveedor",
+        "id": "wER3iB3ffeetKYljrGUP",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1759850830,
+          "_nanoseconds": 237000000
+        },
+        "pagos": {
+          "Efectivo": 30
+        },
+        "items": [
+          {
+            "precio": 30,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Gastos Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "t7XDHlmiaNEMJy8nTIgN",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1759591560,
+          "_nanoseconds": 0
+        },
+        "total": 20,
+        "proveedor": "Proveedor",
+        "id": "t7XDHlmiaNEMJy8nTIgN",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1759850801,
+          "_nanoseconds": 689000000
+        },
+        "pagos": {
+          "Efectivo": 20
+        },
+        "items": [
+          {
+            "precio": 20,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1759591560,
+          "_nanoseconds": 0
+        },
+        "total": 20,
+        "proveedor": "Proveedor",
+        "id": "t7XDHlmiaNEMJy8nTIgN",
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1759850801,
+          "_nanoseconds": 689000000
+        },
+        "pagos": {
+          "Efectivo": 20
+        },
+        "items": [
+          {
+            "precio": 20,
+            "id": "Aharhel",
+            "cantidad": 1,
+            "nombre": "Gastos Aharhel",
+            "categoriaId": "Aharhel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "TrQyHqUSyjnot4KcXYgr",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1759591380,
+          "_nanoseconds": 0
+        },
+        "total": 5.8,
+        "proveedor": "Proveedor",
+        "id": "TrQyHqUSyjnot4KcXYgr",
+        "items": [
+          {
+            "precio": 5.8,
+            "id": "Completo",
+            "cantidad": 1,
+            "nombre": "Completo",
+            "categoriaId": "Compras Feria"
+          }
+        ],
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1759850616,
+          "_nanoseconds": 210000000
+        },
+        "pagos": {
+          "Aharhel": 5.8
+        }
+      },
+      "after": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1759591380,
+          "_nanoseconds": 0
+        },
+        "total": 5.8,
+        "proveedor": "Proveedor",
+        "id": "TrQyHqUSyjnot4KcXYgr",
+        "items": [
+          {
+            "precio": 5.8,
+            "id": "Completo",
+            "cantidad": 1,
+            "nombre": "Completo",
+            "categoriaId": "Compras Feria"
+          }
+        ],
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1759850616,
+          "_nanoseconds": 210000000
+        },
+        "pagos": {
+          "Aharhel YS": 5.8
+        }
+      }
+    }
+  ],
+  "createdAt": "2025-11-20T05:00:37.340Z"
+}

@@ -361,3 +361,127 @@ exports.izipayMockConfirm = functions.https.onRequest((req, res) => {
     }
   });
 });
+
+// -------------------- Propagación de renombres en background --------------------
+// Al actualizar un producto (productos/{productId}) si cambia el campo `nombre`,
+// escribimos un job en `jobs/propagateProductRename/{jobId}`. Un worker (onCreate)
+// procesa el job y actualiza `gastos.items` en batches.
+
+exports.enqueueProductRename = functions.firestore
+  .document('productos/{productId}')
+  .onUpdate(async (change, context) => {
+    try {
+      const before = change.before.data() || {};
+      const after = change.after.data() || {};
+      const productId = context.params.productId;
+      const oldName = (before.nombre || '').toString();
+      const newName = (after.nombre || '').toString();
+      if (!oldName || !newName || oldName === newName) {
+        // nothing to do
+        return null;
+      }
+      const db = admin.firestore();
+      const jobRef = db.collection('jobs').doc();
+      const job = {
+        type: 'propagateProductRename',
+        productId,
+        oldName,
+        newName,
+        days: 30,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        status: 'pending'
+      };
+      await jobRef.set(job);
+      console.log('enqueueProductRename: created job', jobRef.path, 'for', productId, oldName, '=>', newName);
+      return null;
+    } catch (err) {
+      console.error('enqueueProductRename error:', err);
+      return null;
+    }
+  });
+
+// Worker: procesa jobs de propagación de nombre de producto
+exports.processPropagationJob = functions.firestore
+  .document('jobs/propagateProductRename/{jobId}')
+  .onCreate(async (snap, context) => {
+    const job = snap.data() || {};
+    const jobRef = snap.ref;
+    const db = admin.firestore();
+    console.log('processPropagationJob: starting job', snap.id, job);
+    try {
+      await jobRef.update({ status: 'running', startedAt: admin.firestore.FieldValue.serverTimestamp() });
+
+      const days = Number(job.days) || 30;
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
+      const cutoffTs = admin.firestore.Timestamp.fromDate(cutoff);
+
+      const pageSize = 200;
+      let lastDoc = null;
+      let totalScanned = 0;
+      let totalUpdated = 0;
+
+      while (true) {
+        let q = db.collection('gastos')
+          .where('createdAt', '>=', cutoffTs)
+          .orderBy('createdAt', 'desc')
+          .limit(pageSize);
+        if (lastDoc) q = q.startAfter(lastDoc);
+        const snapG = await q.get();
+        if (snapG.empty) break;
+        lastDoc = snapG.docs[snapG.docs.length - 1];
+
+        const updates = [];
+        for (const doc of snapG.docs) {
+          totalScanned++;
+          const data = doc.data() || {};
+          const items = Array.isArray(data.items) ? data.items : [];
+          let changed = false;
+          const newItems = items.map(it => {
+            try {
+              const copy = JSON.parse(JSON.stringify(it));
+              const prodNombre = (copy.producto && copy.producto.nombre) ? copy.producto.nombre.toString() : '';
+              const prodId = (copy.productoId || '').toString();
+              const itemNombre = (copy.nombre || '').toString();
+              if (prodId === job.productId || prodNombre === job.oldName || itemNombre === job.oldName) {
+                if (!copy.producto) copy.producto = {};
+                copy.producto.nombre = job.newName;
+                copy.nombre = job.newName;
+                changed = true;
+              }
+              return copy;
+            } catch (e) {
+              console.warn('processPropagationJob: item parse error', doc.id, e);
+              return it;
+            }
+          });
+          if (changed) updates.push({ ref: doc.ref, items: newItems });
+        }
+
+        // apply updates in batches of 400
+        let batch = db.batch();
+        let ops = 0;
+        for (const u of updates) {
+          batch.update(u.ref, { items: u.items });
+          ops++;
+          if (ops >= 400) { await batch.commit(); batch = db.batch(); ops = 0; }
+          totalUpdated++;
+        }
+        if (ops > 0) await batch.commit();
+
+        // write progress to job doc
+        await jobRef.update({ lastProgressAt: admin.firestore.FieldValue.serverTimestamp(), totalScanned, totalUpdated });
+
+        // If fewer than pageSize docs fetched, exit
+        if (snapG.docs.length < pageSize) break;
+      }
+
+      await jobRef.update({ status: 'done', finishedAt: admin.firestore.FieldValue.serverTimestamp(), totalScanned, totalUpdated });
+      console.log('processPropagationJob: finished', snap.id, 'scanned', totalScanned, 'updated', totalUpdated);
+      return null;
+    } catch (err) {
+      console.error('processPropagationJob error:', err);
+      try { await jobRef.update({ status: 'failed', error: (err && err.stack) ? err.stack : String(err), failedAt: admin.firestore.FieldValue.serverTimestamp() }); } catch (e) { console.error('Could not update job status:', e); }
+      return null;
+    }
+  });

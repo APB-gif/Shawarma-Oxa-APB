@@ -21,7 +21,10 @@ String capitalize(String s) {
 String _displayMethodForGastos(String key) {
   final lower = key.toLowerCase().trim();
   if (lower == 'tarjeta') return 'Ruben';
-  if (lower == 'yape personal' || lower == 'yape') return 'Aharhel';
+  // Priorizar variantes que indican gastos personales
+  if (lower.contains('gasto aharhel') || lower.contains('aharhel gastos') || lower.contains('gasto_aharhel')) return 'Aharhel Gastos';
+  // Yape / Aharhel históricos -> Aharhel YS
+  if (lower == 'yape personal' || lower == 'yape' || lower.contains('aharhel')) return 'Aharhel YS';
   return key;
 }
 
@@ -774,8 +777,8 @@ class _TabVentasYProductosState extends State<_TabVentasYProductos> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: TextField(
               onChanged: (value) => setState(() => _searchQuery = value),
-              decoration: InputDecoration(
-                hintText: 'Buscar por monto o método de pago...',
+        decoration: InputDecoration(
+          hintText: 'Buscar por monto, producto, categoría o método de pago...',
                 prefixIcon:
                     const Icon(Icons.search, color: _ThemeColors.inactive),
                 filled: true,
@@ -841,10 +844,29 @@ class _TabGastosState extends State<_TabGastos> {
     }
 
     final filtered = gastos.where((g) {
-      final q = _searchQuery.toLowerCase();
+      final q = _searchQuery.toLowerCase().trim();
+      if (q.isEmpty) return true;
+
+      // Buscar por monto
       final totalStr = g.total.toStringAsFixed(2);
+      if (totalStr.contains(q)) return true;
+
+      // Buscar por método de pago (claves)
       final metodos = g.pagos.keys.join(', ').toLowerCase();
-      return totalStr.contains(q) || metodos.contains(q);
+      if (metodos.contains(q)) return true;
+
+      // Buscar por label/descripcion del gasto
+      if ((g.label ?? '').toLowerCase().contains(q)) return true;
+
+      // Buscar por items (nombre del producto o categoriaId)
+      for (final it in g.items) {
+        try {
+          if (it.nombre.toLowerCase().contains(q)) return true;
+          if ((it.categoriaId ?? '').toLowerCase().contains(q)) return true;
+        } catch (_) {}
+      }
+
+      return false;
     }).toList();
 
     final grouped = groupBy(
@@ -863,7 +885,7 @@ class _TabGastosState extends State<_TabGastos> {
             child: TextField(
               onChanged: (value) => setState(() => _searchQuery = value),
               decoration: InputDecoration(
-                hintText: 'Buscar por monto o método de pago...',
+                hintText: 'Buscar por monto, producto, categoría o método de pago...',
                 prefixIcon:
                     const Icon(Icons.search, color: _ThemeColors.inactive),
                 filled: true,
@@ -1109,15 +1131,15 @@ void _showEditGastoDialog(BuildContext context, GastoResumen gasto) {
   final metodosDisponibles = <String>[
     'Efectivo',
     'Ruben',
-    'Aharhel',
-    'Yape',
+    'Aharhel YS',
+    'Aharhel Gastos',
     'Otros',
     ...gasto.pagos.keys.map((k) => _displayMethodForGastos(k)).where((k) =>
-        k != 'Efectivo' &&
-        k != 'Ruben' &&
-        k != 'Aharhel' &&
-        k != 'Yape' &&
-        k != 'Otros'),
+      k != 'Efectivo' &&
+      k != 'Ruben' &&
+      k != 'Aharhel YS' &&
+      k != 'Aharhel Gastos' &&
+      k != 'Otros'),
   ].toSet().toList();
 
   showDialog(

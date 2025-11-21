@@ -5,6 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shawarma_pos_nuevo/datos/repositorios/admin_repository.dart';
 
 final GlobalKey<ScaffoldMessengerState> productosMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
@@ -95,7 +96,7 @@ class _ProductosPageState extends State<ProductosPage> {
         return pickedFile; // XFile
       }
     } catch (e) {
-      productosMessengerKey.currentState?.showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al seleccionar imagen: $e')),
       );
       return null;
@@ -108,9 +109,9 @@ class _ProductosPageState extends State<ProductosPage> {
         await FirebaseStorage.instance.ref(folder).listAll();
     final List<Reference> files = result.items;
     if (files.isEmpty) {
-      productosMessengerKey.currentState?.showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('No hay imágenes disponibles en Storage.')),
+        content: Text('No hay imágenes disponibles en Storage.')),
       );
       return null;
     }
@@ -167,14 +168,28 @@ class _ProductosPageState extends State<ProductosPage> {
   }
 
   void _mostrarFormularioProducto({DocumentSnapshot? producto}) {
-    final nombreController =
-        TextEditingController(text: producto?['nombre'] ?? '');
-    final precioController =
-        TextEditingController(text: producto?['precio']?.toString() ?? '');
-    final nombreDocumentoController =
-        TextEditingController(text: producto?.id ?? '');
-    final imagenUrlController =
-        TextEditingController(text: producto?['imagenUrl'] ?? '');
+  final productoData = producto != null
+    ? (producto.data() as Map<String, dynamic>?) ?? {}
+    : <String, dynamic>{};
+  final nombreController = TextEditingController(
+    text: producto != null ? (productoData['nombre']?.toString() ?? '') : '');
+  final precioController = TextEditingController(
+    text: producto != null ? (productoData['precio']?.toString() ?? '') : '');
+  final nombreDocumentoController =
+    TextEditingController(text: producto?.id ?? '');
+  // Autogenerar slug para nombreDocumento mientras se escribe el nombre (no sobrescribir edición manual)
+  String prevGenerated = nombreDocumentoController.text.trim();
+  nombreController.addListener(() {
+    final name = nombreController.text.trim();
+    final gen = _slugify(name);
+    final cur = nombreDocumentoController.text.trim();
+    if (cur.isEmpty || cur == prevGenerated) {
+      nombreDocumentoController.text = gen;
+      prevGenerated = gen;
+    }
+  });
+  final imagenUrlController = TextEditingController(
+    text: producto != null ? (productoData['imagenUrl']?.toString() ?? '') : '');
 
     showDialog(
       context: context,
@@ -426,28 +441,33 @@ class _ProductosPageState extends State<ProductosPage> {
                                           categoriaDoc.data()?['tipo'] ??
                                               'venta';
 
-                                      if (nombre.isEmpty) {
-                                        productosMessengerKey.currentState
-                                            ?.showSnackBar(const SnackBar(
-                                                content: Text(
-                                                    'Por favor, ingresa el nombre del producto'),
-                                                backgroundColor: Colors.red));
+                                        if (nombre.isEmpty) {
+                                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                            content: Text(
+                                              'Por favor, ingresa el nombre del producto'),
+                                            backgroundColor: Colors.red));
                                         return;
                                       }
-                                      if (nombreDocumento.isEmpty) {
-                                        productosMessengerKey.currentState
-                                            ?.showSnackBar(const SnackBar(
-                                                content: Text(
-                                                    'Por favor, ingresa el nombre del documento'),
-                                                backgroundColor: Colors.red));
-                                        return;
+                                      // Si no proporcionó nombreDocumento, generamos un slug y comprobamos colisiones
+                                      String finalDocId = nombreDocumento;
+                                      if (finalDocId.isEmpty) {
+                                        final base = _slugify(nombre);
+                                        String candidate = base;
+                                        int suffix = 0;
+                                        while (true) {
+                                          final docRef = FirebaseFirestore.instance.collection('productos').doc(candidate);
+                                          final snap = await docRef.get();
+                                          if (!snap.exists) break;
+                                          suffix++;
+                                          candidate = '$base-$suffix';
+                                        }
+                                        finalDocId = candidate;
                                       }
                                       if (tipo == 'venta' && precio <= 0) {
-                                        productosMessengerKey.currentState
-                                            ?.showSnackBar(const SnackBar(
-                                                content: Text(
-                                                    'Por favor, ingresa un precio válido para el producto de venta'),
-                                                backgroundColor: Colors.red));
+                                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                            content: Text(
+                                              'Por favor, ingresa un precio válido para el producto de venta'),
+                                            backgroundColor: Colors.red));
                                         return;
                                       }
 
@@ -462,8 +482,10 @@ class _ProductosPageState extends State<ProductosPage> {
                                       };
 
                                       try {
+                                        final oldNombre = producto != null ? (productoData['nombre']?.toString() ?? '') : '';
+                                        final oldId = producto != null ? producto.id : '';
                                         String finalImageUrl = imagenUrl;
-                                        if (_pendingImage != null) {
+                                            if (_pendingImage != null) {
                                           try {
                                             final fileExtension = kIsWeb
                                                 ? (_pendingImage.extension ??
@@ -528,10 +550,9 @@ class _ProductosPageState extends State<ProductosPage> {
                                           } catch (e) {
                                             // Si hubo un error (incluida una cancelación), marcamos cancelada
                                             uploadWasCancelled = true;
-                                            productosMessengerKey.currentState
-                                                ?.showSnackBar(SnackBar(
-                                                    content: Text(
-                                                        'Error al subir imagen: $e')));
+                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                                content: Text(
+                                                  'Error al subir imagen: $e')));
                                             return;
                                           }
                                         }
@@ -548,7 +569,7 @@ class _ProductosPageState extends State<ProductosPage> {
                                           final docExists =
                                               await FirebaseFirestore.instance
                                                   .collection('productos')
-                                                  .doc(nombreDocumento)
+                                                  .doc(finalDocId)
                                                   .get();
                                           if (docExists.exists) {
                                             productosMessengerKey.currentState
@@ -561,14 +582,14 @@ class _ProductosPageState extends State<ProductosPage> {
                                           }
                                           await FirebaseFirestore.instance
                                               .collection('productos')
-                                              .doc(nombreDocumento)
+                                              .doc(finalDocId)
                                               .set(data);
                                         } else {
-                                          if (nombreDocumento != producto.id) {
+                                          if (finalDocId != producto.id) {
                                             final docExists =
                                                 await FirebaseFirestore.instance
                                                     .collection('productos')
-                                                    .doc(nombreDocumento)
+                                                    .doc(finalDocId)
                                                     .get();
                                             if (docExists.exists) {
                                               productosMessengerKey.currentState
@@ -581,7 +602,7 @@ class _ProductosPageState extends State<ProductosPage> {
                                             }
                                             await FirebaseFirestore.instance
                                                 .collection('productos')
-                                                .doc(nombreDocumento)
+                                                .doc(finalDocId)
                                                 .set(data);
                                             await producto.reference.delete();
                                           } else {
@@ -589,23 +610,32 @@ class _ProductosPageState extends State<ProductosPage> {
                                                 .update(data);
                                           }
                                         }
+                                        // Si se actualizó el nombre o el id, propagar a gastos
+                                        if (producto != null) {
+                                          final newId = nombreDocumento;
+                                          final newNombre = nombre;
+                                          if (oldNombre.toLowerCase() != newNombre.toLowerCase() || (oldId != newId)) {
+                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Producto actualizado. Propagando cambios...')));
+                                            AdminRepository.instance.limpiarCache();
+                                            await _propagateProductRename(oldId, oldNombre, newId, newNombre);
+                                          }
+                                        }
                                         // Después de guardar en Firestore, ya no necesitamos la referencia en Storage
                                         if (currentUploadRef != null) {
                                           currentUploadRef = null;
                                         }
                                         Navigator.of(context).pop();
-                                        productosMessengerKey.currentState
-                                            ?.showSnackBar(SnackBar(
-                                                content: Text(producto == null
-                                                    ? 'Producto creado exitosamente'
-                                                    : 'Producto actualizado exitosamente'),
-                                                backgroundColor: Colors.green));
+                                        ScaffoldMessenger.of(context)
+                                          .showSnackBar(SnackBar(
+                                            content: Text(producto == null
+                                              ? 'Producto creado exitosamente'
+                                              : 'Producto actualizado exitosamente'),
+                                            backgroundColor: Colors.green));
                                       } catch (e) {
-                                        productosMessengerKey.currentState
-                                            ?.showSnackBar(const SnackBar(
-                                                content: Text(
-                                                    'Error al guardar el producto'),
-                                                backgroundColor: Colors.red));
+                                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                            content: Text(
+                                              'Error al guardar el producto'),
+                                            backgroundColor: Colors.red));
                                       }
                                     } finally {
                                       setDialogState(() => isSaving = false);
@@ -770,41 +800,85 @@ class _ProductosPageState extends State<ProductosPage> {
   }
 
   Future<void> _eliminarProducto(DocumentSnapshot producto) async {
+    final pdata = producto.data() as Map<String, dynamic>? ?? {};
     final bool? confirmar = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          scrollable: true,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Row(
-            children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Confirmar eliminación',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+      builder: (BuildContext ctx) {
+        return Dialog(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Center(
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+                CurvedAnimation(
+                  parent: ModalRoute.of(ctx)?.animation ?? const AlwaysStoppedAnimation<double>(1.0),
+                  curve: Curves.elasticOut,
                 ),
               ),
-            ],
-          ),
-          content: FractionallySizedBox(
-            widthFactor: 0.95,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: SingleChildScrollView(
+              child: Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 24,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                constraints: const BoxConstraints(maxWidth: 500),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.red.shade400,
+                            Colors.red.shade600,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(50),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withOpacity(0.3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.white,
+                        size: 48,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     const Text(
-                        '¿Estás seguro de que quieres eliminar este producto?'),
+                      'Eliminar Producto',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
                     const SizedBox(height: 12),
+                    Text(
+                      '¿Estás seguro de que quieres eliminar este producto?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -815,48 +889,82 @@ class _ProductosPageState extends State<ProductosPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Producto: ${producto['nombre'] ?? 'Sin nombre'}',
+                            'Producto: ${pdata['nombre']?.toString() ?? 'Sin nombre'}',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           Text('ID: ${producto.id}'),
                           Text(
-                              'Precio: S/ ${producto['precio']?.toString() ?? '0.00'}'),
+                              'Precio: S/ ${pdata['precio']?.toString() ?? '0.00'}'),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Esta acción no se puede deshacer.',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w500,
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.red.withOpacity(0.2),
+                        ),
                       ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.warning_outlined,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Esta acción no se puede deshacer.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.red.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text('Cancelar'),
+                        ),
+                        const SizedBox(width: 12),
+                        FilledButton.icon(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.red.shade600,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          label: const Text('Eliminar'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancelar'),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.grey[600],
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Eliminar'),
-            ),
-          ],
         );
       },
     );
@@ -864,7 +972,7 @@ class _ProductosPageState extends State<ProductosPage> {
     if (confirmar == true) {
       try {
         await producto.reference.delete();
-        productosMessengerKey.currentState?.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Row(
               children: [
@@ -877,7 +985,7 @@ class _ProductosPageState extends State<ProductosPage> {
           ),
         );
       } catch (e) {
-        productosMessengerKey.currentState?.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Row(
               children: [
@@ -890,6 +998,60 @@ class _ProductosPageState extends State<ProductosPage> {
           ),
         );
       }
+    }
+  }
+
+  // Propaga renombre/ID de producto en los items de la colección 'gastos'.
+  Future<void> _propagateProductRename(String oldId, String oldName, String newId, String newName) async {
+    try {
+      final db = FirebaseFirestore.instance;
+      // Limitar a los últimos 30 días para no saturar la consulta
+      final cutoff = DateTime.now().subtract(const Duration(days: 30));
+      final gastosQuery = FirebaseFirestore.instance
+          .collection('gastos')
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
+          .orderBy('createdAt', descending: true)
+          .limit(10000);
+      final gastosSnap = await gastosQuery.get();
+      int ops = 0;
+      WriteBatch batch = db.batch();
+      for (final g in gastosSnap.docs) {
+        final data = g.data();
+        final items = (data['items'] as List?) ?? [];
+        var changed = false;
+            final newItems = items.map((it) {
+          try {
+            final mapIt = Map<String, dynamic>.from(it as Map);
+            final prod = mapIt['producto'] as Map<String, dynamic>?;
+            final pNombre = prod != null ? (prod['nombre'] ?? '')?.toString() ?? '' : '';
+            final pId = (mapIt['productoId'] ?? '').toString();
+            if ((oldId.isNotEmpty && pId == oldId) || (oldName.isNotEmpty && pNombre.toLowerCase() == oldName.toLowerCase())) {
+              if (mapIt['producto'] == null) mapIt['producto'] = {};
+              // Actualizar nombre dentro del objeto producto (si existe)
+              mapIt['producto']['nombre'] = newName;
+              // Actualizar también el campo top-level 'nombre' para compatibilidad
+              mapIt['nombre'] = newName;
+              // Si coincide el id antiguo, actualizar productoId
+              if (oldId.isNotEmpty && newId.isNotEmpty && pId == oldId) {
+                mapIt['productoId'] = newId;
+              }
+              changed = true;
+            }
+            return mapIt;
+          } catch (_) {
+            return it;
+          }
+        }).toList();
+        if (changed) {
+          batch.update(g.reference, {'items': newItems});
+          ops++;
+          if (ops >= 400) { await batch.commit(); batch = db.batch(); ops = 0; }
+        }
+      }
+      if (ops > 0) await batch.commit();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Propagación de producto completada'), backgroundColor: Colors.green));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error propagando producto: $e'), backgroundColor: Colors.red));
     }
   }
 
@@ -1000,8 +1162,7 @@ class _ProductosPageState extends State<ProductosPage> {
                         // Filtrar productos según la búsqueda
                         if (_searchQuery.isNotEmpty) {
                           productos = productos.where((doc) {
-                            final nombre =
-                                doc['nombre'].toString().toLowerCase();
+                            final nombre = ((doc.data() as Map<String, dynamic>?)?['nombre']?.toString() ?? '').toLowerCase();
                             return nombre.contains(_searchQuery.toLowerCase());
                           }).toList();
                         }
@@ -1042,7 +1203,9 @@ class _ProductosPageState extends State<ProductosPage> {
                           ),
                           itemCount: productos.length,
                           itemBuilder: (context, index) {
-                            final producto = productos[index];
+              final producto = productos[index];
+              final data =
+                (producto.data() as Map<String, dynamic>?) ?? {};
                             return Card(
                               elevation: 3,
                               shape: RoundedRectangleBorder(
@@ -1064,13 +1227,9 @@ class _ProductosPageState extends State<ProductosPage> {
                                             child: ClipRRect(
                                               borderRadius:
                                                   BorderRadius.circular(12),
-                                              child: producto['imagenUrl'] !=
-                                                          null &&
-                                                      producto['imagenUrl']
-                                                          .toString()
-                                                          .isNotEmpty
+                                              child: (data['imagenUrl']?.toString().isNotEmpty ?? false)
                                                   ? Image.network(
-                                                      producto['imagenUrl'],
+                                                      data['imagenUrl'].toString(),
                                                       fit: BoxFit.contain,
                                                     )
                                                   : Container(
@@ -1086,7 +1245,7 @@ class _ProductosPageState extends State<ProductosPage> {
                                           ),
                                           const SizedBox(height: 8),
                                           Text(
-                                            producto['nombre'] ?? '',
+                                            data['nombre']?.toString() ?? '',
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 15,
@@ -1096,7 +1255,7 @@ class _ProductosPageState extends State<ProductosPage> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'S/ ${producto['precio']?.toString() ?? '0.00'}',
+                                            'S/ ${data['precio']?.toString() ?? '0.00'}',
                                             style: TextStyle(
                                               color: Colors.green[700],
                                               fontWeight: FontWeight.w600,
@@ -1162,5 +1321,21 @@ class _ProductosPageState extends State<ProductosPage> {
         backgroundColor: const Color(0xFF3B82F6),
       ),
     );
+  }
+
+  // Genera un slug legible desde un nombre. Ej: "Café con Leche" -> "cafe-con-leche"
+  String _slugify(String input) {
+    var s = input.trim().toLowerCase();
+    // Normalizar acentos básicos
+    s = s.replaceAll('á', 'a').replaceAll('é', 'e').replaceAll('í', 'i').replaceAll('ó', 'o').replaceAll('ú', 'u').replaceAll('ñ', 'n');
+    // Reemplazar caracteres no alfanuméricos por guiones
+    s = s.replaceAll(RegExp(r"[^a-z0-9]+"), '-');
+    // Eliminar guiones repetidos
+    s = s.replaceAll(RegExp(r"-+"), '-');
+    // Recortar guiones al inicio/fin
+    s = s.replaceAll(RegExp(r"^-|-$"), '');
+    if (s.isEmpty) s = 'producto';
+    if (s.length > 50) s = s.substring(0, 50);
+    return s;
   }
 }

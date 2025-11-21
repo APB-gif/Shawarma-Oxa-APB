@@ -47,7 +47,7 @@ async function main() {
         const lower = (k || '').toString().toLowerCase().trim();
         let newKey = k;
         if (lower === 'tarjeta') newKey = 'Ruben';
-        else if (lower === 'yape personal' || lower === 'yape') newKey = 'Aharhel';
+  else if (lower === 'yape personal' || lower === 'yape') newKey = 'Aharhel';
         if (newPagos[newKey]) {
           newPagos[newKey] += pagos[k];
         } else {

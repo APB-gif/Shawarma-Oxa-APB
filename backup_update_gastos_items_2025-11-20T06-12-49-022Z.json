@@ -1,0 +1,46 @@
+{
+  "createdAt": "2025-11-20T06:12:49.022Z",
+  "opts": {
+    "apply": true,
+    "limit": 200,
+    "days": 30,
+    "verbose": true,
+    "productId": "gastos_aharhel",
+    "oldName": "Gastos Aharhel Per",
+    "newName": "Aharhel Gastos",
+    "key": "C:\\Users\\Usuario\\Downloads\\shawarmaoxa-pos-firebase-adminsdk-fbsvc-9f6254f225.json"
+  },
+  "updates": [
+    {
+      "id": "ylzECjwCDNWWwNHXamIG",
+      "before": {
+        "descripcion": "Gasto registrado desde panel",
+        "fecha": {
+          "_seconds": 1763618490,
+          "_nanoseconds": 292000000
+        },
+        "total": 10,
+        "proveedor": "Proveedor",
+        "id": "ylzECjwCDNWWwNHXamIG",
+        "items": [
+          {
+            "precio": 10,
+            "id": "gastos_aharhel",
+            "cantidad": 1,
+            "nombre": "Gastos Aharhel Per",
+            "categoriaId": "Aharhel"
+          }
+        ],
+        "pagos": {
+          "Aharhel Gastos": 10
+        },
+        "usuarioId": "CYW2LBKRJsNnWO29jCDtqxdzoaC2",
+        "usuarioNombre": "Aharhel PB",
+        "createdAt": {
+          "_seconds": 1763618492,
+          "_nanoseconds": 292000000
+        }
+      }
+    }
+  ]
+}

@@ -181,9 +181,10 @@ class _ProductoImage extends StatelessWidget {
               child: const Center(
                   child: CircularProgressIndicator(strokeWidth: 1)));
         }
-        final doc = snap.data;
-        final fetched =
-            (doc != null) ? (doc['imagenUrl']?.toString() ?? '').trim() : '';
+    final doc = snap.data;
+    final fetched = (doc != null)
+      ? (doc.data()?['imagenUrl']?.toString() ?? '').trim()
+      : '';
         if (fetched.isNotEmpty) {
           return SizedBox(
               width: size,

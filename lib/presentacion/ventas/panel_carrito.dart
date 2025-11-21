@@ -129,7 +129,7 @@ class _CategoriaIcon extends StatelessWidget {
     // gs:// (Firebase Storage)
     return FutureBuilder<String>(
       future: _gsToUrl(iconPath),
-      builder: (context, snap) {
+        builder: (context, snap) {
         if (!snap.hasData) {
           return const SizedBox(
             width: 18,
@@ -196,9 +196,10 @@ class _ProductoImage extends StatelessWidget {
               child: const Center(
                   child: CircularProgressIndicator(strokeWidth: 1)));
         }
-        final doc = snap.data;
-        final fetched =
-            (doc != null) ? (doc['imagenUrl']?.toString() ?? '').trim() : '';
+    final doc = snap.data;
+    final fetched = (doc != null)
+      ? (doc.data()?['imagenUrl']?.toString() ?? '').trim()
+      : '';
         if (fetched.isNotEmpty) {
           return SizedBox(
               width: size,
@@ -676,9 +677,9 @@ class _PanelCarritoState extends State<PanelCarrito> {
       isScrollControlled: true,
       builder: (ctx) => ReviewSplitDialog(
         groups: groups,
-        onPayGroup: (groupIndex, items, subtotal) async {
+          onPayGroup: (groupIndex, items, subtotal) async {
           final idsToRemove = items.map((e) => e.uniqueId).toSet();
-          await showModalBottomSheet(
+          final paid = await showModalBottomSheet<bool>(
             context: ctx,
             isScrollControlled: true,
             showDragHandle: true,
@@ -705,6 +706,20 @@ class _PanelCarritoState extends State<PanelCarrito> {
               },
             ),
           );
+
+          // Si PanelPago devolvió true, la venta fue procesada (online/offline).
+          // Cerramos la hoja de revisión y también el panel del carrito para
+          // que la UI principal (pagina_ventas) refresque el carrito desde su estado.
+          if (paid == true) {
+            // Cerrar review (ctx) si está abierta
+            try {
+              if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+            } catch (_) {}
+            // Cerrar el panel del carrito (context)
+            try {
+              if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+            } catch (_) {}
+          }
         },
       ),
     );
@@ -746,7 +761,7 @@ class _PanelCarritoState extends State<PanelCarrito> {
         groups: groups,
         onPayGroup: (groupIndex, items, subtotal) async {
           final idsToRemove = items.map((e) => e.uniqueId).toSet();
-          await showModalBottomSheet(
+          final paid = await showModalBottomSheet<bool>(
             context: ctx,
             isScrollControlled: true,
             showDragHandle: true,
@@ -772,6 +787,15 @@ class _PanelCarritoState extends State<PanelCarrito> {
               },
             ),
           );
+
+          if (paid == true) {
+            try {
+              if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+            } catch (_) {}
+            try {
+              if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+            } catch (_) {}
+          }
         },
       ),
     );
@@ -1160,8 +1184,7 @@ class _PanelCarritoState extends State<PanelCarrito> {
                                 padding: EdgeInsets.zero,
                                 itemCount: groupedItems.length,
                                 itemBuilder: (context, index) {
-                                  final itemsInGroup =
-                                      groupedItems.values.elementAt(index);
+                                  final itemsInGroup = groupedItems.values.elementAt(index);
 
                                   if (itemsInGroup.length == 1) {
                                     return _buildIndividualItemTile(
@@ -1979,8 +2002,8 @@ class _PanelCarritoState extends State<PanelCarrito> {
                           isPrimary: true,
                           onPressed: widget.items.isEmpty
                               ? null
-                              : () {
-                                  showModalBottomSheet(
+                              : () async {
+                                  final result = await showModalBottomSheet<bool>(
                                     context: context,
                                     isScrollControlled: true,
                                     showDragHandle: true,
@@ -1995,6 +2018,15 @@ class _PanelCarritoState extends State<PanelCarrito> {
                                               fechaVenta: fechaVenta),
                                     ),
                                   );
+
+                                  // Si el panel devolvió true, la venta se procesó (online/offline).
+                                  if (result == true && mounted) {
+                                    widget.onClear();
+                                    // Cerrar el panel del carrito también
+                                    if (Navigator.of(context).canPop()) {
+                                      Navigator.of(context).pop();
+                                    }
+                                  }
                                 },
                         ),
                       ),

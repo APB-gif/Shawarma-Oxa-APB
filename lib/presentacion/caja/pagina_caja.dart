@@ -12,6 +12,7 @@ import 'package:shawarma_pos_nuevo/datos/servicios/caja_service.dart';
 import 'package:shawarma_pos_nuevo/presentacion/widgets/notificaciones.dart';
 import 'package:shawarma_pos_nuevo/presentacion/pagina_principal.dart';
 import 'package:shawarma_pos_nuevo/presentacion/caja/gasto_apertura_dialog.dart';
+import 'package:shawarma_pos_nuevo/presentacion/caja/modern_dialogs.dart' show showModernConfirmDialog, showCajaInitiatedDialog, showCajaClosedDialog;
 import 'package:shawarma_pos_nuevo/datos/servicios/auth/auth_service.dart';
 import 'package:shawarma_pos_nuevo/presentacion/auth/auth_gate.dart';
 import 'package:shawarma_pos_nuevo/main.dart';
@@ -55,17 +56,25 @@ Future<void> _mostrarDialogoAbrirCajaGenerico(BuildContext context) async {
 
   DateTime fechaSeleccionada = DateTime.now();
 
+  bool _ctxMounted(BuildContext c) {
+    return c is Element && c.mounted;
+  }
+
   Future<void> abrirCaja(
     double monto,
     DateTime fecha,
-    BuildContext dialogContext,
-  ) async {
+    BuildContext dialogContext, {
+    bool skipDialogClose = false,
+  }) async {
     final user = FirebaseAuth.instance.currentUser;
     final isGuest = user == null;
     // Capturar referencia al servicio antes de cualquier await que pueda disparar
-    // reconstrucciones que reciclen el context.
-    final authSvc = Provider.of<AuthService>(context, listen: false);
+    // reconstrucciones que reciclen el context. Usar el context del navigator
+    // global si el context local fue desmontado.
+    final authContext = navigatorKey.currentContext ?? context;
+    final authSvc = Provider.of<AuthService>(authContext, listen: false);
 
+    bool _didCloseDialog = false;
     try {
       // Antes de abrir, validar si el trabajador tiene permiso según horarios
       final uidNow = FirebaseAuth.instance.currentUser?.uid;
@@ -159,19 +168,36 @@ Future<void> _mostrarDialogoAbrirCajaGenerico(BuildContext context) async {
         }
       } catch (_) {}
 
-      // Cerrar el diálogo usando el navigator global para evitar lookup de ancestros
-      // desde un BuildContext que pudo quedar en un árbol desactivado.
-      final nav = navigatorKey.currentState;
-      if (nav != null && nav.canPop()) {
-        nav.pop();
+      if (!skipDialogClose) {
+        // Cerrar el diálogo de apertura de forma robusta para cubrir casos
+        // offline donde los contextos/navigators pueden variar. Intentamos
+        // cerrar usando el contexto local `dialogContext` y, si falla,
+        // usamos el navigator global (`navigatorKey`) como fallback.
+        try {
+          if (_ctxMounted(dialogContext) && Navigator.of(dialogContext).canPop()) {
+            Navigator.of(dialogContext).pop();
+            _didCloseDialog = true;
+          } else {
+            final rootNav = navigatorKey.currentState;
+            if (rootNav != null && rootNav.canPop()) {
+              rootNav.pop();
+              _didCloseDialog = true;
+            }
+          }
+        } catch (_) {
+          try {
+            final rootNav = navigatorKey.currentState;
+            if (rootNav != null && rootNav.canPop()) {
+              rootNav.pop();
+              _didCloseDialog = true;
+            }
+          } catch (_) {}
+        }
       }
       if (mainScaffoldContext != null) {
-        mostrarNotificacionElegante(
+        await showCajaInitiatedDialog(
           mainScaffoldContext!,
-          isGuest
-              ? 'Caja iniciada en modo Invitado (offline).'
-              : 'Caja iniciada correctamente.',
-          messengerKey: principalMessengerKey,
+          isGuest: isGuest,
         );
       }
     } catch (e) {
@@ -180,143 +206,294 @@ Future<void> _mostrarDialogoAbrirCajaGenerico(BuildContext context) async {
             esError: true, messengerKey: principalMessengerKey);
       }
     }
+
+    // Asegurar cierre del diálogo incluso si ocurrió una excepción antes
+    // de llegar al bloque anterior. Solo intentamos cerrar si no lo hicimos
+    // y si no se pidió explícitamente omitir el cierre.
+    if (!_didCloseDialog && !skipDialogClose) {
+      try {
+        if (_ctxMounted(dialogContext) && Navigator.of(dialogContext).canPop()) {
+          Navigator.of(dialogContext).pop();
+        } else {
+          final rootNav = navigatorKey.currentState;
+          if (rootNav != null && rootNav.canPop()) rootNav.pop();
+        }
+      } catch (_) {}
+    }
   }
 
   void confirmarAbrirConCero(BuildContext parentDialogContext) {
-    showDialog(
-      context: context,
-      builder: (confirmContext) => AlertDialog(
-        title: const Text('Confirmar Apertura'),
-        content: const Text(
-            'El monto está vacío. ¿Desea abrir la caja con S/ 0.00?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(confirmContext).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.of(confirmContext).pop();
-              await abrirCaja(0.0, fechaSeleccionada, parentDialogContext);
-            },
-            child: const Text('Sí, abrir'),
-          ),
-        ],
-      ),
-    );
+    showModernConfirmDialog(
+      context,
+      title: 'Confirmar Apertura',
+      message: 'El monto está vacío. ¿Desea abrir la caja con S/ 0.00?',
+      confirmText: 'Sí, abrir',
+      cancelText: 'Cancelar',
+      confirmColor: Colors.blue.shade600,
+      icon: Icons.info_outline_rounded,
+    ).then((confirmed) async {
+      if (confirmed == true) {
+        // Intentar cerrar el diálogo padre usando el navigator global primero
+        try {
+          final rootNav = navigatorKey.currentState;
+          if (rootNav != null && rootNav.canPop()) {
+            rootNav.pop();
+          } else if (_ctxMounted(parentDialogContext) && Navigator.of(parentDialogContext).canPop()) {
+            Navigator.of(parentDialogContext).pop();
+          }
+        } catch (_) {}
+        await abrirCaja(0.0, fechaSeleccionada, parentDialogContext, skipDialogClose: true);
+      }
+    });
   }
 
+  // Mostrar el diálogo principal de apertura de caja con estilo moderno
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (dialogContext) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text('Iniciar Nueva Caja'),
-      content: StatefulBuilder(
-        builder: (context, setDialogState) {
-          return Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: controller,
-                  decoration: const InputDecoration(
-                    labelText: 'Monto Inicial (S/)',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  autofocus: true,
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return null;
-                    if (double.tryParse(v.replaceAll(',', '.')) == null)
-                      return 'Monto inválido.';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.calendar_today_outlined),
-                        label: Text(DateFormat.yMMMd('es_ES')
-                            .format(fechaSeleccionada)),
-                        onPressed: () async {
-                          final pickedDate = await showDatePicker(
-                            context: context,
-                            initialDate: fechaSeleccionada,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime.now(),
-                          );
-                          if (pickedDate != null) {
-                            setDialogState(() {
-                              fechaSeleccionada = DateTime(
-                                pickedDate.year,
-                                pickedDate.month,
-                                pickedDate.day,
-                                fechaSeleccionada.hour,
-                                fechaSeleccionada.minute,
-                              );
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.access_time_outlined),
-                        label: Text(
-                            DateFormat.jm('es_ES').format(fechaSeleccionada)),
-                        onPressed: () async {
-                          final pickedTime = await showTimePicker(
-                            context: context,
-                            initialTime:
-                                TimeOfDay.fromDateTime(fechaSeleccionada),
-                          );
-                          if (pickedTime != null) {
-                            setDialogState(() {
-                              fechaSeleccionada = DateTime(
-                                fechaSeleccionada.year,
-                                fechaSeleccionada.month,
-                                fechaSeleccionada.day,
-                                pickedTime.hour,
-                                pickedTime.minute,
-                              );
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ],
+    builder: (dialogContext) => Dialog(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      child: Center(
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+            CurvedAnimation(
+              parent: ModalRoute.of(dialogContext)?.animation ?? const AlwaysStoppedAnimation<double>(1.0),
+              curve: Curves.elasticOut,
+            ),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 500),
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
                 ),
               ],
             ),
-          );
-        },
+            child: StatefulBuilder(
+              builder: (ctx, setDialogState) => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icono con gradiente
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.blue.shade400,
+                          Colors.blue.shade600,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(50),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.store_rounded,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Título
+                  const Text(
+                    'Iniciar Nueva Caja',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Ingresa el monto inicial y selecciona la fecha',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Contenido del formulario
+                  Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextFormField(
+                          controller: controller,
+                          decoration: InputDecoration(
+                            labelText: 'Monto Inicial (S/)',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            prefixIcon: const Icon(Icons.monetization_on_rounded),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          autofocus: true,
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return null;
+                            if (double.tryParse(v.replaceAll(',', '.')) == null)
+                              return 'Monto inválido.';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        // Selección de fecha y hora
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Fecha y Hora',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.blue.shade700,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      icon: const Icon(Icons.calendar_today_outlined),
+                                      label: Text(
+                                        DateFormat.yMMMd('es_ES').format(fechaSeleccionada),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      onPressed: () async {
+                                        final pickedDate = await showDatePicker(
+                                          context: context,
+                                          initialDate: fechaSeleccionada,
+                                          firstDate: DateTime(2020),
+                                          lastDate: DateTime.now(),
+                                        );
+                                        if (pickedDate != null) {
+                                          setDialogState(() {
+                                            fechaSeleccionada = DateTime(
+                                              pickedDate.year,
+                                              pickedDate.month,
+                                              pickedDate.day,
+                                              fechaSeleccionada.hour,
+                                              fechaSeleccionada.minute,
+                                            );
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      icon: const Icon(Icons.access_time_outlined),
+                                      label: Text(
+                                        DateFormat.jm('es_ES').format(fechaSeleccionada),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      onPressed: () async {
+                                        final pickedTime = await showTimePicker(
+                                          context: context,
+                                          initialTime: TimeOfDay.fromDateTime(fechaSeleccionada),
+                                        );
+                                        if (pickedTime != null) {
+                                          setDialogState(() {
+                                            fechaSeleccionada = DateTime(
+                                              fechaSeleccionada.year,
+                                              fechaSeleccionada.month,
+                                              fechaSeleccionada.day,
+                                              pickedTime.hour,
+                                              pickedTime.minute,
+                                            );
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Botones de acción
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () async {
+                            if (formKey.currentState!.validate()) {
+                              if (controller.text.isEmpty) {
+                                // Cerrar el diálogo de inicio y abrir confirmación para 0
+                                if (_ctxMounted(dialogContext) && Navigator.of(dialogContext).canPop()) Navigator.of(dialogContext).pop();
+                                confirmarAbrirConCero(dialogContext);
+                              } else {
+                                final monto = double.parse(controller.text.replaceAll(',', '.'));
+                                // Cerrar inmediatamente el diálogo antes de iniciar la caja
+                                if (_ctxMounted(dialogContext) && Navigator.of(dialogContext).canPop()) Navigator.of(dialogContext).pop();
+                                await abrirCaja(monto, fechaSeleccionada, dialogContext, skipDialogClose: true);
+                              }
+                            }
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.blue.shade600,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.check_circle_outline_rounded),
+                          label: const Text('Iniciar Caja', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () async {
-            if (formKey.currentState!.validate()) {
-              if (controller.text.isEmpty) {
-                confirmarAbrirConCero(dialogContext);
-              } else {
-                final monto =
-                    double.parse(controller.text.replaceAll(',', '.'));
-                await abrirCaja(monto, fechaSeleccionada, dialogContext);
-              }
-            }
-          },
-          child: const Text('Iniciar Caja'),
-        ),
-      ],
     ),
   );
 }
@@ -377,77 +554,226 @@ Future<_AdminCloseParams?> _pedirDatosCierre(
   final result = await showDialog<_AdminCloseParams>(
     context: context,
     barrierDismissible: false,
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setState) => AlertDialog(
-        title: const Text('Cierre remoto (admin)'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: motivoCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Motivo',
-                  border: OutlineInputBorder(),
+    builder: (ctx) => Dialog(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      child: Center(
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+            CurvedAnimation(
+              parent: ModalRoute.of(ctx)?.animation ?? const AlwaysStoppedAnimation<double>(1.0),
+              curve: Curves.elasticOut,
+            ),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 500),
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
                 ),
+              ],
+            ),
+            child: StatefulBuilder(
+              builder: (ctx, setState) => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icono con gradiente
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.orange.shade400,
+                          Colors.orange.shade600,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(50),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.orange.withOpacity(0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.security_rounded,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Título
+                  const Text(
+                    'Cierre Remoto (Admin)',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Ingresa los detalles para cerrar la caja remotamente',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Formulario
+                  Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextFormField(
+                          controller: motivoCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Motivo',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            prefixIcon: const Icon(Icons.note_rounded),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: montoCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Monto contado (opcional)',
+                            hintText: 'Si lo dejas vacío, se usa el esperado',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            prefixIcon: const Icon(Icons.monetization_on_rounded),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return null;
+                            return double.tryParse(v.replaceAll(',', '.')) == null
+                                ? 'Número inválido'
+                                : null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        // Selección de fecha y hora
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.orange.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.edit_calendar_outlined, size: 18, color: Colors.orange.shade700),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Fecha y hora: ${DateFormat('dd/MM/yyyy HH:mm').format(fechaSel)}',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.orange.shade900,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton(
+                                  onPressed: () => pickFechaHora(setState),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: const Text('Cambiar fecha y hora', style: TextStyle(fontWeight: FontWeight.w600)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Botones de acción
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            if (!formKey.currentState!.validate()) return;
+                            final motivo = motivoCtrl.text.trim().isEmpty
+                                ? 'Cierre remoto por admin'
+                                : motivoCtrl.text.trim();
+                            final txt = montoCtrl.text.trim();
+                            final monto =
+                                txt.isEmpty ? null : double.parse(txt.replaceAll(',', '.'));
+                            Navigator.pop(
+                              ctx,
+                              _AdminCloseParams(
+                                motivo: motivo,
+                                montoContado: monto,
+                                fechaCierre: fechaSel,
+                              ),
+                            );
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.orange.shade600,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.send_rounded),
+                          label: const Text('Enviar comando', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: montoCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Monto contado (opcional)',
-                  hintText: 'Si lo dejas vacío, se usa el esperado',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return null;
-                  return double.tryParse(v.replaceAll(',', '.')) == null
-                      ? 'Número inválido'
-                      : null;
-                },
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.edit_calendar_outlined),
-                title: const Text('Fecha y hora de cierre'),
-                subtitle: Text(DateFormat('dd/MM/yyyy HH:mm').format(fechaSel)),
-                trailing: TextButton(
-                  onPressed: () => pickFechaHora(setState),
-                  child: const Text('Cambiar'),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () {
-              if (!formKey.currentState!.validate()) return;
-              final motivo = motivoCtrl.text.trim().isEmpty
-                  ? 'Cierre remoto por admin'
-                  : motivoCtrl.text.trim();
-              final txt = montoCtrl.text.trim();
-              final monto =
-                  txt.isEmpty ? null : double.parse(txt.replaceAll(',', '.'));
-              Navigator.pop(
-                ctx,
-                _AdminCloseParams(
-                  motivo: motivo,
-                  montoContado: monto,
-                  fechaCierre: fechaSel,
-                ),
-              );
-            },
-            child: const Text('Enviar comando'),
-          ),
-        ],
       ),
     ),
   );
@@ -502,34 +828,14 @@ class PaginaCaja extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                           onTap: () async {
                             final auth = Provider.of<AuthService>(context, listen: false);
-                            final shouldLogout = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16)),
-                                title: Row(
-                                  children: [
-                                    Icon(Icons.logout_rounded,
-                                        color: colorScheme.primary),
-                                    const SizedBox(width: 8),
-                                    const Text('Cerrar Sesión'),
-                                  ],
-                                ),
-                                content: const Text(
-                                    '¿Quieres cerrar sesión para cambiar de cuenta?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(false),
-                                    child: const Text('Cancelar'),
-                                  ),
-                                  FilledButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(true),
-                                    child: const Text('Salir'),
-                                  ),
-                                ],
-                              ),
+                            final shouldLogout = await showModernConfirmDialog(
+                              context,
+                              title: 'Cerrar Sesión',
+                              message: '¿Quieres cerrar sesión para cambiar de cuenta?',
+                              confirmText: 'Salir',
+                              cancelText: 'Cancelar',
+                              confirmColor: Colors.red.shade600,
+                              icon: Icons.logout_rounded,
                             );
                             if (shouldLogout != true) return;
 
@@ -598,6 +904,7 @@ class PaginaCaja extends StatelessWidget {
             // Adoptar caja local al usuario autenticado (si cambió de sesión)
             final cajaActiva = cajaService.cajaActiva;
             final uidNow = FirebaseAuth.instance.currentUser?.uid;
+            final liveDeletePending = cajaService.liveDeletePending;
             if (cajaActiva != null &&
                 uidNow != null &&
                 cajaActiva.usuarioAperturaId != uidNow) {
@@ -644,32 +951,38 @@ class PaginaCaja extends StatelessWidget {
                 transitionBuilder: (child, animation) =>
                     FadeTransition(opacity: animation, child: child),
         child: cajaActiva != null
-          ? _VistaCajaAbierta(
-            key: ValueKey(cajaActiva.id), caja: cajaActiva)
-          : (!isAdmin
-            ? _VistaCajaCerrada(
-              key: const ValueKey('caja-cerrada'),
-              allowOpen: !isViewer,
-              isViewer: isViewer,
-              )
-            : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                            stream: FirebaseFirestore.instance
-                                .collection('cajas_live')
-                                .limit(1)
-                                .snapshots(),
-                            builder: (ctx2, s2) {
-                              final hasLive =
-                                  (s2.data?.docs.isNotEmpty ?? false);
-                              return hasLive
-                                  ? const _VistaCajasActivasAdmin(
-                                      key: ValueKey('admin-live'))
-                  : _VistaCajaCerrada(
+            ? _VistaCajaAbierta(
+                key: ValueKey(cajaActiva.id), caja: cajaActiva)
+            : (!isAdmin
+                ? _VistaCajaCerrada(
                     key: const ValueKey('caja-cerrada'),
-                    allowOpen: true,
-                    isViewer: false,
-                  );
-                            },
-                          )),
+                    allowOpen: !isViewer,
+                    isViewer: isViewer,
+                  )
+                : (liveDeletePending
+                    ? _VistaCajaCerrada(
+                        key: const ValueKey('caja-cerrada-pendiente'),
+                        allowOpen: true,
+                        isViewer: false,
+                      )
+                    : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                        stream: FirebaseFirestore.instance
+                            .collection('cajas_live')
+                            .limit(1)
+                            .snapshots(),
+                        builder: (ctx2, s2) {
+                          final hasLive =
+                              (s2.data?.docs.isNotEmpty ?? false);
+                          return hasLive
+                              ? const _VistaCajasActivasAdmin(
+                                  key: ValueKey('admin-live'))
+                              : _VistaCajaCerrada(
+                                  key: const ValueKey('caja-cerrada'),
+                                  allowOpen: true,
+                                  isViewer: false,
+                                );
+                        },
+                      ))),
               ),
             );
           },
@@ -1808,6 +2121,9 @@ class _VistaCajaAbierta extends StatelessWidget {
                                   fechaCierreSeleccionada: fechaSeleccionada,
                                 );
 
+                                // Capturar montos para el diálogo
+                                final montoEsperado = caja.montoInicial + caja.totalVentas;
+
                                 // Al cerrar caja: si el usuario no es admin, poner rol "fuera de servicio"
                                 try {
                                   final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -1850,11 +2166,13 @@ class _VistaCajaAbierta extends StatelessWidget {
                                 if (navigator.mounted && navigator.canPop()) {
                                   navigator.pop();
                                 }
-                                if (mainScaffoldContext != null) {
-                                  mostrarNotificacionElegante(
-                                      mainScaffoldContext!,
-                                      'Caja cerrada y guardada.',
-                                      messengerKey: principalMessengerKey);
+                                if (mainScaffoldContext != null && mainScaffoldContext!.mounted) {
+                                  await showCajaClosedDialog(
+                                    mainScaffoldContext!,
+                                    montoContado: monto,
+                                    montoEsperado: montoEsperado,
+                                    motivo: 'Cierre de sesión',
+                                  );
                                 }
                               } catch (e) {
                                 if (mainScaffoldContext != null) {
@@ -2054,57 +2372,166 @@ void _mostrarDialogoEditarMontoInicial(BuildContext context, Caja caja) {
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (dialogContext) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text('Editar Monto Inicial'),
-      content: Form(
-        key: formKey,
-        child: TextFormField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Nuevo Monto (S/)',
-            border: OutlineInputBorder(),
+    builder: (dialogContext) => Dialog(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      child: Center(
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+            CurvedAnimation(
+              parent: ModalRoute.of(dialogContext)?.animation ?? const AlwaysStoppedAnimation<double>(1.0),
+              curve: Curves.elasticOut,
+            ),
           ),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          autofocus: true,
-          validator: (v) {
-            if (v == null || v.trim().isEmpty) return 'El monto es requerido.';
-            if (double.tryParse(v.replaceAll(',', '.')) == null) {
-              return 'Monto inválido.';
-            }
-            return null;
-          },
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 500),
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icono con gradiente
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.purple.shade400,
+                        Colors.purple.shade600,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(50),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.purple.withOpacity(0.3),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.edit_rounded,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Título
+                const Text(
+                  'Editar Monto Inicial',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Ingresa el nuevo monto inicial en caja',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Formulario
+                Form(
+                  key: formKey,
+                  child: TextFormField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: 'Nuevo Monto (S/)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.monetization_on_rounded),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    autofocus: true,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'El monto es requerido.';
+                      if (double.tryParse(v.replaceAll(',', '.')) == null) {
+                        return 'Monto inválido.';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Botones de acción
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () async {
+                          if (formKey.currentState!.validate()) {
+                            final nuevoMonto =
+                                double.parse(controller.text.replaceAll(',', '.'));
+                            try {
+                              await cajaService.actualizarMontoInicial(nuevoMonto);
+                              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                              if (context.mounted) {
+                                mostrarNotificacionElegante(
+                                    context, 'Monto inicial actualizado.',
+                                    messengerKey: principalMessengerKey);
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                mostrarNotificacionElegante(context, 'Error: $e',
+                                    esError: true, messengerKey: principalMessengerKey);
+                              }
+                            }
+                          }
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.purple.shade600,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.check_circle_outline_rounded),
+                        label: const Text('Guardar Cambios', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () async {
-            if (formKey.currentState!.validate()) {
-              final nuevoMonto =
-                  double.parse(controller.text.replaceAll(',', '.'));
-              try {
-                await cajaService.actualizarMontoInicial(nuevoMonto);
-                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                if (context.mounted) {
-                  mostrarNotificacionElegante(
-                      context, 'Monto inicial actualizado.',
-                      messengerKey: principalMessengerKey);
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  mostrarNotificacionElegante(context, 'Error: $e',
-                      esError: true, messengerKey: principalMessengerKey);
-                }
-              }
-            }
-          },
-          child: const Text('Guardar Cambios'),
-        ),
-      ],
     ),
   );
 }
@@ -2313,42 +2740,44 @@ class _VentaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cajaService = context.read<CajaService>();
+    final notificationContext =
+      mainScaffoldContext ?? navigatorKey.currentContext ?? context;
+
     void mostrarDialogoConfirmarBorrado() {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Confirmar Eliminación'),
-          content: Text(
-              '¿Eliminar la venta de S/ ${venta.total.toStringAsFixed(2)}?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: _ThemeColors.dangerGradientStart,
-              ),
-              onPressed: () async {
-                Navigator.of(ctx).pop();
-                try {
-                  await context
-                      .read<CajaService>()
-                      .registrarVentaEliminada(venta);
-                } finally {
-                  await context.read<CajaService>().eliminarVentaLocal(venta);
-                  mostrarNotificacionElegante(
-                    context,
-                    'Venta eliminada (se registrará al cerrar la caja).',
-                    messengerKey: principalMessengerKey,
-                  );
-                }
-              },
-              child: const Text('Sí, eliminar'),
-            ),
-          ],
-        ),
-      );
+      showModernConfirmDialog(
+        context,
+        title: 'Confirmar Eliminación',
+        message: '¿Eliminar la venta de S/ ${venta.total.toStringAsFixed(2)}?',
+        confirmText: 'Sí, eliminar',
+        cancelText: 'Cancelar',
+        confirmColor: _ThemeColors.dangerGradientStart,
+        icon: Icons.delete_outline_rounded,
+      ).then((confirmed) async {
+        if (confirmed == true) {
+          var localSuccess = true;
+          try {
+            await cajaService.eliminarVentaLocal(venta);
+          } catch (_) {
+            localSuccess = false;
+          }
+
+          try {
+            await cajaService.registrarVentaEliminada(venta);
+          } catch (_) {
+            // El registro remoto puede reintentar al reconectar; no bloquear la UX.
+          }
+
+          mostrarNotificacionElegante(
+            notificationContext,
+            localSuccess
+                ? 'Venta eliminada (se registrará al cerrar la caja).'
+                : 'No se pudo eliminar la venta. Intenta nuevamente.',
+            esError: !localSuccess,
+            messengerKey: principalMessengerKey,
+          );
+        }
+      });
     }
 
     final itemsAgrupados =

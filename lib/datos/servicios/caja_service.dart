@@ -73,6 +73,7 @@ class CajaService with ChangeNotifier {
 
   // ===== Live mirror =====
   DocumentReference<Map<String, dynamic>>? _liveRef;
+  DocumentReference<Map<String, dynamic>>? _pendingLiveDeleteRef;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _cmdSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _liveDocSub;
   Timer? _liveDebounce;
@@ -80,6 +81,14 @@ class CajaService with ChangeNotifier {
 
   // Suspender push/write cuando devolvemos la caja
   bool _suspendLive = false;
+  bool _liveDeletePending = false;
+  bool get liveDeletePending => _liveDeletePending;
+
+  void _setLiveDeletePending(bool value) {
+    if (_liveDeletePending == value) return;
+    _liveDeletePending = value;
+    notifyListeners();
+  }
 
   // Instancia del servicio de productos
 
@@ -322,7 +331,9 @@ class CajaService with ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> _deleteLiveMirror() async {
+  Future<void> _deleteLiveMirror({
+    DocumentReference<Map<String, dynamic>>? refOverride,
+  }) async {
     // Evita recreación mientras limpiamos
     _suspendLive = true;
     _liveDebounce?.cancel();
@@ -331,7 +342,7 @@ class CajaService with ChangeNotifier {
     _liveDocSub?.cancel();
     _liveDocSub = null;
 
-    final ref = _liveRef;
+    final ref = refOverride ?? _liveRef ?? _pendingLiveDeleteRef;
     if (ref == null) return;
 
     // Borrar subcolecciones con tolerancia a errores
@@ -358,7 +369,11 @@ class CajaService with ChangeNotifier {
       if (kDebugMode) debugPrint('[live doc delete] $e');
     }
 
-    _liveRef = null;
+    if (identical(ref, _liveRef)) _liveRef = null;
+    if (identical(ref, _pendingLiveDeleteRef)) {
+      _pendingLiveDeleteRef = null;
+    }
+    _setLiveDeletePending(false);
   }
 
   void _listenLive() {
@@ -385,8 +400,8 @@ class CajaService with ChangeNotifier {
                 (x) => x.id == ventaId,
                 orElse: () => throw 'venta_not_found',
               );
-              await registrarVentaEliminada(v);
               await eliminarVentaLocal(v);
+              await registrarVentaEliminada(v);
             } else if (type == 'EDITAR_PAGO') {
               final ventaId = (data['ventaId'] ?? '').toString();
               final pagos = Map<String, dynamic>.from(data['pagos'] ?? {});
@@ -702,7 +717,70 @@ class CajaService with ChangeNotifier {
 
   Future<void> descartarCajaLocal({bool skipLiveDelete = false}) async {
     if (!skipLiveDelete) {
-      await _deleteLiveMirror();
+      try {
+        final connRaw = await Connectivity().checkConnectivity();
+        final conn = connRaw as dynamic;
+        bool hasNet = false;
+        if (conn is List) {
+          hasNet = conn.isNotEmpty && !conn.contains(ConnectivityResult.none);
+        } else {
+          hasNet = conn != ConnectivityResult.none;
+        }
+
+        if (hasNet) {
+          if (kDebugMode) debugPrint('[caja] Descarta: hay conexión, borrando mirror remoto');
+          // Tenemos conectividad: intentar borrar el mirror y esperar
+          await _deleteLiveMirror();
+          _suspendLive = true;
+        } else {
+          if (kDebugMode) debugPrint('[caja] Descarta: sin conexión, limpiar local y programar borrado remoto');
+          // Sin conectividad: detener listeners y limpiar la referencia live
+          // pero NO bloquear la eliminación local. Agendamos un intento
+          // de borrado en background cuando haya conexión.
+          _cmdSub?.cancel();
+          _cmdSub = null;
+          _liveDocSub?.cancel();
+          _liveDocSub = null;
+          _pendingLiveDeleteRef ??= _liveRef;
+          _liveRef = null;
+          _suspendLive = true;
+          _setLiveDeletePending(true);
+
+          // One-shot listener para intentar el borrado cuando regrese la red
+          var onceSub;
+          onceSub = Connectivity().onConnectivityChanged.listen((rRaw) async {
+            final r = rRaw as dynamic;
+            bool nowHasNet = false;
+            if (r is List) {
+              nowHasNet = r.isNotEmpty && !r.contains(ConnectivityResult.none);
+            } else {
+              nowHasNet = r != ConnectivityResult.none;
+            }
+            if (nowHasNet) {
+              if (kDebugMode) debugPrint('[caja] Conexión detectada → intentando borrar mirror remoto');
+              try {
+                await _deleteLiveMirror(refOverride: _pendingLiveDeleteRef);
+                _suspendLive = true;
+              } catch (_) {}
+              try {
+                await onceSub?.cancel();
+              } catch (_) {}
+            }
+          });
+        }
+      } catch (e) {
+        // En caso de cualquier error con la comprobación/red, procedemos a
+        // limpiar localmente para no bloquear la UX.
+        if (kDebugMode) debugPrint('[caja] Error al comprobar conectividad: $e');
+        _cmdSub?.cancel();
+        _cmdSub = null;
+        _liveDocSub?.cancel();
+        _liveDocSub = null;
+        _pendingLiveDeleteRef ??= _liveRef;
+        _liveRef = null;
+        _suspendLive = true;
+        _setLiveDeletePending(true);
+      }
     } else {
       // Detener listeners y limpiar ref
       _cmdSub?.cancel();
@@ -710,7 +788,11 @@ class CajaService with ChangeNotifier {
       _liveDocSub?.cancel();
       _liveDocSub = null;
       _liveRef = null;
+      _suspendLive = true;
+      _setLiveDeletePending(false);
     }
+
+    // Limpiar estado local inmediatamente (persistir y notificar)
     _cajaActiva = null;
     _ventasLocales = [];
     _gastosLocales = [];
@@ -718,6 +800,7 @@ class CajaService with ChangeNotifier {
     _baselineTotalVentas = 0.0;
     _baselineTotalesPorMetodo = {};
     _adoptadaLocalmente = false;
+    if (kDebugMode) debugPrint('[caja] Estado local limpiado — persistiendo sesión local');
     await _guardarSesionLocal();
   }
 
@@ -817,7 +900,14 @@ class CajaService with ChangeNotifier {
 
   Future<void> registrarVentaEliminada(Venta venta) async {
     if (_cajaActiva == null) return;
-    _ventasEliminadas.add(venta);
+
+    final existingIndex =
+        _ventasEliminadas.indexWhere((element) => element.id == venta.id);
+    if (existingIndex >= 0) {
+      _ventasEliminadas[existingIndex] = venta;
+    } else {
+      _ventasEliminadas.add(venta);
+    }
     await _guardarSesionLocal();
     _scheduleLivePush();
     await _pushLiveNow();
@@ -830,25 +920,29 @@ class CajaService with ChangeNotifier {
   Future<void> eliminarVentaLocal(Venta ventaParaEliminar) async {
     if (_cajaActiva == null) return;
 
+    final beforeLength = _ventasLocales.length;
     _ventasLocales.removeWhere((v) => v.id == ventaParaEliminar.id);
+    final removed = _ventasLocales.length != beforeLength;
 
-    final nuevosTotales =
-        Map<String, double>.from(_cajaActiva!.totalesPorMetodo);
-    ventaParaEliminar.pagos.forEach((metodo, monto) {
-      final prevC = _toCents(nuevosTotales[metodo] ?? 0.0);
-      final newC = prevC - _toCents(monto);
-      nuevosTotales[metodo] = _fromCents(newC);
-    });
-    final tvC =
-        _toCents(_cajaActiva!.totalVentas) - _toCents(ventaParaEliminar.total);
+    if (removed) {
+      final nuevosTotales =
+          Map<String, double>.from(_cajaActiva!.totalesPorMetodo);
+      ventaParaEliminar.pagos.forEach((metodo, monto) {
+        final prevC = _toCents(nuevosTotales[metodo] ?? 0.0);
+        final newC = prevC - _toCents(monto);
+        nuevosTotales[metodo] = _fromCents(newC);
+      });
+      final tvC = _toCents(_cajaActiva!.totalVentas) -
+          _toCents(ventaParaEliminar.total);
 
-    _cajaActiva = _cajaActiva!.copyWith(
-      totalVentas: _fromCents(tvC),
-      totalesPorMetodo: nuevosTotales,
-    );
+      _cajaActiva = _cajaActiva!.copyWith(
+        totalVentas: _fromCents(tvC),
+        totalesPorMetodo: nuevosTotales,
+      );
 
-    await _guardarSesionLocal();
-    _scheduleLivePush();
+      await _guardarSesionLocal();
+      _scheduleLivePush();
+    }
 
     // quitar del buffer
     await _deleteVentaFromBuffer(ventaParaEliminar.id.toString());
