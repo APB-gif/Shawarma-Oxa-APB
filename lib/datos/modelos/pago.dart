@@ -6,7 +6,6 @@ enum PaymentMethod {
   izipayCard,
   aharhelYS,
   aharhelGastos,
-  izipayYape,
   yapePersonal,
   split;
 
@@ -21,8 +20,6 @@ enum PaymentMethod {
         return 'Aharhel YS';
       case PaymentMethod.aharhelGastos:
         return 'Aharhel Gastos';
-      case PaymentMethod.izipayYape:
-        return 'IziPay Yape';
       case PaymentMethod.yapePersonal:
         return 'Yape Personal';
       case PaymentMethod.split:
@@ -41,8 +38,6 @@ enum PaymentMethod {
         return Icons.person;
       case PaymentMethod.aharhelGastos:
         return Icons.account_balance_wallet;
-      case PaymentMethod.izipayYape:
-        return Icons.qr_code_2;
       case PaymentMethod.yapePersonal:
         return Icons.person_outline;
       case PaymentMethod.split:

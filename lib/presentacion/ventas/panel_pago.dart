@@ -6,12 +6,14 @@ import 'package:intl/intl.dart'; // <-- AÑADIDO
 import 'package:shawarma_pos_nuevo/presentacion/ventas/item_carrito.dart';
 // removed provider and caja_service imports as panel pago restored to local-only flow
 import 'dart:async';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shawarma_pos_nuevo/core/net/connectivity_utils.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'dart:typed_data';
 
 enum MetodoDePago {
   cash,
   izipayCard,
-  izipayYape,
   yapePersonal,
   split;
 
@@ -21,10 +23,9 @@ enum MetodoDePago {
         return 'Efectivo';
       case MetodoDePago.izipayCard:
         return 'Tarjeta';
-      case MetodoDePago.izipayYape:
-        return 'IziPay Yape';
+      
       case MetodoDePago.yapePersonal:
-        return 'Yape Pers.';
+        return 'Yape';
       case MetodoDePago.split:
         return 'Dividir';
     }
@@ -36,8 +37,6 @@ enum MetodoDePago {
         return Icons.money_outlined;
       case MetodoDePago.izipayCard:
         return Icons.credit_card_outlined;
-      case MetodoDePago.izipayYape:
-        return Icons.qr_code_2_outlined;
       case MetodoDePago.yapePersonal:
         return Icons.phone_android_outlined;
       case MetodoDePago.split:
@@ -70,11 +69,11 @@ class _PanelPagoState extends State<PanelPago> {
   MetodoDePago _method = MetodoDePago.cash;
   final _cashCtl = TextEditingController();
   final _cardCtl = TextEditingController();
-  final _izipayYapeCtl = TextEditingController();
+  
   final _yapePersonalCtl = TextEditingController();
   final _fnCash = FocusNode();
   final _fnCard = FocusNode();
-  final _fnIziYape = FocusNode();
+  
   final _fnYapePers = FocusNode();
   static const double _cardFeeRate = 0.05;
   final bool _autoFill = true;
@@ -89,11 +88,11 @@ class _PanelPagoState extends State<PanelPago> {
   bool _splitByTotal = false;
   final _stCashCtl = TextEditingController();
   final _stCardCtl = TextEditingController(); // base sin fee
-  final _stIziCtl = TextEditingController();
+  
   final _stYapeCtl = TextEditingController();
   final _stCashFn = FocusNode();
   final _stCardFn = FocusNode();
-  final _stIziFn = FocusNode();
+  
   final _stYapeFn = FocusNode();
 
   // Visual metadata for methods
@@ -103,10 +102,8 @@ class _PanelPagoState extends State<PanelPago> {
         return _MethodDisp('Efectivo', Icons.money_outlined, Colors.green.shade700);
       case MetodoDePago.izipayCard:
         return _MethodDisp('Tarjeta', Icons.credit_card_outlined, Colors.blue.shade700);
-      case MetodoDePago.izipayYape:
-        return _MethodDisp('IziYape', Icons.qr_code_2_outlined, Colors.purple.shade700);
       case MetodoDePago.yapePersonal:
-        return _MethodDisp('Yape Pers.', Icons.phone_android_outlined, Colors.purple.shade900);
+        return _MethodDisp('Yape', Icons.phone_android_outlined, Colors.purple.shade900);
       case MetodoDePago.split:
         // No se usa como método por ítem; devolver un estilo neutral por si acaso.
         return _MethodDisp('Dividir', Icons.call_split_outlined, Colors.teal.shade700);
@@ -137,9 +134,7 @@ class _PanelPagoState extends State<PanelPago> {
       // En split (por ítem o por total), calcular el total con fee de tarjeta
       final totals = _currentSplitTotals();
       final cardBase = totals[MetodoDePago.izipayCard] ?? 0.0;
-      final others = (totals[MetodoDePago.cash] ?? 0.0) +
-          (totals[MetodoDePago.izipayYape] ?? 0.0) +
-          (totals[MetodoDePago.yapePersonal] ?? 0.0);
+      final others = (totals[MetodoDePago.cash] ?? 0.0) + (totals[MetodoDePago.yapePersonal] ?? 0.0);
       return others + _cardWithFee(cardBase);
     }
     return _subtotal;
@@ -163,7 +158,7 @@ class _PanelPagoState extends State<PanelPago> {
       // Inicial por total: todo a efectivo
       _stCashCtl.text = widget.subtotal.toStringAsFixed(2);
       _stCardCtl.clear();
-      _stIziCtl.clear();
+                  
       _stYapeCtl.clear();
     });
   }
@@ -172,19 +167,17 @@ class _PanelPagoState extends State<PanelPago> {
   void dispose() {
     _cashCtl.dispose();
     _cardCtl.dispose();
-    _izipayYapeCtl.dispose();
     _yapePersonalCtl.dispose();
     _fnCash.dispose();
     _fnCard.dispose();
-    _fnIziYape.dispose();
     _fnYapePers.dispose();
     _stCashFn.dispose();
     _stCardFn.dispose();
-    _stIziFn.dispose();
+    
     _stYapeFn.dispose();
     _stCashCtl.dispose();
     _stCardCtl.dispose();
-    _stIziCtl.dispose();
+    
     _stYapeCtl.dispose();
     super.dispose();
   }
@@ -192,7 +185,6 @@ class _PanelPagoState extends State<PanelPago> {
   void _clearAllInputs() {
     _cashCtl.clear();
     _cardCtl.clear();
-    _izipayYapeCtl.clear();
     _yapePersonalCtl.clear();
   }
 
@@ -211,9 +203,7 @@ class _PanelPagoState extends State<PanelPago> {
       case MetodoDePago.izipayCard:
         _cardCtl.text = _cardWithFee(_subtotal).toStringAsFixed(2);
         break;
-      case MetodoDePago.izipayYape:
-        _izipayYapeCtl.text = _subtotal.toStringAsFixed(2);
-        break;
+      
       case MetodoDePago.yapePersonal:
         _yapePersonalCtl.text = _subtotal.toStringAsFixed(2);
         break;
@@ -234,7 +224,6 @@ class _PanelPagoState extends State<PanelPago> {
     final totals = <MetodoDePago, double>{
       MetodoDePago.cash: 0.0,
       MetodoDePago.izipayCard: 0.0,
-      MetodoDePago.izipayYape: 0.0,
       MetodoDePago.yapePersonal: 0.0,
     };
     for (final parts in _splitsByItem.values) {
@@ -255,7 +244,6 @@ class _PanelPagoState extends State<PanelPago> {
       return {
         MetodoDePago.cash: p(_stCashCtl),
         MetodoDePago.izipayCard: p(_stCardCtl),
-        MetodoDePago.izipayYape: p(_stIziCtl),
         MetodoDePago.yapePersonal: p(_stYapeCtl),
       };
     }
@@ -273,26 +261,22 @@ class _PanelPagoState extends State<PanelPago> {
         case MetodoDePago.izipayCard:
           pagos['Tarjeta'] = _cardWithFee(_subtotal);
           break;
-        case MetodoDePago.izipayYape:
-          pagos['IziPay Yape'] = _subtotal;
-          break;
+        
         case MetodoDePago.yapePersonal:
-          pagos['Yape Personal'] = _subtotal;
+          pagos['Yape'] = _subtotal;
           break;
         case MetodoDePago.split:
           final totals = _currentSplitTotals();
           final cashAmount = totals[MetodoDePago.cash] ?? 0.0;
           final cardBase = totals[MetodoDePago.izipayCard] ?? 0.0;
           final cardAmount = _cardWithFee(cardBase);
-          final iziYapeAmount = totals[MetodoDePago.izipayYape] ?? 0.0;
           final yapePersAmount = totals[MetodoDePago.yapePersonal] ?? 0.0;
 
           if (cashAmount > 0) pagos['Efectivo'] = cashAmount;
           if (cardAmount > 0) pagos['Tarjeta'] = cardAmount;
-          if (iziYapeAmount > 0) pagos['IziPay Yape'] = iziYapeAmount;
-          if (yapePersAmount > 0) pagos['Yape Personal'] = yapePersAmount;
+          if (yapePersAmount > 0) pagos['Yape'] = yapePersAmount;
 
-          final assignedBase = cashAmount + cardBase + iziYapeAmount + yapePersAmount;
+          final assignedBase = cashAmount + cardBase + yapePersAmount;
           if ((assignedBase - _subtotal).abs() > 0.01) {
             principalMessengerKey.currentState?.showSnackBar(const SnackBar(
                 content: Text('Los montos no coinciden con el total. Completa o corrige los importes.')));
@@ -1742,56 +1726,7 @@ class _PanelPagoState extends State<PanelPago> {
           ),
         ];
 
-      case MetodoDePago.izipayYape:
-        return [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.qr_code_2_rounded,
-                      size: 20,
-                      color: Colors.purple.shade700,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'IziPay Yape',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade800,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _izipayYapeCtl,
-                  focusNode: _fnIziYape,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: _inputDeco('Monto por IziPay Yape',
-                      borderColor: Colors.purple.shade300),
-                ),
-              ],
-            ),
-          ),
-        ];
+      
 
       case MetodoDePago.yapePersonal:
         return [
@@ -1821,7 +1756,7 @@ class _PanelPagoState extends State<PanelPago> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Yape Personal',
+                      'Yape',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -1836,8 +1771,38 @@ class _PanelPagoState extends State<PanelPago> {
                   focusNode: _fnYapePers,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  decoration: _inputDeco('Monto por Yape personal',
+                  decoration: _inputDeco('Monto por Yape',
                       borderColor: Colors.purple.shade300),
+                ),
+                const SizedBox(height: 12),
+                // QR de Yape: preferir asset si existe, sino mostrar un QR generado
+                Center(
+                  child: GestureDetector(
+                    onTap: () {
+                      // Abrir QR a pantalla completa (pantalla independiente con botón cerrar)
+                      Navigator.of(context).push(MaterialPageRoute(
+                        fullscreenDialog: true,
+                        builder: (_) => _YapeQrFullScreen(amountCtl: _yapePersonalCtl, subtotal: widget.subtotal),
+                      ));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE8EAF0)),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Mostrar asset si existe; si no, renderizar QR con datos mínimos
+                          SizedBox(width: 180, height: 180, child: _YapeQrWidget(size: 170, amountCtl: _yapePersonalCtl, subtotal: widget.subtotal)),
+                          const SizedBox(height: 8),
+                          Text('Paga aquí con Yape', style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1889,7 +1854,6 @@ class _PanelPagoState extends State<PanelPago> {
                       if (_splitByTotal) {
                         _stCashCtl.text = widget.subtotal.toStringAsFixed(2);
                         _stCardCtl.clear();
-                        _stIziCtl.clear();
                         _stYapeCtl.clear();
                         FocusScope.of(context).requestFocus(_stCashFn);
                         _stCashCtl.selection = TextSelection(baseOffset: 0, extentOffset: _stCashCtl.text.length);
@@ -1908,7 +1872,6 @@ class _PanelPagoState extends State<PanelPago> {
                       if (_splitByTotal) {
                         _stCardCtl.text = widget.subtotal.toStringAsFixed(2);
                         _stCashCtl.clear();
-                        _stIziCtl.clear();
                         _stYapeCtl.clear();
                         FocusScope.of(context).requestFocus(_stCardFn);
                         _stCardCtl.selection = TextSelection(baseOffset: 0, extentOffset: _stCardCtl.text.length);
@@ -1922,32 +1885,14 @@ class _PanelPagoState extends State<PanelPago> {
                       _quickSelected = MetodoDePago.izipayCard;
                     });
                   },
-                  onAllIziYape: () {
-                    setState(() {
-                      if (_splitByTotal) {
-                        _stIziCtl.text = widget.subtotal.toStringAsFixed(2);
-                        _stCashCtl.clear();
-                        _stCardCtl.clear();
-                        _stYapeCtl.clear();
-                        FocusScope.of(context).requestFocus(_stIziFn);
-                        _stIziCtl.selection = TextSelection(baseOffset: 0, extentOffset: _stIziCtl.text.length);
-                      } else {
-                        for (final it in widget.items) {
-                          _splitsByItem[it.uniqueId] = {
-                            MetodoDePago.izipayYape: it.precioEditable
-                          };
-                        }
-                      }
-                      _quickSelected = MetodoDePago.izipayYape;
-                    });
-                  },
+                  
                   onAllYapePers: () {
                     setState(() {
                       if (_splitByTotal) {
                         _stYapeCtl.text = widget.subtotal.toStringAsFixed(2);
                         _stCashCtl.clear();
                         _stCardCtl.clear();
-                        _stIziCtl.clear();
+                        
                         FocusScope.of(context).requestFocus(_stYapeFn);
                         _stYapeCtl.selection = TextSelection(baseOffset: 0, extentOffset: _stYapeCtl.text.length);
                       } else {
@@ -2094,7 +2039,7 @@ class _PanelPagoState extends State<PanelPago> {
     final cash = totals[MetodoDePago.cash] ?? 0.0;
     final cardBase = totals[MetodoDePago.izipayCard] ?? 0.0;
     final card = _cardWithFee(cardBase);
-    final izi = totals[MetodoDePago.izipayYape] ?? 0.0;
+    
     final yape = totals[MetodoDePago.yapePersonal] ?? 0.0;
 
     Widget tile(String title, double amount, Color color, IconData icon,
@@ -2157,10 +2102,7 @@ class _PanelPagoState extends State<PanelPago> {
         const SizedBox(height: 8),
         Row(
           children: [
-            tile('IziPay Yape', izi, Colors.purple.shade700,
-                Icons.qr_code_2_outlined),
-            const SizedBox(width: 8),
-            tile('Yape Pers.', yape, Colors.purple.shade800,
+            tile('Yape', yape, Colors.purple.shade800,
                 Icons.phone_android_outlined),
           ],
         ),
@@ -2171,7 +2113,7 @@ class _PanelPagoState extends State<PanelPago> {
   // Editor de división por total
   Widget _buildTotalSplitEditor() {
     double p(TextEditingController c) => double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0;
-    final sum = p(_stCashCtl) + p(_stCardCtl) + p(_stIziCtl) + p(_stYapeCtl);
+    final sum = p(_stCashCtl) + p(_stCardCtl) + p(_stYapeCtl);
     final restante = (widget.subtotal - sum);
     final ok = restante.abs() <= 0.01 && sum > 0.0;
 
@@ -2236,21 +2178,12 @@ class _PanelPagoState extends State<PanelPago> {
                       _stCardCtl.selection = TextSelection(baseOffset: 0, extentOffset: _stCardCtl.text.length);
                     },
                   ),
-                  TextField(
-                    controller: _stIziCtl,
-                    focusNode: _stIziFn,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: deco('IziPay Yape', Colors.purple.shade700),
-                    onChanged: (_) => setState(() {}),
-                    onTap: () {
-                      _stIziCtl.selection = TextSelection(baseOffset: 0, extentOffset: _stIziCtl.text.length);
-                    },
-                  ),
+                  
                   TextField(
                     controller: _stYapeCtl,
                     focusNode: _stYapeFn,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: deco('Yape Pers.', Colors.purple.shade900),
+                    decoration: deco('Yape', Colors.purple.shade900),
                     onChanged: (_) => setState(() {}),
                     onTap: () {
                       _stYapeCtl.selection = TextSelection(baseOffset: 0, extentOffset: _stYapeCtl.text.length);
@@ -2299,20 +2232,10 @@ class _PanelPagoState extends State<PanelPago> {
                         _stCardCtl.selection = TextSelection(baseOffset: 0, extentOffset: v.length);
                       }),
                     ),
-                    _QuickActionChip(
-                      icon: Icons.qr_code_2_outlined,
-                      label: 'IziYape',
-                      color: Colors.purple.shade700,
-                      onTap: () => setState(() {
-                        final v = (p(_stIziCtl) + restante).toStringAsFixed(2);
-                        _stIziCtl.text = v;
-                        FocusScope.of(context).requestFocus(_stIziFn);
-                        _stIziCtl.selection = TextSelection(baseOffset: 0, extentOffset: v.length);
-                      }),
-                    ),
+                    
                     _QuickActionChip(
                       icon: Icons.phone_android_outlined,
-                      label: 'Yape Pers.',
+                      label: 'Yape',
                       color: Colors.purple.shade900,
                       onTap: () => setState(() {
                         final v = (p(_stYapeCtl) + restante).toStringAsFixed(2);
@@ -2502,13 +2425,11 @@ class _QuickGrid extends StatelessWidget {
   final MetodoDePago? selectedMethod;
   final VoidCallback onAllCash;
   final VoidCallback onAllCard;
-  final VoidCallback onAllIziYape;
   final VoidCallback onAllYapePers;
   const _QuickGrid({
     required this.selectedMethod,
     required this.onAllCash,
     required this.onAllCard,
-    required this.onAllIziYape,
     required this.onAllYapePers,
   });
 
@@ -2555,9 +2476,10 @@ class _QuickGrid extends StatelessWidget {
       ),
       children: [
         btn(icon: Icons.payments_rounded, color: Colors.green, tooltip: 'Todo a Efectivo', onTap: onAllCash, selected: selectedMethod == MetodoDePago.cash),
+        // Mover "Yape" al lado derecho de Efectivo
+        btn(icon: Icons.phone_android_outlined, color: Colors.purple.shade900, tooltip: 'Todo a Yape', onTap: onAllYapePers, selected: selectedMethod == MetodoDePago.yapePersonal),
         btn(icon: Icons.credit_card_outlined, color: Colors.blue, tooltip: 'Todo a Tarjeta', onTap: onAllCard, selected: selectedMethod == MetodoDePago.izipayCard),
-        btn(icon: Icons.qr_code_2_outlined, color: Colors.purple, tooltip: 'Todo a IziYape', onTap: onAllIziYape, selected: selectedMethod == MetodoDePago.izipayYape),
-        btn(icon: Icons.phone_android_outlined, color: Colors.purple.shade900, tooltip: 'Todo a Yape Pers.', onTap: onAllYapePers, selected: selectedMethod == MetodoDePago.yapePersonal),
+        // IziPay Yape eliminado: botón retirado
       ],
     );
   }
@@ -2576,11 +2498,9 @@ class _EditItemSplitSheet extends StatefulWidget {
 class _EditItemSplitSheetState extends State<_EditItemSplitSheet> {
   late final TextEditingController _efecCtl;
   late final TextEditingController _cardCtl;
-  late final TextEditingController _iziCtl;
   late final TextEditingController _yapeCtl;
   final _fnEfec = FocusNode();
   final _fnCard = FocusNode();
-  final _fnIzi = FocusNode();
   final _fnYape = FocusNode();
 
   @override
@@ -2590,7 +2510,6 @@ class _EditItemSplitSheetState extends State<_EditItemSplitSheet> {
     String f(double d) => d > 0 ? d.toStringAsFixed(2) : '';
     _efecCtl = TextEditingController(text: f(v(MetodoDePago.cash)));
     _cardCtl = TextEditingController(text: f(v(MetodoDePago.izipayCard)));
-    _iziCtl = TextEditingController(text: f(v(MetodoDePago.izipayYape)));
     _yapeCtl = TextEditingController(text: f(v(MetodoDePago.yapePersonal)));
   }
 
@@ -2598,18 +2517,16 @@ class _EditItemSplitSheetState extends State<_EditItemSplitSheet> {
   void dispose() {
     _fnEfec.dispose();
     _fnCard.dispose();
-    _fnIzi.dispose();
     _fnYape.dispose();
     _efecCtl.dispose();
     _cardCtl.dispose();
-    _iziCtl.dispose();
     _yapeCtl.dispose();
     super.dispose();
   }
 
   double _p(TextEditingController c) => double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0;
 
-  double get _sum => _p(_efecCtl) + _p(_cardCtl) + _p(_iziCtl) + _p(_yapeCtl);
+  double get _sum => _p(_efecCtl) + _p(_cardCtl) + _p(_yapeCtl);
   double get _price => widget.item.precioEditable;
 
   InputDecoration _dec(String label, Color color) => InputDecoration(
@@ -2635,7 +2552,6 @@ class _EditItemSplitSheetState extends State<_EditItemSplitSheet> {
     setState(() {
       _efecCtl.text = m == MetodoDePago.cash ? _price.toStringAsFixed(2) : '';
       _cardCtl.text = m == MetodoDePago.izipayCard ? _price.toStringAsFixed(2) : '';
-      _iziCtl.text = m == MetodoDePago.izipayYape ? _price.toStringAsFixed(2) : '';
       _yapeCtl.text = m == MetodoDePago.yapePersonal ? _price.toStringAsFixed(2) : '';
     });
   }
@@ -2644,7 +2560,6 @@ class _EditItemSplitSheetState extends State<_EditItemSplitSheet> {
     setState(() {
       _efecCtl.clear();
       _cardCtl.clear();
-      _iziCtl.clear();
       _yapeCtl.clear();
     });
   }
@@ -2717,20 +2632,10 @@ class _EditItemSplitSheetState extends State<_EditItemSplitSheet> {
                   },
                 ),
                 TextField(
-                  controller: _iziCtl,
-                  focusNode: _fnIzi,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: _dec('IziPay Yape', Colors.purple.shade700),
-                  onChanged: (_) => setState(() {}),
-                  onTap: () {
-                    _iziCtl.selection = TextSelection(baseOffset: 0, extentOffset: _iziCtl.text.length);
-                  },
-                ),
-                TextField(
                   controller: _yapeCtl,
                   focusNode: _fnYape,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: _dec('Yape Pers.', Colors.purple.shade900),
+                  decoration: _dec('Yape', Colors.purple.shade900),
                   onChanged: (_) => setState(() {}),
                   onTap: () {
                     _yapeCtl.selection = TextSelection(baseOffset: 0, extentOffset: _yapeCtl.text.length);
@@ -2759,18 +2664,12 @@ class _EditItemSplitSheetState extends State<_EditItemSplitSheet> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _QuickActionChip(
-                  icon: Icons.qr_code_2_outlined,
-                  label: 'Todo IziYape',
-                  color: Colors.purple.shade700,
-                  onTap: () => _setAllTo(MetodoDePago.izipayYape),
-                ),
                 const SizedBox(width: 8),
-                _QuickActionChip(
-                  icon: Icons.phone_android_outlined,
-                  label: 'Todo Yape Pers.',
-                  color: Colors.purple.shade900,
-                  onTap: () => _setAllTo(MetodoDePago.yapePersonal),
+                  _QuickActionChip(
+                    icon: Icons.phone_android_outlined,
+                    label: 'Todo Yape',
+                    color: Colors.purple.shade900,
+                    onTap: () => _setAllTo(MetodoDePago.yapePersonal),
                 ),
                 const Spacer(),
                 TextButton(
@@ -2819,18 +2718,8 @@ class _EditItemSplitSheetState extends State<_EditItemSplitSheet> {
                     }),
                   ),
                   _QuickActionChip(
-                    icon: Icons.qr_code_2_outlined,
-                    label: 'IziYape',
-                    color: Colors.purple.shade700,
-                    onTap: () => setState(() {
-                      final v = (_p(_iziCtl) + restante).toStringAsFixed(2);
-                      _iziCtl.text = v;
-                      _iziCtl.selection = TextSelection(baseOffset: 0, extentOffset: v.length);
-                    }),
-                  ),
-                  _QuickActionChip(
                     icon: Icons.phone_android_outlined,
-                    label: 'Yape Pers.',
+                    label: 'Yape',
                     color: Colors.purple.shade900,
                     onTap: () => setState(() {
                       final v = (_p(_yapeCtl) + restante).toStringAsFixed(2);
@@ -2904,7 +2793,7 @@ class _EditItemSplitSheetState extends State<_EditItemSplitSheet> {
                             }
                             put(MetodoDePago.cash, _efecCtl);
                             put(MetodoDePago.izipayCard, _cardCtl);
-                            put(MetodoDePago.izipayYape, _iziCtl);
+                            
                             put(MetodoDePago.yapePersonal, _yapeCtl);
                             Navigator.of(context).pop(map);
                           }
@@ -2934,6 +2823,13 @@ class _QuickActionChip extends StatelessWidget {
     required this.onTap,
   });
 
+  // Carga el asset JPEG exacto desde el bundle para asegurar que el QR mostrado
+  // sea idéntico al archivo subido por el usuario. Si falla, genera un QR
+  // dinámico como fallback.
+  static Widget _buildFromBundle({required double size, required TextEditingController amountCtl, required double subtotal}) {
+    return _YapeQrWidget(size: size, amountCtl: amountCtl, subtotal: subtotal);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -2959,6 +2855,136 @@ class _QuickActionChip extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _YapeQrWidget extends StatelessWidget {
+  final double size;
+  final TextEditingController amountCtl;
+  final double subtotal;
+
+  const _YapeQrWidget({required this.size, required this.amountCtl, required this.subtotal});
+
+  Future<Uint8List> _loadAsset() async {
+    final data = await rootBundle.load('assets/images/yape_qr.jpeg');
+    return data.buffer.asUint8List();
+  }
+
+  String _qrPayload() => 'yape:amount=${amountCtl.text.isEmpty ? subtotal.toStringAsFixed(2) : amountCtl.text}';
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List>(
+      future: _loadAsset(),
+      builder: (ctx, snap) {
+        if (snap.hasData) {
+          return Image.memory(
+            snap.data!,
+            width: size,
+            height: size,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+            gaplessPlayback: true,
+          );
+        }
+        if (snap.hasError) {
+          return Center(
+            child: QrImageView(
+              data: _qrPayload(),
+              size: size,
+            ),
+          );
+        }
+        return const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2)));
+      },
+    );
+  }
+}
+
+class _YapeQrFullScreen extends StatelessWidget {
+  final TextEditingController amountCtl;
+  final double subtotal;
+
+  const _YapeQrFullScreen({required this.amountCtl, required this.subtotal});
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context).size;
+    final double maxDimension = media.width < media.height ? media.width : media.height;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // Imagen ocupando el máximo espacio posible (manteniendo aspect ratio)
+            Positioned.fill(
+              child: FutureBuilder<Uint8List>(
+                future: rootBundle.load('assets/images/yape_qr.jpeg').then((d) => d.buffer.asUint8List()),
+                builder: (ctx, snap) {
+                  if (snap.hasData) {
+                    return InteractiveViewer(
+                      panEnabled: true,
+                      minScale: 1.0,
+                      maxScale: 4.0,
+                      child: Center(
+                        child: Image.memory(
+                          snap.data!,
+                          width: media.width,
+                          height: media.height,
+                          fit: BoxFit.contain, // escalar al máximo sin recortar
+                          filterQuality: FilterQuality.high,
+                          gaplessPlayback: true,
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (snap.hasError) {
+                    // fallback: generar QR dinámico si el asset falla
+                    final payload = 'yape:amount=${amountCtl.text.isEmpty ? subtotal.toStringAsFixed(2) : amountCtl.text}';
+                    return Center(
+                      child: InteractiveViewer(
+                        minScale: 1.0,
+                        maxScale: 3.0,
+                        child: QrImageView(data: payload, size: maxDimension),
+                      ),
+                    );
+                  }
+
+                  return const Center(child: CircularProgressIndicator());
+                },
+              ),
+            ),
+
+            // Texto/leyenda sobre la imagen (opcional, semitransparente)
+            Positioned(
+              bottom: 28,
+              left: 16,
+              right: 16,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(24)),
+                  child: const Text('Escanea para pagar con Yape', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                ),
+              ),
+            ),
+
+            // Botón cerrar
+            Positioned(
+              top: 12,
+              right: 12,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                onPressed: () => Navigator.of(context).pop(),
+                tooltip: 'Cerrar',
+              ),
+            ),
+          ],
         ),
       ),
     );

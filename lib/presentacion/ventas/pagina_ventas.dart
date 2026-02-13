@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -23,6 +25,7 @@ import 'package:shawarma_pos_nuevo/datos/servicios/producto_service.dart';
 
 import 'package:shawarma_pos_nuevo/presentacion/ventas/item_carrito.dart';
 import 'package:shawarma_pos_nuevo/presentacion/ventas/panel_carrito.dart';
+import 'package:shawarma_pos_nuevo/presentacion/ventas/panel_pago.dart';
 
 import 'package:shawarma_pos_nuevo/presentacion/widgets/notificaciones.dart';
 import 'package:shawarma_pos_nuevo/presentacion/pagina_principal.dart';
@@ -49,6 +52,216 @@ class PedidoPendiente {
     required this.subtotal,
     required this.fecha,
   });
+}
+
+/// Diálogo para pedir/editar el nombre del pedido con sugerencias editables.
+class _OrderNameDialog extends StatefulWidget {
+  const _OrderNameDialog({Key? key}) : super(key: key);
+
+  @override
+  State<_OrderNameDialog> createState() => _OrderNameDialogState();
+}
+
+class _OrderNameDialogState extends State<_OrderNameDialog> {
+  static const _prefsKey = 'order_name_suggestions';
+  final TextEditingController _ctl = TextEditingController();
+  List<String> _suggestions = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSuggestions();
+  }
+
+  Future<void> _loadSuggestions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getStringList(_prefsKey);
+    setState(() {
+      _suggestions = (stored == null || stored.isEmpty)
+          ? ['Mesa 1', 'Mesa 2', 'Para Llevar']
+          : List.from(stored);
+      _loading = false;
+    });
+  }
+
+  Future<void> _editSuggestions() async {
+    final edited = await showDialog<List<String>>(
+      context: context,
+      builder: (ctx) {
+        final controllers = _suggestions.map((s) => TextEditingController(text: s)).toList();
+        return StatefulBuilder(builder: (ctx2, setModalState) {
+          void _add() {
+            controllers.add(TextEditingController());
+            setModalState(() {});
+          }
+
+          void _removeAt(int i) {
+            controllers.removeAt(i);
+            setModalState(() {});
+          }
+
+          return AlertDialog(
+            title: const Text('Editar sugerencias'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...List.generate(controllers.length, (i) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: controllers[i],
+                                decoration: InputDecoration(labelText: 'Sugerencia ${i + 1}'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                              onPressed: () => _removeAt(i),
+                            )
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: _add,
+                        icon: const Icon(Icons.add_circle_outline),
+                        label: const Text('Agregar sugerencia'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Cancelar')),
+              FilledButton(
+                onPressed: () {
+                  final result = controllers.map((c) => c.text.trim()).where((s) => s.isNotEmpty).toList();
+                  Navigator.pop(ctx, result);
+                },
+                child: const Text('Guardar'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+
+    if (edited != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_prefsKey, edited);
+      setState(() => _suggestions = edited);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Guardar Pedido Pendiente'),
+      content: _loading
+          ? const SizedBox(width: 200, height: 60, child: Center(child: CircularProgressIndicator()))
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _ctl,
+                  decoration: const InputDecoration(labelText: 'Nombre (ej: Mesa 5)'),
+                  autofocus: true,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text('Sugerencias:', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: _editSuggestions,
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: const Text('Editar'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 10,
+                    children: _suggestions.map((s) {
+                      final bool selected = _ctl.text.trim() == s;
+                      return GestureDetector(
+                        onTap: () => setState(() => _ctl.text = s),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).cardColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: selected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).dividerColor.withOpacity(0.6),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AnimatedOpacity(
+                                opacity: selected ? 1.0 : 0.0,
+                                duration: const Duration(milliseconds: 150),
+                                child: Icon(
+                                  Icons.check_circle,
+                                  size: 16,
+                                  color: selected ? Colors.white : Colors.transparent,
+                                ),
+                              ),
+                              if (selected) const SizedBox(width: 8),
+                              Text(
+                                s,
+                                style: TextStyle(
+                                  color: selected ? Colors.white : Colors.black87,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+        FilledButton(
+          onPressed: () {
+            final value = _ctl.text.trim();
+            if (value.isNotEmpty) Navigator.pop(context, value);
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
 }
 
 // Nota: la funcionalidad de registrar gasto de insumos por apertura ahora
@@ -838,33 +1051,11 @@ class _PaginaVentasState extends State<PaginaVentas> {
     String? nombre;
 
     Future<String?> _askForName() async {
-      return showDialog<String>(
-        context: context,
-        builder: (ctx) {
-          final ctl = TextEditingController();
-          return AlertDialog(
-            title: const Text('Guardar Pedido Pendiente'),
-            content: TextField(
-              controller: ctl,
-              decoration:
-                  const InputDecoration(labelText: 'Nombre (ej: Mesa 5)'),
-              autofocus: true,
-            ),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cancelar')),
-              FilledButton(
-                  onPressed: () {
-                    if (ctl.text.trim().isNotEmpty) {
-                      Navigator.pop(ctx, ctl.text.trim());
-                    }
-                  },
-                  child: const Text('Guardar')),
-            ],
-          );
-        },
-      );
+        // Usar un diálogo más completo con sugerencias editables almacenadas
+        return showDialog<String>(
+          context: context,
+          builder: (_) => _OrderNameDialog(),
+        );
     }
 
     if (_activeOrderName != null) {
@@ -1245,26 +1436,62 @@ class _PaginaVentasState extends State<PaginaVentas> {
                                               Row(
                                                 children: [
                                                   Expanded(
-                                                    child: FilledButton.icon(
-                                                      onPressed: () =>
-                                                          _loadPendingOrder(
-                                                              pedido),
-                                                      icon: const Icon(
-                                                          Icons
-                                                              .play_arrow_rounded,
-                                                          size: 18),
-                                                      label: const Text(
-                                                          'Reanudar'),
-                                                      style: FilledButton
-                                                          .styleFrom(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                                vertical: 12),
-                                                        backgroundColor: theme
-                                                            .colorScheme
-                                                            .primary,
-                                                      ),
+                                                    child: Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child:
+                                                              FilledButton.icon(
+                                                            onPressed: () =>
+                                                                _loadPendingOrder(
+                                                                    pedido),
+                                                            icon: const Icon(
+                                                                Icons
+                                                                    .play_arrow_rounded,
+                                                                size: 18),
+                                                            label:
+                                                                const Text('Reanudar'),
+                                                            style: FilledButton
+                                                                .styleFrom(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                          vertical:
+                                                                              12),
+                                                              backgroundColor:
+                                                                  theme.colorScheme.primary,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 8),
+                                                        SizedBox(
+                                                          width: 120,
+                                                          child:
+                                                                FilledButton.icon(
+                                                              onPressed: () {
+                                                                // Cerrar el sheet de "Pedidos Pendientes"
+                                                                Navigator.pop(context);
+                                                                // Abrir panel de pago desde la pantalla principal
+                                                                Future.microtask(() => _payPendingOrder(pedido));
+                                                              },
+                                                            icon: const Icon(
+                                                                Icons
+                                                                    .payment_rounded,
+                                                                size: 18),
+                                                            label:
+                                                                const Text('Pagar'),
+                                                            style: FilledButton
+                                                                .styleFrom(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                          vertical:
+                                                                              12),
+                                                              backgroundColor:
+                                                                  Colors.teal.shade600,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
                                                   ),
                                                   const SizedBox(width: 8),
@@ -1743,6 +1970,8 @@ class _PaginaVentasState extends State<PaginaVentas> {
     );
   }
 
+
+
   String _formatTimeAgo(DateTime fecha) {
     final now = DateTime.now();
     final diff = now.difference(fecha);
@@ -2015,6 +2244,226 @@ class _PaginaVentasState extends State<PaginaVentas> {
     if (cajaActiva != null) {
       _openCart(cajaActiva);
     }
+  }
+
+  Future<void> _appendCartToPendingOrder(PedidoPendiente pedido, {required bool removeFromCart}) async {
+    if (_cart.isEmpty) return;
+
+    // Crear copias de los ítems del carrito para añadir al pedido pendiente
+    List<ItemCarrito> copies = _cart.map((it) {
+      final copy = ItemCarrito(
+        producto: it.producto,
+        uniqueId: '${it.producto.id}-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(999)}',
+        categoryName: it.categoryName,
+      );
+      copy.comentario = it.comentario;
+      copy.precioEditable = it.precioEditable;
+      return copy;
+    }).toList();
+
+    final updatedItems = List<ItemCarrito>.from(pedido.items)..addAll(copies);
+    final updatedSubtotal = updatedItems.fold(0.0, (s, it) => s + it.precioEditable);
+
+    final updatedPedido = PedidoPendiente(
+      nombre: pedido.nombre,
+      items: updatedItems,
+      subtotal: updatedSubtotal,
+      fecha: DateTime.now(),
+    );
+
+    setState(() {
+      final idx = _pedidosPendientes.indexWhere((p) => p.nombre == pedido.nombre);
+      if (idx != -1) _pedidosPendientes[idx] = updatedPedido;
+      if (removeFromCart) {
+        _cart.clear();
+        _activeOrderName = null;
+      }
+    });
+
+    if (mainScaffoldContext != null) {
+      mostrarNotificacionElegante(
+        mainScaffoldContext!,
+        'Se agregaron ${copies.length} ítems a "${pedido.nombre}"',
+        messengerKey: principalMessengerKey,
+      );
+    }
+  }
+
+  /// Pagar directamente un `PedidoPendiente` desde la lista de guardados.
+  /// Abre `PanelPago` pre‑llenado con los ítems/subtotal del pedido.
+  Future<void> _payPendingOrder(PedidoPendiente pedido) async {
+    final cajaActiva = context.read<CajaService>().cajaActiva;
+    if (cajaActiva == null) {
+      if (mainScaffoldContext != null) {
+        mostrarNotificacionElegante(
+          mainScaffoldContext!,
+          'No hay caja activa. Abre la caja antes de procesar pagos.',
+          esError: true,
+          messengerKey: principalMessengerKey,
+        );
+      }
+      return;
+    }
+
+    final paid = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => PanelPago(
+        subtotal: pedido.subtotal,
+        items: pedido.items,
+        onConfirm: ({required pagos, required fechaVenta}) async {
+          // Procesar la venta usando los ítems del pedido pendiente
+          await _procesarVentaDesdePedidoPendiente(
+            pedido: pedido,
+            pagos: pagos,
+            fechaVenta: fechaVenta,
+            cajaActiva: cajaActiva,
+          );
+        },
+      ),
+    );
+
+    if (paid == true && mounted) {
+      // El pago fue procesado correctamente -> eliminar pedido guardado
+      setState(() {
+        _pedidosPendientes.removeWhere((p) => p.nombre == pedido.nombre && p.fecha == pedido.fecha);
+      });
+    }
+  }
+
+  Future<void> _procesarVentaDesdePedidoPendiente({
+    required PedidoPendiente pedido,
+    required Map<String, double> pagos,
+    required DateTime fechaVenta,
+    required Caja cajaActiva,
+  }) async {
+    final totalPagado = pagos.values.fold(0.0, (sum, amount) => sum + amount);
+
+    final ventaItems = pedido.items
+        .map((c) => VentaItem(
+              producto: c.producto,
+              uniqueId: c.uniqueId,
+              precioEditable: c.precioEditable,
+              comentario: c.comentario,
+            ))
+        .toList();
+
+    final nuevaVenta = Venta(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      cajaId: cajaActiva.id,
+      fecha: fechaVenta,
+      items: ventaItems,
+      total: totalPagado,
+      pagos: pagos,
+      usuarioId: cajaActiva.usuarioAperturaId,
+      usuarioNombre: cajaActiva.usuarioAperturaNombre,
+    );
+
+    try {
+      final cajaService = Provider.of<CajaService>(context, listen: false);
+      await cajaService.agregarVentaLocal(nuevaVenta);
+
+      // Descontar Pan Árabe si aplica (misma lógica que en _procesarVenta)
+      final panArabeVendidos = pedido.items
+          .where((item) => item.producto.nombre.toLowerCase().contains('shawarma'))
+          .length;
+      if (panArabeVendidos > 0) {
+        try {
+          final insumosQuery = await FirebaseFirestore.instance
+              .collection('insumos')
+              .where('nombre', isGreaterThanOrEqualTo: 'Pan Árabe')
+              .where('nombre', isLessThan: 'Pan Áráz')
+              .get();
+          bool descontado = false;
+          for (final doc in insumosQuery.docs) {
+            final nombre = (doc.data()['nombre'] ?? '').toString();
+            if (nombre.startsWith('Pan Árabe')) {
+              final stockActual = (doc.data()['stockActual'] ?? doc.data()['stockTotal'] ?? 0).toDouble();
+              final nuevoStock = stockActual - panArabeVendidos;
+              await doc.reference.update({'stockActual': nuevoStock});
+              descontado = true;
+              break;
+            }
+          }
+          if (!descontado && mainScaffoldContext != null) {
+            mostrarNotificacionElegante(
+              mainScaffoldContext!,
+              "No se encontró el insumo 'Pan Árabe' para descontar.",
+              esError: true,
+              messengerKey: principalMessengerKey,
+            );
+          }
+        } catch (e) {
+          if (mainScaffoldContext != null) {
+            mostrarNotificacionElegante(
+              mainScaffoldContext!,
+              "Error al descontar Pan Árabe: $e",
+              esError: true,
+              messengerKey: principalMessengerKey,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted && mainScaffoldContext != null) {
+        mostrarNotificacionElegante(
+          mainScaffoldContext!,
+          "Error al registrar la venta: $e",
+          esError: true,
+          messengerKey: principalMessengerKey,
+        );
+      }
+      // Propagar para que PanelPago muestre el diálogo de error
+      rethrow;
+    }
+  }
+
+  Future<void> _showAttachToPendingDialog() async {
+    if (_cart.isEmpty || _pedidosPendientes.isEmpty) return;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    const Expanded(child: Text('Agregar ítems a pedido guardado', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                    IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
+                  ],
+                ),
+              ),
+              ..._pedidosPendientes.map((p) {
+                return ListTile(
+                  title: Text(p.nombre, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text('${p.items.length} ítems • S/ ${p.subtotal.toStringAsFixed(2)}'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.playlist_add_check),
+                    tooltip: 'Agregar y mover (quitar del carrito)',
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      await _appendCartToPendingOrder(p, removeFromCart: true);
+                    },
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    // Por diseño: siempre agregar y mover los ítems al pedido guardado
+                    await _appendCartToPendingOrder(p, removeFromCart: true);
+                  },
+                );
+              }).toList(),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _openCart(Caja cajaActiva) {
@@ -2619,6 +3068,18 @@ class _PaginaVentasState extends State<PaginaVentas> {
               : Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
+                    // Botón para derivar el carrito a un pedido pendiente existente
+                    if (_pedidosPendientes.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12.0),
+                        child: FloatingActionButton(
+                          heroTag: 'derivarPedido',
+                          onPressed: _showAttachToPendingDialog,
+                          tooltip: 'Agregar a pedido guardado',
+                          backgroundColor: Theme.of(context).colorScheme.secondary,
+                          child: const Icon(Icons.playlist_add),
+                        ),
+                      ),
                     FloatingActionButton(
                       onPressed: _confirmAndClearCart,
                       backgroundColor: Theme.of(context).colorScheme.error,

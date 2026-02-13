@@ -20,11 +20,12 @@ String capitalize(String s) {
 // Mapeo específico para mostrar los métodos en la sección de Gastos
 String _displayMethodForGastos(String key) {
   final lower = key.toLowerCase().trim();
-  if (lower == 'tarjeta') return 'Ruben';
-  // Priorizar variantes que indican gastos personales
-  if (lower.contains('gasto aharhel') || lower.contains('aharhel gastos') || lower.contains('gasto_aharhel')) return 'Aharhel Gastos';
-  // Yape / Aharhel históricos -> Aharhel YS
-  if (lower == 'yape personal' || lower == 'yape' || lower.contains('aharhel')) return 'Aharhel YS';
+  // Normalizar todos los métodos de gasto para mostrar únicamente Efectivo o Yape
+  if (lower == 'tarjeta') return 'Yape';
+  // Variantes históricas o específicas de Aharhel/izipay se consideran ahora 'Yape'
+  if (lower.contains('gasto aharhel') || lower.contains('aharhel gastos') || lower.contains('gasto_aharhel') || lower.contains('izipay')) return 'Yape';
+  // Yape / Aharhel históricos -> Yape
+  if (lower == 'yape personal' || lower == 'yape' || lower.contains('aharhel')) return 'Yape';
   return key;
 }
 
@@ -1130,15 +1131,11 @@ void _showEditGastoDialog(BuildContext context, GastoResumen gasto) {
 
   final metodosDisponibles = <String>[
     'Efectivo',
-    'Ruben',
-    'Aharhel YS',
-    'Aharhel Gastos',
+    'Yape',
     'Otros',
     ...gasto.pagos.keys.map((k) => _displayMethodForGastos(k)).where((k) =>
       k != 'Efectivo' &&
-      k != 'Ruben' &&
-      k != 'Aharhel YS' &&
-      k != 'Aharhel Gastos' &&
+      k != 'Yape' &&
       k != 'Otros'),
   ].toSet().toList();
 

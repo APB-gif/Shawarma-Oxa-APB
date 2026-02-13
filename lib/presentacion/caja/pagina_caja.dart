@@ -3056,9 +3056,10 @@ IconData _getPaymentMethodIcon(String key) {
       return Icons.money_rounded;
     case 'Tarjeta':
       return Icons.credit_card_rounded;
-    case 'IziPay Yape':
-    case 'Yape Personal':
-      return Icons.qr_code_2_rounded;
+      case 'IziPay Yape':
+      case 'Yape Personal':
+      case 'Yape':
+        return Icons.qr_code_2_rounded;
     default:
       return Icons.payment_rounded;
   }
@@ -3071,8 +3072,8 @@ Color _getPaymentMethodColor(String key) {
     case 'Tarjeta':
       return Colors.indigo.shade600;
     case 'IziPay Yape':
-      return Colors.purple.shade600;
     case 'Yape Personal':
+    case 'Yape':
       return Colors.deepPurple.shade400;
     default:
       return Colors.grey.shade600;
